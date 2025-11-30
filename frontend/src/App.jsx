@@ -10,6 +10,7 @@ import EventManagerTemplate from "./templates/EventManagerTemplate";
 import Users from "./pages/Admin/User/User";
 import NotFound from "./pages/NotFound";
 import EventDetail from "./pages/EventDetail";
+import Dashboard from "./pages/Dashboard";
 import AdminEvents from "./pages/Admin/Events/AdminEvents";
 import PendingEvents from "./pages/Admin/Events/PendingAdminEvents";
 import EventManagerEvents from "./pages/EventManager/Event/EventManagerEvents";
@@ -32,6 +33,7 @@ class App extends Component {
             <Route path="/hoat-dong" element={<VolunteerActivities />} />
             <Route path="/quyen-gop" element={<Donation />} />
             <Route path="/thong-tin-ca-nhan" element={<UserProfile />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="su-kien/:eventId" element={<EventDetail />} />
           </Route>
           {/* Admin routes */}

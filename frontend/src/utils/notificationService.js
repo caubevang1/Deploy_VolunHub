@@ -45,8 +45,8 @@ export const subscribeUserToPush = async () => {
       try {
         swRegistration = await navigator.serviceWorker.ready;
         if (swRegistration) break;
-      } catch (e) {
-        console.warn(`⏳ [WebPush] Service Worker chưa ready (attempt ${attempt}/${maxAttempts})`);
+      } catch (err) {
+        console.warn(`⏳ [WebPush] Service Worker chưa ready (attempt ${attempt}/${maxAttempts})`, err);
       }
       // đợi 500ms trước khi thử lại
       await new Promise((r) => setTimeout(r, 500));

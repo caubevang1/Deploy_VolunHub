@@ -106,6 +106,7 @@ export default function Header() {
           <nav className="flex gap-6 text-lg ml-14 pl-4 font-semibold">
             {[
               { to: "/trang-chu", label: "Trang chủ" },
+              { to: "/dashboard", label: "Dashboard" },
               { to: "/hoat-dong", label: "Hoạt động" },
               { to: "/quyen-gop", label: "Quyên góp" },
               { to: "/tam-guong", label: "Tấm gương tình nguyện" },
