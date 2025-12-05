@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { GetEventDetail } from "../services/EventService";
-import { Calendar, Users, MapPin, Tag, Phone } from "lucide-react";
+import { Calendar, Users, MapPin, Tag, Phone, MessageSquare } from "lucide-react";
 import { Registration, CancelRegistration, GetMyEvent } from "../services/UserService";
 import Swal from "sweetalert2";
 
@@ -306,6 +306,17 @@ export default function EventDetail() {
                         className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 font-semibold absolute right-6"
                     >
                         Hủy đăng ký
+                    </button>
+                )}
+
+                {/* --- BUTTON: KÊNH TRAO ĐỔI (Chỉ hiện khi Approved và sự kiện đang diễn ra) --- */}
+                {registrationStatus === "approved" && event.status === 'approved' && (
+                    <button
+                        onClick={() => navigate(`/su-kien/${eventId}/trao-doi`)}
+                        className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 font-semibold flex items-center gap-2"
+                    >
+                        <MessageSquare size={20} />
+                        <span>Kênh Trao Đổi</span>
                     </button>
                 )}
             </div>

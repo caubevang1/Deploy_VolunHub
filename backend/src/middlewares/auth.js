@@ -1,5 +1,7 @@
 import jwt from "jsonwebtoken";
 import User from '../models/user.js'; // Đảm bảo bạn đã import User model
+import Registration from '../models/registration.js';
+import Event from '../models/event.js';
 
 export const verifyToken = async (req, res, next) => { // 1. Thêm "async"
   const authHeader = req.headers.authorization || "";
@@ -47,23 +49,30 @@ export const eventManager = (req, res, next) => {
     }
 };
 
-// Thêm import ở đầu file
-import Registration from '../models/registration.js';
-
-// ... (code của verifyToken, admin, eventManager) ...
-
-// 🛡️ Middleware kiểm tra xem user có phải là thành viên đã được duyệt của sự kiện không
+// ✅ Cải thiện middleware isEventMember
 export const isEventMember = async (req, res, next) => {
   try {
-    const eventId = req.params.eventId || req.body.eventId; // Lấy eventId từ param hoặc body
+    const eventId = req.params.eventId || req.body.eventId;
     const userId = req.user._id;
+    const userRole = req.user.role.toUpperCase();
 
-    // Kiểm tra xem có phải Manager của sự kiện không (Manager luôn có quyền)
-    if (req.user.role === 'EVENTMANAGER' || req.user.role === 'ADMIN') {
-        return next(); 
+    // 1. Admin luôn có quyền
+    if (userRole === 'ADMIN') {
+      return next();
     }
 
-    // Kiểm tra xem có phải là Volunteer đã được 'approved'
+    // 2. Kiểm tra Event có tồn tại không
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({ message: 'Không tìm thấy sự kiện.' });
+    }
+
+    // 3. Manager của event có quyền
+    if (userRole === 'EVENTMANAGER' && event.createdBy.toString() === userId.toString()) {
+      return next();
+    }
+
+    // 4. Volunteer phải có registration status = approved
     const registration = await Registration.findOne({
       event: eventId,
       volunteer: userId,
@@ -71,10 +80,10 @@ export const isEventMember = async (req, res, next) => {
     });
 
     if (registration) {
-      return next(); // Là thành viên, cho phép
+      return next();
     }
 
-    res.status(403).json({ message: 'Forbidden: Bạn phải là thành viên đã được duyệt của sự kiện này.' });
+    res.status(403).json({ message: 'Bạn phải là thành viên đã được duyệt của sự kiện này.' });
 
   } catch (error) {
     res.status(500).json({ message: 'Lỗi server', error: error.message });

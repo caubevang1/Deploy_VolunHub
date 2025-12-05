@@ -18,6 +18,7 @@ import CreateEvent from "./pages/EventManager/Event/CreatEvents";
 import AdminEventDetail from "./pages/Admin/Events/AdminEventDetail";
 import Participants from "./pages/EventManager/Participant/Participant";
 import EditEvent from "./pages/EventManager/Event/EditEvent";
+import EventDiscussion from "./pages/EventDiscussion";
 
 class App extends Component {
   render() {
@@ -50,7 +51,10 @@ class App extends Component {
             <Route path="su-kien/tao" element={<CreateEvent />} />
             <Route path="su-kien/sua/:eventId" element={<EditEvent />} />
             <Route path="su-kien/:eventId" element={<AdminEventDetail />} />
+            <Route path="/quanlisukien/su-kien/:eventId/trao-doi" element={<EventDiscussion />} />
           </Route>
+          {/* Volunteer routes */}
+          <Route path="/su-kien/:eventId/trao-doi" element={<EventDiscussion />} />
         </Routes>
       </Router>
     );

@@ -7,6 +7,7 @@ import Swal from 'sweetalert2';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTrash } from "@fortawesome/free-solid-svg-icons";
 import { useNavigate } from 'react-router-dom';
+import { MessageSquare } from 'lucide-react'; // ✅ Import icon
 
 const { Search } = Input;
 
@@ -198,9 +199,19 @@ export default function EventManagerEvents() {
             title: 'Thao tác',
             key: 'action',
             align: 'center',
-            width: 100,
+            width: 150, // ✅ Tăng width
             render: (_, event) => (
                 <div className="flex justify-center gap-2">
+                    {/* ✅ Thêm nút vào kênh trao đổi */}
+                    {event.status === 'approved' && (
+                        <Button
+                            type="text"
+                            icon={<MessageSquare className="text-green-500 text-lg" />}
+                            onClick={() => navigate(`/quanlisukien/su-kien/${event._id}/trao-doi`)}
+                            title="Kênh trao đổi"
+                        />
+                    )}
+                    
                     <Button
                         type="text"
                         danger
