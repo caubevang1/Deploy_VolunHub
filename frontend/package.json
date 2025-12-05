@@ -10,7 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@ckeditor/ckeditor5-build-classic": "^41.4.2",
+    "@ckeditor/ckeditor5-build-classic": "^39.0.2",
     "@ckeditor/ckeditor5-react": "^11.0.0",
     "@fortawesome/fontawesome-svg-core": "^7.1.0",
     "@fortawesome/free-solid-svg-icons": "^7.1.0",
@@ -18,7 +18,7 @@
     "@reduxjs/toolkit": "^2.10.1",
     "antd": "^5.29.0",
     "axios": "^1.13.2",
-    "ckeditor5-custom-build-full": "^1.0.0",
+    "ckeditor5-custom-build-full": "^0.0.2",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.23.24",
     "lodash": "^4.17.21",

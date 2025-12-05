@@ -89,7 +89,7 @@ export default function Header() {
     };
 
     fetchUser();
-  }, []);
+  }, [dispatch]);
 
 
   return (
