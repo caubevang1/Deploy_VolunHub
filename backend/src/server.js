@@ -9,7 +9,8 @@ import { startCronJobs } from "./utils/cronJob.js"; // Hàm khởi động các 
 // =================================================================================================
 // Import các file routes
 // =================================================================================================
-import authRoutes from "./routes/auth.routes.js";
+import authRoutes from "./routes/auth.routes.js"; // Đúng
+// import authRoutes from '../routes/auth.routes.js'; // ❌ Sai
 import adminRoutes from "./routes/admin.routes.js";
 import eventRoutes from "./routes/event.routes.js";
 import registrationRoutes from "./routes/registration.routes.js";
@@ -38,6 +39,8 @@ const app = express(); // Tạo một instance của Express
 app.use(cors());
 // Middleware để phân tích body của request dưới dạng JSON
 app.use(express.json());
+// Middleware để phân tích các trường trong form
+app.use(express.urlencoded({ extended: true }));
 
 // =================================================================================================
 // Kết nối cơ sở dữ liệu
@@ -64,14 +67,24 @@ app.use("/api/comments", commentRoutes); // Routes cho Comment
 app.use("/api/dashboard", dashboardRoutes); // Routes cho dashboard
 app.use("/api/statistics", statisticsRoutes); // Routes cho thống kê
 app.use("/api/notifications", notificationRoutes); // Routes cho thông báo
+
 // Tạo route ảo /uploads để trỏ vào thư mục /uploads thật
-app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
+app.use("/uploads", express.static("uploads"));
 // =================================================================================================
 // Xử lý lỗi 404 - Route không tồn tại
 // =================================================================================================
 // Middleware này sẽ được gọi khi không có route nào khớp với request
 app.use((req, res) => {
   res.status(404).json({ message: "❌ API route not found" });
+});
+
+// ✅ Catch-all 404 phải đặt CUỐI CÙNG (sau tất cả routes)
+app.use((req, res) => {
+  console.log("❌ 404 Not Found:", req.method, req.originalUrl);
+  res.status(404).json({
+    message: "API route not found",
+    path: req.originalUrl,
+  });
 });
 
 // =================================================================================================

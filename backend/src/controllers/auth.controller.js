@@ -489,3 +489,68 @@ export const getAllUsers = async (req, res) => {
     return res.status(500).json({ message: "Lỗi máy chủ", error: err.message });
   }
 };
+
+/**
+ * 📋 Đăng ký tài khoản mới
+ * (Không sử dụng OTP - ADMIN THÊM NGƯỜI DÙNG MỚI)
+ */
+export const register = async (req, res) => {
+  try {
+    console.log('📝 Register endpoint hit!'); // ✅ Thêm log này
+    console.log('📦 Body:', req.body);
+    console.log('📎 File:', req.file);
+
+    const { username, email, password, name, birthday, gender, phone, otp } = req.body;
+
+    // 1. Kiểm tra dữ liệu đầu vào
+    if (!username || !email || !password || !name || !birthday) {
+      return res.status(400).json({ message: "Vui lòng nhập đầy đủ thông tin." });
+    }
+
+    // 2. Kiểm tra trùng lặp (email, username)
+    const existingUser = await User.findOne({
+      $or: [{ email }, { username }],
+    });
+    if (existingUser) {
+      return res.status(400).json({ message: "Email hoặc username đã được sử dụng." });
+    }
+
+    // 3. Băm mật khẩu
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // ✅ Xử lý avatar
+    let avatarPath = null;
+    if (req.file) {
+      avatarPath = `/uploads/avatars/${req.file.filename}`;
+    }
+
+    const newUser = new User({
+      username,
+      email,
+      password: hashedPassword,
+      name,
+      birthday,
+      gender,
+      phone,
+      avatar: avatarPath, // ✅ Thêm field avatar
+      role: "VOLUNTEER",
+    });
+
+    await newUser.save();
+    res.status(201).json({ message: "Đăng ký thành công" });
+  } catch (error) {
+    console.error("❌ Lỗi trong register:", error);
+    return res.status(500).json({ message: "Lỗi server", error: error.message });
+  }
+};
+
+// ✅ Kiểm tra tên function - có thể là:
+// - sendOTP (viết hoa TP)
+// - sendOtp (viết thường tp)  
+// - generateOTP
+// Hoặc function không tồn tại
+
+// Nếu function có tên khác, đổi tên cho khớp:
+export const sendOTP = async (req, res) => {
+  // ...existing code...
+};

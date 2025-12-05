@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { User, Lock, Mail, Calendar, Phone, Image } from "lucide-react";
+import { User, Lock, Mail, Calendar, Phone, Upload } from "lucide-react";
 import { useDispatch } from "react-redux";
 import { closeModal, openLogin } from "../redux/reducers/UserReducer";
 import Swal from "sweetalert2";
@@ -26,8 +26,10 @@ export default function Register() {
         password: "",
         confirmPassword: "",
         otp: "",
-        avatar: "",
     });
+
+    const [avatarFile, setAvatarFile] = useState(null);
+    const [avatarPreview, setAvatarPreview] = useState(null);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -56,25 +58,56 @@ export default function Register() {
         }
     };
 
+    const handleAvatarChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            if (!file.type.startsWith('image/')) {
+                Swal.fire("Lỗi", "Vui lòng chọn file ảnh", "error");
+                return;
+            }
+            if (file.size > 5 * 1024 * 1024) {
+                Swal.fire("Lỗi", "Kích thước ảnh không được vượt quá 5MB", "error");
+                return;
+            }
+            setAvatarFile(file);
+            const reader = new FileReader();
+            reader.onloadend = () => setAvatarPreview(reader.result);
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleRemoveAvatar = () => {
+        setAvatarFile(null);
+        setAvatarPreview(null);
+        const fileInput = document.getElementById('avatar-upload');
+        if (fileInput) fileInput.value = '';
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
-
-        // Chuyển đổi giới tính
-        const { gender, ...restForm } = form;
+        const { gender, confirmPassword, ...restForm } = form;
         const mappedGender = gender === "Nam" ? "Male" : gender === "Nữ" ? "Female" : gender;
 
-        // Cập nhật lại gender sau khi chuyển đổi
-        const formData = { ...restForm, gender: mappedGender };
-
-        // Kiểm tra dữ liệu
-        if (!formData.name || !formData.birthday || !formData.gender || !formData.phone || !formData.email || !formData.username || !formData.password || !formData.confirmPassword || !formData.otp) {
+        if (!restForm.name || !restForm.birthday || !mappedGender || !restForm.phone || !restForm.email || !restForm.username || !restForm.password || !restForm.otp) {
             Swal.fire("Không thành công", "Vui lòng điền đầy đủ thông tin.", "error");
             return;
         }
-
-        if (formData.password !== formData.confirmPassword) {
+        if (restForm.password !== confirmPassword) {
             Swal.fire("Mật khẩu không khớp", "Vui lòng kiểm tra lại.", "error");
             return;
+        }
+
+        const formData = new FormData();
+        formData.append('name', restForm.name);
+        formData.append('birthday', restForm.birthday);
+        formData.append('gender', mappedGender);
+        formData.append('phone', restForm.phone);
+        formData.append('email', restForm.email);
+        formData.append('username', restForm.username);
+        formData.append('password', restForm.password);
+        formData.append('otp', restForm.otp);
+        if (avatarFile) {
+            formData.append('avatar', avatarFile);
         }
 
         try {
@@ -89,12 +122,9 @@ export default function Register() {
                     dispatch(closeModal());
                     dispatch(openLogin());
                 });
-            } else {
-                Swal.fire("Không thành công", response.message || "Đăng ký thất bại. Vui lòng thử lại.", "error");
             }
         } catch (error) {
-            const errorMessage = error.response?.data?.message || "Có lỗi xảy ra khi đăng ký. Vui lòng thử lại.";
-            Swal.fire("Không thành công", errorMessage, "error");
+            Swal.fire("Không thành công", error.response?.data?.message || "Có lỗi xảy ra khi đăng ký.", "error");
         }
     };
 
@@ -226,29 +256,55 @@ export default function Register() {
                         </div>
                     </div>
 
-                    {/* Avatar */}
+                    {/* Avatar Upload */}
                     <div>
-                        <label className="flex items-center gap-2 text-gray-800 font-medium mb-1">
-                            <Image size={18} /> Ảnh đại diện (URL):
-                        </label>
-                        <input
-                            type="text"
-                            name="avatar"
-                            value={form.avatar}
-                            onChange={handleChange}
-                            placeholder="Dán đường dẫn hình ảnh vào đây"
-                            className="w-full bg-[#f5f5f5] border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-400 text-black"
-                        />
-                        {form.avatar && (
-                            <div className="mt-2 flex justify-center">
-                                <img
-                                    src={form.avatar}
-                                    alt="Avatar preview"
-                                    onError={(e) => (e.target.style.display = "none")}
-                                    className="w-24 h-24 rounded-full object-cover border border-gray-300 shadow-sm"
+                        <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-3">
+                                <label className="flex items-center gap-2 text-gray-800 font-medium">
+                                    <Upload size={18} /> Ảnh đại diện:
+                                </label>
+                                <input
+                                    type="file"
+                                    id="avatar-upload"
+                                    accept="image/*"
+                                    onChange={handleAvatarChange}
+                                    className="hidden"
                                 />
+                                <label
+                                    htmlFor="avatar-upload"
+                                    className="cursor-pointer bg-[#DCBA58] hover:bg-[#CDA550] text-white font-medium px-4 py-2 rounded-md transition-colors inline-flex items-center gap-2"
+                                >
+                                    <Upload size={18} />
+                                    Choose File
+                                </label>
+                                {avatarFile && (
+                                    <button
+                                        type="button"
+                                        onClick={handleRemoveAvatar}
+                                        className="text-red-500 hover:text-red-700 font-medium px-3 py-2 rounded-md transition-colors"
+                                    >
+                                        ✕ Xóa
+                                    </button>
+                                )}
                             </div>
-                        )}
+                            <div className="w-28 h-12 flex items-center justify-center -ml-8 mt-4">
+                                {avatarPreview && (
+                                    <img
+                                        src={avatarPreview}
+                                        alt="Avatar preview"
+                                        className="w-24 h-24 rounded-full object-cover border-2 border-gray-300 shadow-sm"
+                                    />
+                                )}
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <span className="text-sm text-gray-600">
+                                {avatarFile ? avatarFile.name : 'No file chosen'}
+                            </span>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">
+                            Hỗ trợ: JPG, PNG, GIF. Kích thước tối đa: 5MB
+                        </p>
                     </div>
 
                     {/* Email + OTP */}

@@ -1,8 +1,17 @@
 // src/middlewares/upload.js
 import multer from "multer";
 import path from "path";
+import fs from "fs";
 
-// 1. Hàm kiểm tra loại file (Giữ nguyên)
+// ✅ Tạo folder
+const uploadDirs = ["uploads/avatars", "uploads/events"];
+uploadDirs.forEach((dir) => {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+});
+
+// ✅ Image filter
 const imageFilter = (req, file, cb) => {
   const allowedTypes = /jpeg|jpg|png|gif/;
   const extname = allowedTypes.test(
@@ -13,50 +22,38 @@ const imageFilter = (req, file, cb) => {
   if (extname && mimetype) {
     return cb(null, true);
   } else {
-    cb(new Error("Lỗi: Chỉ chấp nhận file ảnh (jpeg, jpg, png, gif)!"), false);
+    cb(new Error("Chỉ chấp nhận file ảnh (jpeg, jpg, png, gif)!"), false);
   }
 };
 
-// 2. Cấu hình cho Upload Avatar
+// ✅ Avatar storage
 const avatarStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, "uploads/avatars");
   },
-
-  // SỬA LẠI HÀM FILENAME NÀY
   filename: function (req, file, cb) {
-    // Thêm Math.round(Math.random() * 1E9) để đảm bảo duy nhất
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(
-      null,
-      `user-${req.user._id}-${uniqueSuffix}` + path.extname(file.originalname)
-    );
+    cb(null, `avatar-${uniqueSuffix}` + path.extname(file.originalname));
   },
 });
 
-export const uploadAvatar = multer({
-  storage: avatarStorage,
-  fileFilter: imageFilter,
-  limits: { fileSize: 2 * 1024 * 1024 },
-}).single("avatar");
-
-// 3. Cấu hình cho Upload Ảnh Sự kiện
+// ✅ Event storage
 const eventStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, "uploads/events");
   },
-
-  // SỬA LẠI HÀM FILENAME NÀY
   filename: function (req, file, cb) {
-    // Thêm Math.round(Math.random() * 1E9) để đảm bảo duy nhất
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    // Chúng ta cũng có thể dùng 'file.fieldname' (là 'coverImage' hoặc 'galleryImages')
-    cb(
-      null,
-      file.fieldname + "-" + uniqueSuffix + path.extname(file.originalname)
-    );
+    cb(null, file.fieldname + "-" + uniqueSuffix + path.extname(file.originalname));
   },
 });
+
+// ✅ Export - CHỈ 1 LẦN
+export const uploadAvatar = multer({
+  storage: avatarStorage,
+  fileFilter: imageFilter,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+}).single("avatar");
 
 export const uploadEventImages = multer({
   storage: eventStorage,
