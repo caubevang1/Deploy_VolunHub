@@ -70,21 +70,22 @@ export default function EventDiscussion() {
 
   // Fetch posts
   useEffect(() => {
+    // ✅ Fix: Định nghĩa fetchPosts bên trong useEffect
+    const fetchPosts = async () => {
+      try {
+        const res = await GetEventPosts(eventId);
+        if (res.status === 200) {
+          setPosts(res.data);
+        }
+      } catch (err) {
+        console.error('Lỗi lấy bài viết:', err);
+      }
+    };
+
     if (canAccess) {
       fetchPosts();
     }
-  }, [canAccess]);
-
-  const fetchPosts = async () => {
-    try {
-      const res = await GetEventPosts(eventId);
-      if (res.status === 200) {
-        setPosts(res.data);
-      }
-    } catch (err) {
-      console.error('Lỗi lấy bài viết:', err);
-    }
-  };
+  }, [canAccess, eventId]); // ✅ Thêm eventId vào dependencies
 
   const handleCreatePost = async () => {
     if (!newPost.trim()) {
