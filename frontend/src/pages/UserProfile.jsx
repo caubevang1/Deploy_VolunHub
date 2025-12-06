@@ -17,27 +17,6 @@ const ThongTinNguoiDung = ({ user, onUserUpdated }) => {
     const [avatarPreview, setAvatarPreview] = useState("");
     const [editMode, setEditMode] = useState(false);
 
-    useEffect(() => {
-        if (user) {
-            setEditData({
-                username: user.username || "",
-                name: user.name || "",
-                email: user.email || "",
-                phone: user.phone || "",
-                birthday: user.birthday || "",
-                gender: user.gender || "Male",
-                status: user.status || "Hoạt động",
-                points: user.points || 0, // ✅ [MỚI] Thêm trường points vào state
-            });
-            setAvatarPreview(
-                user.avatar?.startsWith("http")
-                    ? user.avatar
-                    : `http://localhost:5000${user.avatar}`
-            );
-        }
-    }, [user]);
-
-
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setEditData((prev) => ({ ...prev, [name]: value }));
@@ -49,6 +28,25 @@ const ThongTinNguoiDung = ({ user, onUserUpdated }) => {
 
         setAvatarFile(file);
         setAvatarPreview(URL.createObjectURL(file));
+    };
+
+    const handleEditClick = () => {
+        setEditData({
+            username: user.username || "",
+            name: user.name || "",
+            email: user.email || "",
+            phone: user.phone || "",
+            birthday: user.birthday || "",
+            gender: user.gender || "Male",
+            status: user.status || "Hoạt động",
+            points: user.points || 0,
+        });
+        setAvatarPreview(
+            user.avatar?.startsWith("http")
+                ? user.avatar
+                : `http://localhost:5000${user.avatar}`
+        );
+        setEditMode(true);
     };
 
     const handleSaveAll = async () => {
@@ -124,7 +122,7 @@ const ThongTinNguoiDung = ({ user, onUserUpdated }) => {
 
                         <div className="ml-4 mt-4 flex gap-4 text-3xl">
                             {!editMode ? (
-                                <button onClick={() => setEditMode(true)} className="text-blue-500">
+                                <button onClick={handleEditClick} className="text-blue-500">
                                     <EditOutlined />
                                 </button>
                             ) : (
@@ -138,7 +136,7 @@ const ThongTinNguoiDung = ({ user, onUserUpdated }) => {
                     <div className="flex items-center gap-3 mt-4">
                         {/* ✅ [HIỂN THỊ] Điểm người dùng (Badge) */}
                         <div className="bg-orange-500 text-white px-4 py-2 mr-2 rounded-full shadow font-bold text-[14px]">
-                            🌟 {editData.points || 0} ĐIỂM
+                            🌟 {user?.points || 0} ĐIỂM
                         </div>
 
                         {/* Trạng thái người dùng */}
@@ -164,7 +162,13 @@ const ThongTinNguoiDung = ({ user, onUserUpdated }) => {
                     <div
                         className="content__avatar w-[200px] h-[200px] rounded-full bg-cover bg-center relative cursor-pointer -mt-[130px] shadow-lg"
                         style={{
-                            backgroundImage: `url(${avatarPreview || "https://cdn-icons-png.flaticon.com/512/149/149071.png"})`,
+                            backgroundImage: `url(${
+                                avatarPreview || 
+                                (user?.avatar?.startsWith("http") 
+                                    ? user.avatar 
+                                    : `http://localhost:5000${user?.avatar}`) ||
+                                "https://cdn-icons-png.flaticon.com/512/149/149071.png"
+                            })`,
                         }}
                     >
                         {editMode && (
@@ -191,46 +195,36 @@ const ThongTinNguoiDung = ({ user, onUserUpdated }) => {
                             className="border-b border-gray-400 text-center text-3xl "
                         />
                     ) : (
-                        <h1 className="text-3xl font-semibold text-gray-800">{editData.name}</h1>
+                        <h1 className="text-3xl font-semibold text-gray-800">{user?.name}</h1>
                     )}
                 </div>
 
                 {/* 2 cột thông tin */}
                 <div className="flex justify-between gap-12 content__list mt-6 text-[20px] px-4 py-2">
-                    <ul className="flex-1 space-y-8 [&>li:last-child]:border-b-0">
-                        <InfoRow
-                            label="Tên đăng nhập"
-                            name="username"
-                            editData={editData}
-                            editMode={false}
-                        />
-                        <InfoRow
-                            label="Email"
-                            name="email"
-                            editData={editData}
-                            editMode={false}
-                        />
+                    <ul className="flex-1 space-y-8">
+                        <InfoRow label="Tên đăng nhập" name="username" editData={user} editMode={false} />
+                        <InfoRow label="Email" name="email" editData={user} editMode={false} />
                         <InfoRow
                             label="Giới tính"
                             name="gender"
-                            editData={editData}
+                            editData={editMode ? editData : user}
                             handleInputChange={handleInputChange}
                             type="gender"
                             editMode={editMode}
                         />
                     </ul>
-                    <ul className="flex-1 space-y-8 [&>li:last-child]:border-b-0">
+                    <ul className="flex-1 space-y-8">
                         <InfoRow
                             label="Số điện thoại"
                             name="phone"
-                            editData={editData}
+                            editData={editMode ? editData : user}
                             handleInputChange={handleInputChange}
                             editMode={editMode}
                         />
                         <InfoRow
                             label="Ngày sinh"
                             name="birthday"
-                            editData={editData}
+                            editData={editMode ? editData : user}
                             handleInputChange={handleInputChange}
                             type="date"
                             editMode={editMode}
