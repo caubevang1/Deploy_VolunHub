@@ -12,7 +12,9 @@ export const ResetPassword = (data) => http.post(`/otp/reset/verify`, data);
 
 //UserInfo
 export const GetUserInfo = () => http.get(`/auth/me`)
-export const UpdateUser = (userData) => http.put(`/auth/update`, userData);
+export const UpdateUser = (formData) => {
+  return http.put('/auth/me', formData); // hoặc http.put('/users/me', formData)
+};
 
 //User Events
 export const Registration = (eventId) => http.post(`/registrations/${eventId}`);

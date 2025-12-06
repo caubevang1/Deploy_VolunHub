@@ -2,7 +2,7 @@ import express from "express";
 import multer from "multer";
 import { uploadAvatar } from "../middlewares/upload.js";
 import { verifyToken } from "../middlewares/auth.js"; // ✅ Import middleware
-import { register, login, sendRegisterOtp, getMe } from "../controllers/auth.controller.js"; // ✅ Import getMe
+import { register, login, sendRegisterOtp, getMe, updateProfile } from "../controllers/auth.controller.js"; // ✅ Import getMe
 
 const router = express.Router();
 
@@ -30,5 +30,8 @@ router.post("/login", login);
 
 // ✅ Route lấy thông tin user hiện tại
 router.get("/me", verifyToken, getMe);
+
+// ✅ Route cập nhật thông tin user
+router.put("/me", verifyToken, uploadAvatar, updateProfile);
 
 export default router;
