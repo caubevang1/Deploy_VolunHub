@@ -55,12 +55,14 @@ const ThongTinNguoiDung = ({ user, onUserUpdated }) => {
         formData.append("birthday", editData.birthday);
         formData.append("gender", editData.gender);
         formData.append("phone", editData.phone || "");
+
         if (avatarFile) {
             formData.append("avatar", avatarFile);
         }
 
         try {
             const res = await UpdateUser(formData);
+
             Swal.fire({
                 title: "Thành công!",
                 text: "Cập nhật thông tin thành công.",
@@ -68,10 +70,15 @@ const ThongTinNguoiDung = ({ user, onUserUpdated }) => {
                 timer: 2000,
                 showConfirmButton: false,
             });
-            setEditMode(false);
+
+            // ✅ Cập nhật user trước
             onUserUpdated(res.data.user);
+
+            // ✅ Reset edit mode và clear preview
+            setEditMode(false);
             setAvatarFile(null);
-            // window.location.reload(); // Không cần reload trang nếu đã update state cha
+            setAvatarPreview(""); // ← Quan trọng: Reset preview để dùng avatar mới từ server
+
         } catch (err) {
             Swal.fire({
                 title: "Lỗi!",
@@ -162,13 +169,12 @@ const ThongTinNguoiDung = ({ user, onUserUpdated }) => {
                     <div
                         className="content__avatar w-[200px] h-[200px] rounded-full bg-cover bg-center relative cursor-pointer -mt-[130px] shadow-lg"
                         style={{
-                            backgroundImage: `url(${
-                                avatarPreview || 
-                                (user?.avatar?.startsWith("http") 
-                                    ? user.avatar 
+                            backgroundImage: `url(${avatarPreview ||
+                                (user?.avatar?.startsWith("http")
+                                    ? user.avatar
                                     : `http://localhost:5000${user?.avatar}`) ||
                                 "https://cdn-icons-png.flaticon.com/512/149/149071.png"
-                            })`,
+                                })`,
                         }}
                     >
                         {editMode && (

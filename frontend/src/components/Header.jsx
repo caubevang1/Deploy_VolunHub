@@ -14,7 +14,7 @@ import { Dropdown, Menu } from "antd";
 import { removeLocalStorage, SwalConfig } from "../utils/Configs";
 import { LOCALSTORAGE_USER } from "../utils/Constants";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowRightFromBracket, faUser } from "@fortawesome/free-solid-svg-icons";
+import { faArrowRightFromBracket, faUser, faUserShield, faUserTie } from "@fortawesome/free-solid-svg-icons";
 import Swal from "sweetalert2";
 import { GetUserInfo } from "../services/UserService";
 
@@ -54,8 +54,20 @@ export default function Header() {
       label: 'Thông tin tài khoản',
       onClick: () => navigate('/thong-tin-ca-nhan'),
     },
-    {
+    ...(user?.role === 'ADMIN' ? [{
       key: '2',
+      icon: <FontAwesomeIcon icon={faUserShield} />,
+      label: 'Trang admin',
+      onClick: () => navigate('/admin'),
+    }] : []),
+    ...(user?.role === 'EVENTMANAGER' ? [{
+      key: '3',
+      icon: <FontAwesomeIcon icon={faUserTie} />,
+      label: 'Trang quản lý',
+      onClick: () => navigate('/quanlisukien'),
+    }] : []),
+    {
+      key: '4',
       icon: <FontAwesomeIcon icon={faArrowRightFromBracket} />,
       label: 'Đăng xuất',
       onClick: handleLogout,

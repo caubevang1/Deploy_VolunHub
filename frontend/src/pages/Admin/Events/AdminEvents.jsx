@@ -16,6 +16,19 @@ export default function AdminEvents() {
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
 
+    // Bảng ánh xạ loại tình nguyện
+    const categoryMapping = {
+        Community: "Cộng đồng",
+        Education: "Giáo dục",
+        Healthcare: "Sức khỏe",
+        Environment: "Môi trường",
+        EventSupport: "Sự kiện",
+        Technical: "Kỹ thuật",
+        Emergency: "Cứu trợ khẩn cấp",
+        Online: "Trực tuyến",
+        Corporate: "Doanh nghiệp"
+    };
+
     // Fetch events
     const fetchEvents = async () => {
         setLoading(true);
@@ -126,6 +139,7 @@ export default function AdminEvents() {
         {
             title: 'Loại sự kiện',
             dataIndex: 'category',
+            render: (category) => categoryMapping[category] || category,
         },
         {
             title: 'Trạng thái',
