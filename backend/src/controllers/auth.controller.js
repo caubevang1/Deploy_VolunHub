@@ -67,9 +67,7 @@ export const verifyAndRegister = async (req, res) => {
 
     // --- BƯỚC 1: VALIDATE TOÀN BỘ FORM TRƯỚC ---
 
-    // 1.1. Validate Name (ĐÃ SỬA LOGIC)
-    // Regex này bắt buộc viết hoa chữ cái đầu của mỗi từ
-    // và phải có ít nhất 2 từ (Họ và Tên)
+    // 1.1. Validate Name
     const nameRegex = /^(\p{Lu}\p{Ll}*)(\s\p{Lu}\p{Ll}*)+$/u;
 
     if (!nameRegex.test(name)) {
@@ -79,8 +77,7 @@ export const verifyAndRegister = async (req, res) => {
       });
     }
 
-    // 1.2. Validate Ngày sinh (giữ nguyên)
-    // ... (logic validate ngày sinh của bạn) ...
+    // 1.2. Validate Ngày sinh
     const birthDate = new Date(birthday);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -96,8 +93,7 @@ export const verifyAndRegister = async (req, res) => {
         .json({ message: "Bạn phải lớn hơn 10 tuổi để đăng ký." });
     }
 
-    // 1.3. Chuẩn hóa Gender (giữ nguyên)
-    // ... (logic chuẩn hóa gender của bạn) ...
+    // 1.3. Chuẩn hóa Gender
     let normalizedGender = null;
     if (gender) {
       const lowerGender = gender.toLowerCase();
@@ -113,9 +109,9 @@ export const verifyAndRegister = async (req, res) => {
       }
     }
 
-    // 1.4. Validate Phone (ĐÃ SỬA LOGIC)
+    // 1.4. Validate Phone
     const phoneRegex = /^0[0-9]{9,10}$/;
-    let cleanedPhone = phone ? phone.replace(/\s/g, "") : null; // 👈 Xóa tất cả khoảng trắng
+    let cleanedPhone = phone ? phone.replace(/\s/g, "") : null;
 
     if (cleanedPhone && !phoneRegex.test(cleanedPhone)) {
       return res.status(400).json({
@@ -124,7 +120,7 @@ export const verifyAndRegister = async (req, res) => {
       });
     }
 
-    // --- BƯỚC 2: KIỂM TRA VÀ "ĐỐT" OTP (giữ nguyên) ---
+    // --- BƯỚC 2: KIỂM TRA VÀ "ĐỐT" OTP ---
     const record = await Otp.findOneAndDelete({
       email,
       otp,
@@ -146,13 +142,14 @@ export const verifyAndRegister = async (req, res) => {
       birthday,
       password: hashed,
       gender: normalizedGender,
-      phone: cleanedPhone, // 👈 Lưu SĐT đã được làm sạch
+      phone: cleanedPhone,
       avatar,
     });
 
     res.status(201).json({ message: "Tài khoản đã được tạo thành công." });
   } catch (err) {
-    // ... (logic catch giữ nguyên) ...
+    console.error("❌ Lỗi trong verifyAndRegister:", err);
+    return res.status(500).json({ message: "Lỗi server", error: err.message });
   }
 };
 
@@ -227,13 +224,7 @@ export const login = async (req, res) => {
 
 export const getMe = async (req, res) => {
   try {
-    // Middleware 'verifyToken' đã giải mã token, tìm người dùng trong DB,
-    // và gán toàn bộ đối tượng user vào 'req.user'.
-
-    // Chúng ta không cần kiểm tra 'req.user.userId' hay tìm lại user.
-    // Nếu 'req.user' không tồn tại, middleware đã trả về lỗi 401 rồi.
-
-    // Chỉ cần trả về đối tượng 'req.user' đã được gán sẵn.
+    // Middleware 'verifyToken' đã gán toàn bộ đối tượng user vào 'req.user'.
     return res.status(200).json(req.user);
   } catch (err) {
     console.error("❌ Lỗi trong getMe:", err);
@@ -253,7 +244,6 @@ export const updateProfile = async (req, res) => {
     // --- BƯỚC 1: VALIDATE DỮ LIỆU TEXT TỪ REQ.BODY ---
     const { name, birthday, gender, phone } = req.body;
 
-    // THAY ĐỔI: Thay vì 'return', chúng ta 'throw' lỗi 400
     if (!name || !birthday) {
       throw { status: 400, message: "Vui lòng nhập đầy đủ thông tin..." };
     }
@@ -306,15 +296,13 @@ export const updateProfile = async (req, res) => {
     };
 
     // --- BƯỚC 3: XỬ LÝ FILE AVATAR (NẾU CÓ) ---
-    // (Logic xóa ảnh cũ của bạn đã đúng)
     if (req.file) {
       updateData.avatar = `/uploads/avatars/${req.file.filename}`;
-      const defaultAvatar =
-        "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+      
+      // ✅ LOGIC ĐÃ SỬA: Chỉ xóa file cũ nếu nó là một đường dẫn tương đối (đã upload)
       if (
         currentUser.avatar &&
-        currentUser.avatar !== defaultAvatar &&
-        !currentUser.avatar.startsWith("http")
+        currentUser.avatar.startsWith("/uploads/avatars/") 
       ) {
         const oldAvatarPath = path.join(process.cwd(), currentUser.avatar);
         try {
@@ -336,7 +324,6 @@ export const updateProfile = async (req, res) => {
     ).select("-password");
 
     if (!updatedUser) {
-      // THAY ĐỔI: 'throw' lỗi 404
       throw { status: 404, message: "Không tìm thấy người dùng." };
     }
 
@@ -347,18 +334,12 @@ export const updateProfile = async (req, res) => {
     });
   } catch (err) {
     // --- BƯỚC 6: KHỐI CATCH-ALL (BẮT TẤT CẢ LỖI) ---
-
-    // THAY ĐỔI QUAN TRỌNG:
-    // Luôn gọi rollback! Nếu req.file không tồn tại, hàm sẽ không làm gì.
-    // Nếu req.file tồn tại, nó sẽ bị xóa.
     rollbackUpload(req);
 
-    // Xử lý lỗi 400/404/403 mà chúng ta đã 'throw'
     if (err.status) {
       return res.status(err.status).json({ message: err.message });
     }
 
-    // Xử lý lỗi trùng lặp (từ DB)
     if (err.code === 11000) {
       const field = Object.keys(err.keyValue)[0];
       return res.status(409).json({
@@ -368,7 +349,6 @@ export const updateProfile = async (req, res) => {
       });
     }
 
-    // Các lỗi 500 khác
     console.error("❌ Lỗi trong updateProfile:", err);
     return res.status(500).json({ message: "Lỗi server", error: err.message });
   }
@@ -432,11 +412,8 @@ export const changePassword = async (req, res) => {
   try {
     const { oldPassword, newPassword } = req.body;
 
-    // 1. Lấy userId từ middleware 'verifyToken'
-    // Lưu ý: Dùng req.user._id (vì verifyToken mới đã gán đầy đủ user)
     const userId = req.user._id;
 
-    // 2. Kiểm tra dữ liệu đầu vào
     if (!oldPassword || !newPassword) {
       return res
         .status(400)
@@ -449,23 +426,19 @@ export const changePassword = async (req, res) => {
         .json({ message: "Mật khẩu mới phải có ít nhất 6 ký tự." });
     }
 
-    // 3. Lấy thông tin user (lần này cần lấy cả password)
-    // .select('+password') là cần thiết nếu bạn đã ẩn password trong schema
     const user = await User.findById(userId).select("+password");
     if (!user) {
       return res.status(404).json({ message: "Không tìm thấy người dùng." });
     }
 
-    // 4. Kiểm tra mật khẩu cũ
     const isMatch = await bcrypt.compare(oldPassword, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: "Mật khẩu cũ không chính xác." });
     }
 
-    // 5. Băm và lưu mật khẩu mới
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(newPassword, salt);
-    await user.save(); // Lưu lại user với mật khẩu mới
+    await user.save();
 
     return res.status(200).json({ message: "Đổi mật khẩu thành công." });
   } catch (err) {
@@ -496,7 +469,7 @@ export const getAllUsers = async (req, res) => {
  */
 export const register = async (req, res) => {
   try {
-    console.log('📝 Register endpoint hit!'); // ✅ Thêm log này
+    console.log('📝 Register endpoint hit!');
     console.log('📦 Body:', req.body);
     console.log('📎 File:', req.file);
 
@@ -532,7 +505,7 @@ export const register = async (req, res) => {
       birthday,
       gender,
       phone,
-      avatar: avatarPath, // ✅ Thêm field avatar
+      avatar: avatarPath,
       role: "VOLUNTEER",
     });
 
@@ -542,15 +515,4 @@ export const register = async (req, res) => {
     console.error("❌ Lỗi trong register:", error);
     return res.status(500).json({ message: "Lỗi server", error: error.message });
   }
-};
-
-// ✅ Kiểm tra tên function - có thể là:
-// - sendOTP (viết hoa TP)
-// - sendOtp (viết thường tp)  
-// - generateOTP
-// Hoặc function không tồn tại
-
-// Nếu function có tên khác, đổi tên cho khớp:
-export const sendOTP = async (req, res) => {
-  // ...existing code...
 };
