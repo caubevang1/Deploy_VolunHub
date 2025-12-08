@@ -1,0 +1,195 @@
+/* src/styles/EventDiscussion.css */
+
+/* --- Tông màu mới: Vàng Nhạt/Kem làm nền Box --- */
+:root {
+    --color-primary: #DDB958; /* Vàng/Nâu đậm cho nút, focus */
+    --color-primary-dark: #CDA550; /* Hover của nút */
+    --color-text-dark: #1f2937; /* Gray-800 */
+    --color-text-light: #6b7280; /* Gray-500 */
+    --color-background-card: #FFFBEB; /* Nền card VÀNG NHẠT/Kem */
+    --color-background-comment: #FEF3C7; /* Nền bubble comment đậm hơn chút (Amber-100) */
+}
+
+/* --- Tổng quan và Vùng chứa Chính --- */
+
+.discussion-container {
+    padding: 1.5rem; 
+}
+
+/* --- Header Event (Phần "Kênh Trao Đổi") --- */
+
+.discussion-header {
+    /* Giữ nền trắng để phân biệt với nội dung chính */
+    background-color: #ffffff; 
+    border-radius: 0.75rem; 
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.discussion-header h1 {
+    color: var(--color-text-dark);
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+/* --- Form Đăng Bài (New Post Form) --- */
+
+.post-form-card {
+    background-color: #fcfcfc; /* Màu trắng sáng */
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); /* Thêm bóng nhẹ */
+}
+
+.post-form-card textarea {
+    transition: all 0.2s;
+    border: 1px solid #e5e7eb;
+}
+
+.post-form-card textarea:focus {
+    /* Màu chủ đạo khi focus */
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 1px var(--color-primary);
+}
+
+.post-form-button {
+    /* Nút đăng bài - Màu Vàng/Nâu đậm */
+    background-color: var(--color-primary);
+    color: white;
+    transition: background-color 0.2s;
+}
+
+.post-form-button:hover {
+    background-color: var(--color-primary-dark);
+}
+
+
+/* --- Bài Viết (Post Item) --- */
+
+/* Tăng độ nổi bật cho Post Card */
+.post-item-card {
+    background-color: #ffffff; /* Giữ nền trắng */
+    border: 1px solid #e0e0e0; /* Viền nhạt */
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.08); /* Bóng rõ hơn */
+}
+
+.post-item-card:hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+}
+
+.post-author-name {
+    color: var(--color-text-dark); 
+    font-weight: 600;
+}
+
+.post-meta-time {
+    color: var(--color-text-light); 
+    font-size: 0.875rem;
+}
+
+/* --- Action Section (Like/Comment) --- */
+
+.post-actions {
+    border-top: 1px solid #fce3a7; /* Màu phân cách đậm hơn, tone vàng */
+    padding-top: 1rem;
+    margin-top: 1rem;
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+}
+
+.action-button {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    transition: transform 0.2s, color 0.2s;
+}
+
+.action-button:hover {
+    transform: translateY(-1px); 
+    color: var(--color-primary); /* Màu vàng/nâu khi hover */
+}
+
+/* --- Comment Section (Component CommentSection) --- */
+
+.comment-section-wrapper {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #FDE68A; /* Màu phân cách tone vàng */
+}
+
+.comment-input-area {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.comment-input-area input {
+    border-radius: 9999px; 
+    padding: 0.375rem 1rem;
+    border: 1px solid #d1d5db;
+    flex-grow: 1;
+    transition: border-color 0.2s;
+}
+
+.comment-input-area input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+}
+
+.comment-send-button {
+    color: var(--color-primary);
+    transition: color 0.2s;
+}
+
+.comment-send-button:hover {
+    color: var(--color-primary-dark);
+}
+
+/* Danh sách Comments */
+.comment-list {
+    padding-left: 0.75rem;
+    border-left: 2px solid #FDE68A; /* Border tone vàng */
+    margin-top: 0.75rem;
+}
+
+/* FIX: Khoảng cách giữa các comment */
+.comment-list > div {
+    margin-bottom: 0.75rem; 
+}
+
+.comment-list > div:last-child {
+    margin-bottom: 0;
+}
+
+/* Làm dịu Comment Bubble */
+.comment-bubble {
+    background-color: #f5f5f5; /* Thay màu vàng bằng màu xám nhạt */
+    border-radius: 18px;
+    padding: 8px 12px;
+    margin-bottom: 4px;
+    display: inline-block;
+    max-width: 100%;
+}
+
+.comment-meta {
+    margin-top: 0.25rem;
+    margin-left: 0.5rem;
+    font-size: 0.75rem;
+    color: var(--color-text-light); 
+}
+
+.comment-meta span:hover {
+    cursor: pointer;
+    color: var(--color-primary); /* Màu vàng/nâu cho link/thao tác */
+}
+
+.comment-meta .delete-link:hover {
+    color: #ef4444; /* Vẫn giữ màu đỏ cho Xóa */
+}

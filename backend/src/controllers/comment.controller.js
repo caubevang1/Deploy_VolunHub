@@ -1,7 +1,7 @@
 // src/controllers/comment.controller.js
 import Comment from '../models/comment.js';
-import Post from '../models/post.js'; // Cần để lấy eventId khi tạo comment
-import Registration from '../models/registration.js'; // Cần để kiểm tra quyền
+import Post from '../models/post.js'; 
+import Registration from '../models/registration.js';
 
 /**
  * [POST] /api/comments/post/:postId
@@ -45,6 +45,10 @@ export const createComment = async (req, res) => {
     });
 
     await newComment.save();
+    
+    // ✅ CẬP NHẬT: Tăng commentCount
+    await Post.findByIdAndUpdate(postId, { $inc: { commentCount: 1 } });
+
     const populatedComment = await newComment.populate('author', 'name avatar');
     res.status(201).json(populatedComment);
 
@@ -61,7 +65,7 @@ export const getPostComments = async (req, res) => {
   try {
     const comments = await Comment.find({ post: req.params.postId })
       .populate('author', 'name avatar')
-      .sort({ createdAt: 1 }); // Sắp xếp từ cũ nhất (hiển thị như 1 thread)
+      .sort({ createdAt: 1 }); // Sắp xếp từ cũ nhất
     res.status(200).json(comments);
   } catch (error) {
     res.status(500).json({ message: 'Lỗi server', error: error.message });
@@ -118,7 +122,14 @@ export const deleteComment = async (req, res) => {
       return res.status(403).json({ message: 'Bạn không có quyền xóa bình luận này.' });
     }
 
+    // Lấy postId trước khi xóa
+    const postId = comment.post; 
+    
     await Comment.findByIdAndDelete(commentId);
+    
+    // ✅ CẬP NHẬT: Giảm commentCount
+    await Post.findByIdAndUpdate(postId, { $inc: { commentCount: -1 } });
+
     res.status(200).json({ message: "Xóa bình luận thành công." });
 
   } catch (error) {
