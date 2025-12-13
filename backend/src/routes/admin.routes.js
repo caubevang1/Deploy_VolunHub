@@ -10,6 +10,9 @@ import {
   exportUsers,
   getDashboardStats,
   updateUserRole,
+  getTrendingEvents,
+  getRecentActivity,
+  getVolunteerRanking,
 } from "../controllers/admin.controller.js";
 
 const router = express.Router();
@@ -85,5 +88,24 @@ router.get("/export/users", exportUsers);
 // - Chức năng: Lấy tổng số user, tổng sự kiện, sự kiện chờ duyệt...
 // - Trả về: { totalUsers, totalEvents, pendingEvents, ... }
 router.get("/dashboard", getDashboardStats);
+
+// [GET] /api/admin/trending
+// 🔥 Sự kiện đang trending
+// - Chức năng: Lấy sự kiện có lượt đăng ký, bài viết, comment tăng nhanh
+// - Query: ?days=7 (mặc định 7 ngày)
+// - Trả về: Mảng events với metrics (recentRegistrations, recentPosts, recentComments, trendingScore)
+router.get("/trending", getTrendingEvents);
+
+// [GET] /api/admin/recent-activity
+// 🆕 Hoạt động gần đây
+// - Chức năng: Lấy sự kiện mới công bố và có tin bài mới
+// - Trả về: { recentlyPublished, recentPosts, recentComments }
+router.get("/recent-activity", getRecentActivity);
+
+// [GET] /api/admin/ranking
+// 🏆 Bảng xếp hạng tình nguyện viên
+// - Chức năng: Lấy danh sách volunteers xếp hạng theo points
+// - Trả về: Mảng volunteers với rank, points, completedEvents
+router.get("/ranking", getVolunteerRanking);
 
 export default router;

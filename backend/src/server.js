@@ -12,6 +12,7 @@ import { startCronJobs } from "./utils/cronJob.js"; // Hàm khởi động các 
 import authRoutes from "./routes/auth.routes.js"; // Đúng
 // import authRoutes from '../routes/auth.routes.js'; // ❌ Sai
 import adminRoutes from "./routes/admin.routes.js";
+import userRoutes from "./routes/user.routes.js";
 import eventRoutes from "./routes/event.routes.js";
 import registrationRoutes from "./routes/registration.routes.js";
 import dashboardRoutes from "./routes/dashboard.routes.js";
@@ -59,6 +60,7 @@ app.get("/", (req, res) => {
 // Gắn các routes vào ứng dụng với tiền tố tương ứng
 app.use("/api/auth", authRoutes); // Routes xác thực người dùng
 app.use("/api/admin", adminRoutes); // Routes cho admin
+app.use("/api/users", userRoutes); // Routes public cho users
 app.use("/api/events", eventRoutes); // Routes quản lý sự kiện
 app.use("/api/actions", eventActionRoutes); // Routes cho các hành động trên sự kiện
 app.use("/api/registrations", registrationRoutes); // Routes quản lý đăng ký

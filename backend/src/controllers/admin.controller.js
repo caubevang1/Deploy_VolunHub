@@ -4,6 +4,7 @@ import Event from "../models/event.js";
 import Registration from "../models/registration.js";
 import Post from "../models/post.js";
 import Comment from "../models/comment.js";
+import EventAction from "../models/eventAction.js";
 import fs from "fs";
 import path from "path";
 import { Parser } from "json2csv";
@@ -190,12 +191,20 @@ export const getDashboardStats = async (req, res) => {
     const approvedEventsCount = await Event.countDocuments({
       status: "approved",
     });
+    const rejectedEventsCount = await Event.countDocuments({
+      status: "rejected",
+    });
+    const completedEventsCount = await Event.countDocuments({
+      status: "completed",
+    });
 
     res.status(200).json({
       totalUsers,
       totalEvents,
       pendingEventsCount,
       approvedEventsCount,
+      rejectedEventsCount,
+      completedEventsCount,
     });
   } catch (error) {
     res.status(500).json({ message: "Lỗi server", error: error.message });
@@ -210,6 +219,145 @@ export const getAllSystemEvents = async (req, res) => {
 
     res.status(200).json(events);
   } catch (error) {
+    res.status(500).json({ message: "Lỗi server", error: error.message });
+  }
+};
+
+// --- TRENDING EVENTS ---
+export const getTrendingEvents = async (req, res) => {
+  try {
+    const { days = 7 } = req.query;
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - parseInt(days));
+
+    // Get events with registration counts since cutoff date
+    const events = await Event.find({ status: "approved" })
+      .populate("createdBy", "name email")
+      .lean();
+
+    // Calculate trending metrics for each event
+    const eventsWithMetrics = await Promise.all(
+      events.map(async (event) => {
+        const recentRegistrations = await Registration.countDocuments({
+          event: event._id,
+          createdAt: { $gte: cutoffDate },
+        });
+
+        const recentLikes = await EventAction.countDocuments({
+          event: event._id,
+          type: "LIKE",
+          createdAt: { $gte: cutoffDate },
+        });
+
+        const recentShares = await EventAction.countDocuments({
+          event: event._id,
+          type: "SHARE",
+          createdAt: { $gte: cutoffDate },
+        });
+
+        // Công thức: Đăng ký × 3 + Like × 2 + Share × 5
+        const trendingScore =
+          recentRegistrations * 3 + recentLikes * 2 + recentShares * 5;
+
+        return {
+          ...event,
+          recentRegistrations,
+          recentLikes,
+          recentShares,
+          trendingScore,
+        };
+      })
+    );
+
+    // Sort by trending score and return top 10
+    const trendingEvents = eventsWithMetrics
+      .sort((a, b) => b.trendingScore - a.trendingScore)
+      .slice(0, 10);
+
+    res.status(200).json(trendingEvents);
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi server", error: error.message });
+  }
+};
+
+// --- RECENT ACTIVITY ---
+export const getRecentActivity = async (req, res) => {
+  try {
+    // Recently published events (approved in last 7 days)
+    const recentlyPublished = await Event.find({
+      status: "approved",
+      updatedAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
+    })
+      .populate("createdBy", "name email")
+      .sort({ updatedAt: -1 })
+      .limit(5);
+
+    // Events with recent posts/comments (last 24 hours)
+    const recentPosts = await Post.find({
+      createdAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+    })
+      .populate("event", "name")
+      .populate("author", "name")
+      .sort({ createdAt: -1 })
+      .limit(10);
+
+    const recentComments = await Comment.find({
+      createdAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+    })
+      .populate("event", "name")
+      .populate("user", "name")
+      .sort({ createdAt: -1 })
+      .limit(10);
+
+    res.status(200).json({
+      recentlyPublished,
+      recentPosts,
+      recentComments,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi server", error: error.message });
+  }
+};
+
+// --- VOLUNTEER RANKING ---
+export const getVolunteerRanking = async (req, res) => {
+  try {
+    // Lấy tất cả volunteers với points và completed events
+    const volunteers = await User.find({ role: "VOLUNTEER" })
+      .select("name email avatar points")
+      .lean();
+
+    // Đếm số sự kiện hoàn thành cho mỗi volunteer
+    const volunteersWithStats = await Promise.all(
+      volunteers.map(async (volunteer) => {
+        const completedEvents = await Registration.countDocuments({
+          user: volunteer._id,
+          status: "completed",
+        });
+
+        return {
+          ...volunteer,
+          completedEvents,
+        };
+      })
+    );
+
+    // Sắp xếp theo points giảm dần
+    const sortedVolunteers = volunteersWithStats
+      .sort((a, b) => b.points - a.points)
+      .map((volunteer, index) => ({
+        ...volunteer,
+        rank: index + 1,
+        // Thêm đầy đủ URL cho avatar
+        avatar:
+          volunteer.avatar && !volunteer.avatar.startsWith("http")
+            ? `http://localhost:5000${volunteer.avatar}`
+            : volunteer.avatar,
+      }));
+
+    res.status(200).json(sortedVolunteers);
+  } catch (error) {
+    console.error("❌ Lỗi lấy ranking:", error);
     res.status(500).json({ message: "Lỗi server", error: error.message });
   }
 };

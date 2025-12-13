@@ -1,195 +1,499 @@
 /* src/styles/EventDiscussion.css */
 
-/* --- Tông màu mới: Vàng Nhạt/Kem làm nền Box --- */
+/* --- Variables --- */
 :root {
-    --color-primary: #DDB958; /* Vàng/Nâu đậm cho nút, focus */
-    --color-primary-dark: #CDA550; /* Hover của nút */
-    --color-text-dark: #1f2937; /* Gray-800 */
-    --color-text-light: #6b7280; /* Gray-500 */
-    --color-background-card: #FFFBEB; /* Nền card VÀNG NHẠT/Kem */
-    --color-background-comment: #FEF3C7; /* Nền bubble comment đậm hơn chút (Amber-100) */
+  --color-primary: #ddb958;
+  --color-primary-dark: #c9a84a;
+  --color-text-dark: #111827;
+  --color-text-light: #6b7280;
+  --color-border: #e5e7eb;
+  --color-bg-hover: #f3f4f6;
 }
 
-/* --- Tổng quan và Vùng chứa Chính --- */
+/* --- Container --- */
 
 .discussion-container {
-    padding: 1.5rem; 
+  padding: 2rem 1.5rem;
+  max-width: 900px;
+  margin: 0 auto;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e3e9f0 50%, #c3cfe2 100%);
 }
 
-/* --- Header Event (Phần "Kênh Trao Đổi") --- */
+/* --- Header Event --- */
 
 .discussion-header {
-    /* Giữ nền trắng để phân biệt với nội dung chính */
-    background-color: #ffffff; 
-    border-radius: 0.75rem; 
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
+  background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%);
+  border-radius: 1rem;
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.8);
 }
 
 .discussion-header h1 {
-    color: var(--color-text-dark);
-    font-size: 2rem;
-    font-weight: 700;
+  color: var(--color-text-dark);
+  font-size: 2rem;
+  font-weight: 700;
 }
 
-/* --- Form Đăng Bài (New Post Form) --- */
+/* --- Event Info Card --- */
 
-.post-form-card {
-    background-color: #fcfcfc; /* Màu trắng sáng */
-    border: 1px solid #e0e0e0;
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 20px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); /* Thêm bóng nhẹ */
+.event-info-card {
+  background: white;
+  border-radius: 1rem;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-.post-form-card textarea {
-    transition: all 0.2s;
-    border: 1px solid #e5e7eb;
+.event-info-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.06);
 }
 
-.post-form-card textarea:focus {
-    /* Màu chủ đạo khi focus */
-    border-color: var(--color-primary);
-    box-shadow: 0 0 0 1px var(--color-primary);
+.event-cover-image {
+  width: 100%;
+  height: 200px;
+  overflow: hidden;
+  background: #f9fafb;
 }
 
-.post-form-button {
-    /* Nút đăng bài - Màu Vàng/Nâu đậm */
-    background-color: var(--color-primary);
-    color: white;
-    transition: background-color 0.2s;
+.event-cover-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
-.post-form-button:hover {
-    background-color: var(--color-primary-dark);
+.event-info-content {
+  padding: 16px 20px;
 }
 
-
-/* --- Bài Viết (Post Item) --- */
-
-/* Tăng độ nổi bật cho Post Card */
-.post-item-card {
-    background-color: #ffffff; /* Giữ nền trắng */
-    border: 1px solid #e0e0e0; /* Viền nhạt */
-    border-radius: 12px;
-    padding: 20px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.08); /* Bóng rõ hơn */
+.event-meta-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
 }
 
-.post-item-card:hover {
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
-.post-author-name {
-    color: var(--color-text-dark); 
-    font-weight: 600;
+.status-approved {
+  background: #dcfce7;
+  color: #166534;
 }
 
-.post-meta-time {
-    color: var(--color-text-light); 
-    font-size: 0.875rem;
+.status-pending {
+  background: #fef3c7;
+  color: #92400e;
 }
 
-/* --- Action Section (Like/Comment) --- */
+.status-completed {
+  background: #dbeafe;
+  color: #1e40af;
+} /* --- Composer (Post Form) --- */
+
+.composer-card {
+  background: linear-gradient(135deg, #ffffff 0%, #fefefe 100%);
+  border: 1px solid rgba(221, 185, 88, 0.2);
+  border-radius: 1rem;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 20px rgba(221, 185, 88, 0.1), 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.composer-card:hover {
+  box-shadow: 0 6px 30px rgba(221, 185, 88, 0.15),
+    0 4px 12px rgba(0, 0, 0, 0.08);
+  border-color: rgba(221, 185, 88, 0.3);
+}
+
+.composer-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.composer-body {
+  margin-bottom: 12px;
+}
+
+.composer-textarea {
+  width: 100%;
+  border: 2px solid var(--color-border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  resize: none;
+  font-size: 15px;
+  line-height: 1.5;
+  transition: all 0.3s ease;
+  background: #fafbfc;
+}
+
+.composer-textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px rgba(221, 185, 88, 0.15);
+  background: white;
+}
+
+.composer-textarea:disabled {
+  background: #f3f4f6;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.composer-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border);
+}
+
+.composer-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.composer-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  color: #6b7280;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.composer-action-btn:hover:not(:disabled) {
+  background: var(--color-bg-hover);
+}
+
+.composer-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.composer-submit-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px;
+  border-radius: 10px;
+  background: linear-gradient(
+    135deg,
+    var(--color-primary) 0%,
+    var(--color-primary-dark) 100%
+  );
+  color: white;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(221, 185, 88, 0.3);
+}
+
+.composer-submit-btn:hover:not(:disabled) {
+  background: linear-gradient(
+    135deg,
+    var(--color-primary-dark) 0%,
+    var(--color-primary) 100%
+  );
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(221, 185, 88, 0.4);
+}
+
+.composer-submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.emoji-picker-wrapper {
+  margin-top: 12px;
+  border-top: 1px solid var(--color-border);
+  padding-top: 12px;
+}
+
+/* --- Feed & Posts --- */
+
+.feed-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.empty-state {
+  background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%);
+  border: 2px dashed rgba(221, 185, 88, 0.3);
+  border-radius: 1rem;
+  padding: 64px 24px;
+  text-align: center;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+}
+
+.post-card {
+  background: linear-gradient(135deg, #ffffff 0%, #fefefe 100%);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: 1rem;
+  padding: 20px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.03);
+  transition: all 0.3s ease;
+}
+
+.post-card:hover {
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1), 0 4px 12px rgba(0, 0, 0, 0.05);
+  transform: translateY(-2px);
+}
+
+.post-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.post-menu {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: 100%;
+  background: white;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 160px;
+  z-index: 10;
+  margin-top: 4px;
+}
+
+.post-header .group:hover .post-menu {
+  display: block;
+}
+
+.post-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 16px;
+  border: none;
+  background: white;
+  text-align: left;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.post-menu-item:hover {
+  background: var(--color-bg-hover);
+}
+
+.post-content {
+  margin-bottom: 12px;
+  line-height: 1.6;
+  color: var(--color-text-dark);
+  font-size: 15px;
+  max-width: 100%;
+}
+
+/* --- Post Stats & Actions --- */
+
+.post-stats {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  margin: 8px 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.reaction-icon {
+  width: 20px;
+  height: 20px;
+  background: #ef4444;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
 .post-actions {
-    border-top: 1px solid #fce3a7; /* Màu phân cách đậm hơn, tone vàng */
-    padding-top: 1rem;
-    margin-top: 1rem;
-    display: flex;
-    gap: 1.5rem;
-    align-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 4px 0;
+  border-top: 1px solid var(--color-border);
+  margin-top: 4px;
 }
 
-.action-button {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    cursor: pointer;
-    transition: transform 0.2s, color 0.2s;
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: transparent;
+  border: none;
+  color: #6b7280;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  flex: 1;
+  justify-content: center;
 }
 
-.action-button:hover {
-    transform: translateY(-1px); 
-    color: var(--color-primary); /* Màu vàng/nâu khi hover */
+.action-btn:hover {
+  background: rgba(221, 185, 88, 0.1);
+  transform: translateY(-1px);
 }
 
-/* --- Comment Section (Component CommentSection) --- */
+.action-btn-active {
+  color: #ef4444;
+}
+
+.action-btn-active:hover {
+  background: #fee2e2;
+  transform: translateY(-1px);
+}
+
+/* --- Comment Section --- */
 
 .comment-section-wrapper {
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid #FDE68A; /* Màu phân cách tone vàng */
+  margin-top: 16px;
+  padding: 16px;
+  background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+  border-radius: 12px;
+  border: 1px solid rgba(221, 185, 88, 0.1);
 }
 
 .comment-input-area {
-    display: flex;
-    gap: 0.75rem;
-    margin-bottom: 1rem;
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
 }
 
 .comment-input-area input {
-    border-radius: 9999px; 
-    padding: 0.375rem 1rem;
-    border: 1px solid #d1d5db;
-    flex-grow: 1;
-    transition: border-color 0.2s;
+  flex: 1;
+  border-radius: 20px;
+  padding: 8px 16px;
+  border: 1px solid var(--color-border);
+  font-size: 14px;
+  transition: all 0.2s;
+  background: white;
 }
 
 .comment-input-area input:focus {
-    outline: none;
-    border-color: var(--color-primary);
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(221, 185, 88, 0.1);
 }
 
 .comment-send-button {
-    color: var(--color-primary);
-    transition: color 0.2s;
+  color: var(--color-primary);
+  padding: 8px;
+  border-radius: 50%;
+  transition: all 0.2s;
+  background: transparent;
+  border: none;
+  cursor: pointer;
 }
 
 .comment-send-button:hover {
-    color: var(--color-primary-dark);
+  background: rgba(221, 185, 88, 0.1);
 }
 
-/* Danh sách Comments */
 .comment-list {
-    padding-left: 0.75rem;
-    border-left: 2px solid #FDE68A; /* Border tone vàng */
-    margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
 }
 
-/* FIX: Khoảng cách giữa các comment */
-.comment-list > div {
-    margin-bottom: 0.75rem; 
-}
-
-.comment-list > div:last-child {
-    margin-bottom: 0;
-}
-
-/* Làm dịu Comment Bubble */
 .comment-bubble {
-    background-color: #f5f5f5; /* Thay màu vàng bằng màu xám nhạt */
-    border-radius: 18px;
-    padding: 8px 12px;
-    margin-bottom: 4px;
-    display: inline-block;
-    max-width: 100%;
+  background: white;
+  border-radius: 16px;
+  padding: 12px 16px;
+  display: inline-block;
+  max-width: 100%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(221, 185, 88, 0.1);
+  transition: all 0.2s ease;
+}
+
+.comment-bubble:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateX(2px);
 }
 
 .comment-meta {
-    margin-top: 0.25rem;
-    margin-left: 0.5rem;
-    font-size: 0.75rem;
-    color: var(--color-text-light); 
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+  margin-left: 8px;
+  font-size: 12px;
+  color: var(--color-text-light);
+}
+
+.comment-meta span {
+  cursor: pointer;
+  transition: color 0.2s;
 }
 
 .comment-meta span:hover {
-    cursor: pointer;
-    color: var(--color-primary); /* Màu vàng/nâu cho link/thao tác */
+  color: var(--color-primary);
 }
 
 .comment-meta .delete-link:hover {
-    color: #ef4444; /* Vẫn giữ màu đỏ cho Xóa */
+  color: #ef4444;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .discussion-container {
+    padding: 12px;
+  }
+
+  .event-meta-line {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .event-meta-line > span {
+    display: none;
+  }
+
+  .composer-actions {
+    flex-wrap: wrap;
+  }
+
+  .action-btn {
+    font-size: 13px;
+    padding: 6px 12px;
+  }
 }

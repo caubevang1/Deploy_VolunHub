@@ -1,7 +1,11 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { Calendar, Users, MapPin, Heart, Share2, Search } from "lucide-react";
 import { GetEvents, GetEventActionStats } from "../services/EventService";
-import { GetMyEvent, CheckEventStatus, EventActions } from "../services/UserService";
+import {
+  GetMyEvent,
+  CheckEventStatus,
+  EventActions,
+} from "../services/UserService";
 import Swal from "sweetalert2";
 
 const categoryMapping = {
@@ -13,7 +17,7 @@ const categoryMapping = {
   Technical: "Kỹ thuật",
   Emergency: "Cứu trợ khẩn cấp",
   Online: "Trực tuyến",
-  Corporate: "Doanh nghiệp"
+  Corporate: "Doanh nghiệp",
 };
 
 export default function EventList() {
@@ -61,7 +65,7 @@ export default function EventList() {
           if (res.status === 200) {
             return {
               id: event._id,
-              stats: res.data // { likesCount, sharesCount, viewsCount }
+              stats: res.data, // { likesCount, sharesCount, viewsCount }
             };
           }
         } catch (error) {
@@ -74,13 +78,13 @@ export default function EventList() {
     // Cập nhật state events một lần duy nhất
     setEvents((prevEvents) =>
       prevEvents.map((ev) => {
-        const newStat = updatedStats.find(item => item && item.id === ev._id);
+        const newStat = updatedStats.find((item) => item && item.id === ev._id);
         if (newStat) {
           return {
             ...ev,
             likes: newStat.stats.likesCount,
             shares: newStat.stats.sharesCount,
-            views: newStat.stats.viewsCount
+            views: newStat.stats.viewsCount,
           };
         }
         return ev;
@@ -97,7 +101,12 @@ export default function EventList() {
         setEvents((prevEvents) =>
           prevEvents.map((ev) =>
             ev._id === eventId
-              ? { ...ev, likes: likesCount, shares: sharesCount, views: viewsCount }
+              ? {
+                  ...ev,
+                  likes: likesCount,
+                  shares: sharesCount,
+                  views: viewsCount,
+                }
               : ev
           )
         );
@@ -112,7 +121,9 @@ export default function EventList() {
     if (!eventList || eventList.length === 0) return;
 
     // Chỉ check những event chưa có trong state để tránh gọi lại
-    const eventsToCheck = eventList.filter(e => likedEvents[e._id] === undefined);
+    const eventsToCheck = eventList.filter(
+      (e) => likedEvents[e._id] === undefined
+    );
     if (eventsToCheck.length === 0) return;
 
     const statusMap = {};
@@ -174,7 +185,7 @@ export default function EventList() {
 
           // Map: { eventId: status } -> Giúp tra cứu nhanh O(1)
           const statusMap = {};
-          myEventList.forEach(item => {
+          myEventList.forEach((item) => {
             if (item.event && item.event._id) {
               statusMap[item.event._id] = item.status;
             }
@@ -231,12 +242,16 @@ export default function EventList() {
 
     // 2. Lọc theo Category
     if (appliedFilters.category) {
-      filtered = filtered.filter((event) => event.category === appliedFilters.category);
+      filtered = filtered.filter(
+        (event) => event.category === appliedFilters.category
+      );
     }
 
     // 3. Lọc theo Status Dropdown (Trạng thái tham gia của user)
     if (appliedFilters.status) {
-      filtered = filtered.filter((event) => userParticipationMap[event._id] === appliedFilters.status);
+      filtered = filtered.filter(
+        (event) => userParticipationMap[event._id] === appliedFilters.status
+      );
     }
 
     // 4. Lọc theo Search
@@ -255,11 +270,21 @@ export default function EventList() {
       filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
     } else {
       const originalOrder = new Map(events.map((e, idx) => [e._id, idx]));
-      filtered.sort((a, b) => (originalOrder.get(a._id) || 0) - (originalOrder.get(b._id) || 0));
+      filtered.sort(
+        (a, b) =>
+          (originalOrder.get(a._id) || 0) - (originalOrder.get(b._id) || 0)
+      );
     }
 
     setFilteredEvents(filtered);
-  }, [events, appliedFilters, debouncedQuery, tab, likedEvents, userParticipationMap]);
+  }, [
+    events,
+    appliedFilters,
+    debouncedQuery,
+    tab,
+    likedEvents,
+    userParticipationMap,
+  ]);
 
   const applyFilter = () => {
     setAppliedFilters({
@@ -304,17 +329,18 @@ export default function EventList() {
         );
 
         const res = await EventActions(eventId, { type: "SHARE" });
-        const shareLink = res.data?.link || `${window.location.origin}/su-kien/${eventId}`;
+        const shareLink =
+          res.data?.link || `${window.location.origin}/su-kien/${eventId}`;
 
         navigator.clipboard.writeText(shareLink);
         Swal.fire({
-          icon: 'success',
-          title: 'Đã sao chép!',
-          text: 'Liên kết sự kiện đã được sao chép vào bộ nhớ tạm.',
-          confirmButtonText: 'OK',
-          confirmButtonColor: '#DDB958',
+          icon: "success",
+          title: "Đã sao chép!",
+          text: "Liên kết sự kiện đã được sao chép vào bộ nhớ tạm.",
+          confirmButtonText: "OK",
+          confirmButtonColor: "#DDB958",
           timer: 2000,
-          timerProgressBar: true
+          timerProgressBar: true,
         });
 
         await updateSingleEventStats(eventId); // Đồng bộ lại số chuẩn
@@ -352,15 +378,20 @@ export default function EventList() {
   const tabCounts = useMemo(() => {
     return {
       all: events.length,
-      joined: events.filter(e => userParticipationMap[e._id]).length,
-      notJoined: events.filter(e => !userParticipationMap[e._id]).length,
+      joined: events.filter((e) => userParticipationMap[e._id]).length,
+      notJoined: events.filter((e) => !userParticipationMap[e._id]).length,
       liked: Object.values(likedEvents).filter(Boolean).length,
       forYou: 0,
     };
   }, [events, userParticipationMap, likedEvents]);
 
   const removeVietnameseTones = (str) =>
-    str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D").toLowerCase();
+    str
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/đ/g, "d")
+      .replace(/Đ/g, "D")
+      .toLowerCase();
 
   const softMatch = (source, keyword) => {
     source = removeVietnameseTones(source);
@@ -381,7 +412,12 @@ export default function EventList() {
     <div>
       {/* FILTER UI */}
       <div className="flex flex-wrap items-left gap-4 mb-8">
-        <select name="category" className="border border-gray-300 rounded-md px-3 py-2" value={filters.category} onChange={handleFilterChange}>
+        <select
+          name="category"
+          className="border border-gray-300 rounded-md px-3 py-2"
+          value={filters.category}
+          onChange={handleFilterChange}
+        >
           <option value="">Loại sự kiện</option>
           <option value="Cộng đồng">Cộng đồng</option>
           <option value="Giáo dục">Giáo dục</option>
@@ -394,7 +430,12 @@ export default function EventList() {
           <option value="Doanh nghiệp">Doanh nghiệp</option>
         </select>
 
-        <select name="status" className="border border-gray-300 rounded-md px-3 py-2 min-w-[150px]" value={filters.status} onChange={handleFilterChange}>
+        <select
+          name="status"
+          className="border border-gray-300 rounded-md px-3 py-2 min-w-[150px]"
+          value={filters.status}
+          onChange={handleFilterChange}
+        >
           <option value="">Tất cả trạng thái</option>
           <option value="pending">Đang chờ duyệt</option>
           <option value="approved">Đăng ký thành công</option>
@@ -402,18 +443,33 @@ export default function EventList() {
           <option value="rejected">Bị từ chối</option>
         </select>
 
-        <select name="dateOrder" className="border border-gray-300 rounded-md px-3 py-2" value={filters.dateOrder} onChange={handleFilterChange}>
+        <select
+          name="dateOrder"
+          className="border border-gray-300 rounded-md px-3 py-2"
+          value={filters.dateOrder}
+          onChange={handleFilterChange}
+        >
           <option value="">Thời gian</option>
           <option value="asc">Gần đến xa</option>
           <option value="desc">Xa đến gần</option>
         </select>
 
-        <button className="bg-[#DCBA58] text-white px-6 py-2.5 rounded-lg font-medium hover:bg-[#caa445]" onClick={applyFilter}>
+        <button
+          className="bg-[#DCBA58] text-white px-6 py-2.5 rounded-lg font-medium hover:bg-[#caa445]"
+          onClick={applyFilter}
+        >
           Lọc
         </button>
 
         <div className="flex w-[35vw] items-center border border-gray-300 rounded-full px-3 py-2 ml-10 shadow shadow-md">
-          <input type="text" name="query" value={filters.query} placeholder="Tìm kiếm tên sự kiện hoặc địa điểm..." className="flex-1 outline-none" onChange={handleFilterChange} />
+          <input
+            type="text"
+            name="query"
+            value={filters.query}
+            placeholder="Tìm kiếm tên sự kiện hoặc địa điểm..."
+            className="flex-1 outline-none"
+            onChange={handleFilterChange}
+          />
           <Search size={18} className="text-gray-500" />
         </div>
       </div>
@@ -434,10 +490,11 @@ export default function EventList() {
             <button
               key={key}
               onClick={() => setTab(key)}
-              className={`relative pb-2 whitespace-nowrap ${isActive
-                ? "text-[#DDB958] font-semibold"
-                : "hover:text-gray-900"
-                }`}
+              className={`relative pb-2 whitespace-nowrap ${
+                isActive
+                  ? "text-[#DDB958] font-semibold"
+                  : "hover:text-gray-900"
+              }`}
             >
               {label} ({count})
               {isActive && (
@@ -470,16 +527,29 @@ export default function EventList() {
               >
                 {/* Badge trạng thái user */}
                 {userStatus && (
-                  <div className={`absolute top-4 right-4 px-3 py-1 rounded-full text-white text-xs font-bold shadow-md z-10
-                        ${userStatus === 'approved' ? 'bg-green-500' :
-                      userStatus === 'pending' ? 'bg-yellow-500' :
-                        userStatus === 'rejected' ? 'bg-red-500' :
-                          userStatus === 'completed' ? 'bg-blue-500' : 'bg-gray-500'}`}
+                  <div
+                    className={`absolute top-4 right-4 px-3 py-1 rounded-full text-white text-xs font-bold shadow-md z-10
+                        ${
+                          userStatus === "approved"
+                            ? "bg-green-500"
+                            : userStatus === "pending"
+                            ? "bg-yellow-500"
+                            : userStatus === "rejected"
+                            ? "bg-red-500"
+                            : userStatus === "completed"
+                            ? "bg-blue-500"
+                            : "bg-gray-500"
+                        }`}
                   >
-                    {userStatus === 'approved' ? 'Đã đăng ký' :
-                      userStatus === 'pending' ? 'Chờ duyệt' :
-                        userStatus === 'rejected' ? 'Bị từ chối' :
-                          userStatus === 'completed' ? 'Hoàn thành' : userStatus}
+                    {userStatus === "approved"
+                      ? "Đã đăng ký"
+                      : userStatus === "pending"
+                      ? "Chờ duyệt"
+                      : userStatus === "rejected"
+                      ? "Bị từ chối"
+                      : userStatus === "completed"
+                      ? "Hoàn thành"
+                      : userStatus}
                   </div>
                 )}
 
@@ -502,13 +572,16 @@ export default function EventList() {
                     <div className="flex flex-col text-gray-700 text-[15px] gap-4 w-[140px] min-h-[120px]">
                       <div className="flex gap-2 items-center border-b pb-2">
                         <Calendar size={18} />
-                        <span>{new Date(event.date).toLocaleDateString("vi-VN")}</span>
+                        <span>
+                          {new Date(event.date).toLocaleDateString("vi-VN")}
+                        </span>
                       </div>
 
                       <div className="flex gap-2 items-center border-b pb-2">
                         <Users size={18} />
                         <span>
-                          {event.currentParticipants || 0}/{event.maxParticipants || 50}
+                          {event.currentParticipants || 0}/
+                          {event.maxParticipants || 50}
                         </span>
                       </div>
 
@@ -535,17 +608,31 @@ export default function EventList() {
                         <Heart
                           size={24}
                           strokeWidth={1.5}
-                          className={`${isLiked ? "text-red-600 fill-red-600" : "text-gray-600"}`}
+                          className={`${
+                            isLiked
+                              ? "text-red-600 fill-red-600"
+                              : "text-gray-600"
+                          }`}
                         />
-                        <span className="font-medium text-gray-700">{event.likes || 0}</span>
+                        <span className="font-medium text-gray-700">
+                          {event.likes || 0}
+                        </span>
                       </button>
 
                       <button
                         className="flex items-center gap-2 hover:scale-110 transition-transform"
-                        onClick={(e) => handleInteraction(e, event._id, "SHARE")}
+                        onClick={(e) =>
+                          handleInteraction(e, event._id, "SHARE")
+                        }
                       >
-                        <Share2 size={24} strokeWidth={1.5} className="text-blue-500" />
-                        <span className="font-medium text-gray-700">{event.shares || 0}</span>
+                        <Share2
+                          size={24}
+                          strokeWidth={1.5}
+                          className="text-blue-500"
+                        />
+                        <span className="font-medium text-gray-700">
+                          {event.shares || 0}
+                        </span>
                       </button>
                     </div>
 

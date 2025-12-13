@@ -1,0 +1,239 @@
+/* VolunteerRanking.css */
+
+.volunteer-ranking-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+}
+
+/* Header Section */
+.ranking-header {
+  background: white;
+  border-radius: 16px;
+  padding: 32px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.ranking-title-section {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.ranking-title {
+  font-size: 32px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0;
+}
+
+.ranking-subtitle {
+  font-size: 16px;
+  color: #6b7280;
+  margin: 4px 0 0 0;
+}
+
+/* Podium Section */
+.podium-container {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 0;
+  margin-top: 48px;
+  margin-bottom: 48px;
+}
+
+.podium-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  transition: transform 0.3s;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.podium-item:hover {
+  transform: translateY(-8px);
+}
+
+.podium-1 {
+  background: linear-gradient(180deg, #ddb958 0%, #c9a84a 100%);
+  width: 240px;
+  height: 340px;
+  order: 2;
+  border-radius: 12px 12px 0 0;
+  box-shadow: 0 -4px 20px rgba(221, 185, 88, 0.5);
+}
+
+.podium-2 {
+  background: linear-gradient(180deg, #b8b8b8 0%, #9e9e9e 100%);
+  width: 240px;
+  height: 260px;
+  order: 1;
+  border-radius: 12px 0 0 0;
+  box-shadow: 0 -4px 16px rgba(158, 158, 158, 0.4);
+}
+
+.podium-3 {
+  background: linear-gradient(180deg, #cd7f32 0%, #b86f28 100%);
+  width: 240px;
+  height: 200px;
+  order: 3;
+  border-radius: 0 12px 0 0;
+  box-shadow: 0 -4px 16px rgba(205, 127, 50, 0.4);
+}
+
+.podium-rank-number {
+  position: absolute;
+  font-size: 180px;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.15);
+  line-height: 1;
+  z-index: 1;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  user-select: none;
+}
+
+.podium-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 16px;
+  width: 100%;
+}
+
+.podium-avatar {
+  border: 4px solid white;
+  margin-bottom: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.podium-avatar img {
+  object-fit: cover;
+  width: 100%;
+  height: 100%;
+}
+
+.podium-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: white;
+  margin-top: 8px;
+  text-align: center;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.podium-points {
+  font-size: 22px;
+  font-weight: 800;
+  color: white;
+  margin-top: 4px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.podium-events {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.9);
+  margin-top: 4px;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Table Section */
+.ranking-table-card {
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.ranking-table-card .ant-card-body {
+  padding: 0;
+}
+
+.ranking-table {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.ranking-table .ant-table-thead > tr > th {
+  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+  font-weight: 700;
+  font-size: 14px;
+  color: #1f2937;
+  border-bottom: 2px solid #d1d5db;
+}
+
+.ranking-table tbody tr {
+  transition: all 0.3s;
+}
+
+.ranking-table tbody tr:hover {
+  background: #fef3c7;
+  transform: scale(1.01);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Row Highlighting for Top 3 */
+.ranking-table tbody tr.rank-1 {
+  background: linear-gradient(90deg, #fef3c7 0%, #ffffff 100%);
+  border-left: 4px solid #f59e0b;
+}
+
+.ranking-table tbody tr.rank-2 {
+  background: linear-gradient(90deg, #f3f4f6 0%, #ffffff 100%);
+  border-left: 4px solid #9ca3af;
+}
+
+.ranking-table tbody tr.rank-3 {
+  background: linear-gradient(90deg, #fed7aa 0%, #ffffff 100%);
+  border-left: 4px solid #f97316;
+}
+
+.ranking-table tbody tr.rank-1:hover,
+.ranking-table tbody tr.rank-2:hover,
+.ranking-table tbody tr.rank-3:hover {
+  transform: scale(1.02);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .volunteer-ranking-container {
+    padding: 16px;
+  }
+
+  .ranking-header {
+    padding: 20px;
+  }
+
+  .ranking-title {
+    font-size: 24px;
+  }
+
+  .podium-container {
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .podium-1,
+  .podium-2,
+  .podium-3 {
+    order: 0;
+    min-height: 200px;
+    width: 100%;
+    max-width: 300px;
+  }
+
+  .ranking-table {
+    font-size: 12px;
+  }
+}
