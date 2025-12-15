@@ -19,6 +19,8 @@ import {
   faUser,
   faUserShield,
   faUserTie,
+  faBars,
+  faTimes,
 } from "@fortawesome/free-solid-svg-icons";
 import Swal from "sweetalert2";
 import { GetUserInfo } from "../services/UserService";
@@ -63,23 +65,23 @@ export default function Header() {
     },
     ...(user?.role === "ADMIN"
       ? [
-          {
-            key: "2",
-            icon: <FontAwesomeIcon icon={faUserShield} />,
-            label: "Trang admin",
-            onClick: () => navigate("/admin"),
-          },
-        ]
+        {
+          key: "2",
+          icon: <FontAwesomeIcon icon={faUserShield} />,
+          label: "Trang admin",
+          onClick: () => navigate("/admin"),
+        },
+      ]
       : []),
     ...(user?.role === "EVENTMANAGER"
       ? [
-          {
-            key: "3",
-            icon: <FontAwesomeIcon icon={faUserTie} />,
-            label: "Trang quản lý",
-            onClick: () => navigate("/quanlisukien"),
-          },
-        ]
+        {
+          key: "3",
+          icon: <FontAwesomeIcon icon={faUserTie} />,
+          label: "Trang quản lý",
+          onClick: () => navigate("/quanlisukien"),
+        },
+      ]
       : []),
     {
       key: "4",
@@ -91,6 +93,7 @@ export default function Header() {
 
   const [showHeader, setShowHeader] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -119,18 +122,21 @@ export default function Header() {
 
   return (
     <header
-      className={`${
-        showHeader ? "translate-y-0" : "-translate-y-full"
-      } bg-gray-900 text-white py-4 shadow-md fixed top-0 left-0 w-full transition-transform duration-300 z-50`}
+      className={`${showHeader ? "translate-y-0" : "-translate-y-full"
+        } bg-gray-900 text-white py-4 shadow-md fixed top-0 left-0 w-full transition-transform duration-300 z-50`}
     >
-      <div className="container mx-auto flex items-center justify-between">
-        {/* Logo trường và đoàn */}
-        <div className="flex items-center gap-2">
-          <img src={logoUet} alt="Logo UET" className="h-16" />
-          <img src={logoDoan} alt="Logo Đoàn" className="h-16" />
-          <img src={logoHsv} alt="Logo HSV" className="h-16" />
-          <img src={dhcn} alt="Logo DHCN" className="h-12" />
-          <nav className="flex gap-6 text-lg ml-14 pl-4 font-semibold">
+      <div className="container mx-auto px-4">
+        <div className="flex items-center justify-between">
+          {/* Logo trường và đoàn */}
+          <div className="flex items-center gap-2">
+            <img src={logoUet} alt="Logo UET" className="h-10 md:h-16" />
+            <img src={logoDoan} alt="Logo Đoàn" className="h-10 md:h-16" />
+            <img src={logoHsv} alt="Logo HSV" className="h-10 md:h-16" />
+            <img src={dhcn} alt="Logo DHCN" className="h-8 md:h-12" />
+          </div>
+
+          {/* Desktop Navigation */}
+          <nav className="hidden lg:flex gap-6 text-lg font-semibold">
             {[
               { to: "/trang-chu", label: "Trang chủ" },
               { to: "/dashboard", label: "Dashboard" },
@@ -143,73 +149,106 @@ export default function Header() {
                 <Link
                   key={to}
                   to={to}
-                  className={`hover:text-white transition ${
-                    isActive ? "text-white" : "text-[#A0A0A7]"
-                  }`}
+                  className={`hover:text-white transition ${isActive ? "text-white" : "text-[#A0A0A7]"
+                    }`}
                 >
                   {label}
                 </Link>
               );
             })}
           </nav>
+
+          {/* Right side: User/Login + Mobile Menu Button */}
+          <div className="flex items-center gap-4">
+            {/* User Avatar or Login Button */}
+            {user ? (
+              <Dropdown
+                menu={{ items: menuItems }}
+                trigger={["hover"]}
+                placement="bottom"
+                arrow
+              >
+                <div className="flex items-center gap-2 cursor-pointer">
+                  <div className="relative">
+                    <img
+                      src={
+                        user?.avatar
+                          ? user.avatar.startsWith("http")
+                            ? user.avatar
+                            : `http://localhost:5000${user.avatar}`
+                          : "https://tse4.mm.bing.net/th/id/OIP.sDwEr1D6McBY9MeE3a_NpAHaHa?cb=12&rs=1&pid=ImgDetMain&o=7&rm=3"
+                      }
+                      alt="User Avatar"
+                      className="w-12 h-12 md:w-16 md:h-16 rounded-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src =
+                          "https://tse4.mm.bing.net/th/id/OIP.sDwEr1D6McBY9MeE3a_NpAHaHa?cb=12&rs=1&pid=ImgDetMain&o=7&rm=3";
+                      }}
+                    />
+                    <span
+                      className={`absolute bottom-0 right-0 w-3 h-3 md:w-4 md:h-4 rounded-full border-2 border-[#111827] 
+                      ${user?.status === "ACTIVE"
+                          ? "bg-green-500"
+                          : user?.status === "LOCKED"
+                            ? "bg-red-500"
+                            : "bg-red-400"
+                        }`}
+                      title={
+                        user?.status === "ACTIVE"
+                          ? "Đang hoạt động"
+                          : user?.status === "LOCKED"
+                            ? "Bị khóa"
+                            : "Không rõ"
+                      }
+                    ></span>
+                  </div>
+                </div>
+              </Dropdown>
+            ) : (
+              <button
+                onClick={() => dispatch(openLogin())}
+                className="bg-[#DCBA58] text-black px-3 py-1.5 md:px-4 md:py-2 rounded-md font-medium hover:bg-[#CDA550] transition text-sm md:text-base"
+              >
+                Đăng Nhập
+              </button>
+            )}
+
+            {/* Mobile Menu Button */}
+            <button
+              className="lg:hidden text-white text-2xl"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              <FontAwesomeIcon icon={mobileMenuOpen ? faTimes : faBars} />
+            </button>
+          </div>
         </div>
 
-        {/* Nút đăng nhập hoặc avatar */}
-        <div className="flex items-center gap-4">
-          {user ? (
-            <Dropdown
-              menu={{ items: menuItems }}
-              trigger={["hover"]}
-              placement="bottom"
-              arrow
-            >
-              <div className="flex items-center gap-2 cursor-pointer">
-                <div className="relative">
-                  <img
-                    src={
-                      user?.avatar
-                        ? user.avatar.startsWith("http")
-                          ? user.avatar
-                          : `http://localhost:5000${user.avatar}`
-                        : "https://tse4.mm.bing.net/th/id/OIP.sDwEr1D6McBY9MeE3a_NpAHaHa?cb=12&rs=1&pid=ImgDetMain&o=7&rm=3"
-                    }
-                    alt="User Avatar"
-                    className="w-16 h-16 rounded-full object-cover "
-                    onError={(e) => {
-                      e.currentTarget.onerror = null;
-                      e.currentTarget.src =
-                        "https://tse4.mm.bing.net/th/id/OIP.sDwEr1D6McBY9MeE3a_NpAHaHa?cb=12&rs=1&pid=ImgDetMain&o=7&rm=3";
-                    }}
-                  />
-                  <span
-                    className={`absolute bottom-0 right-0 w-4 h-4 rounded-full border-2 border-[#111827] 
-                    ${
-                      user?.status === "ACTIVE"
-                        ? "bg-green-500"
-                        : user?.status === "LOCKED"
-                        ? "bg-red-500"
-                        : "bg-red-400"
+        {/* Mobile Navigation */}
+        {mobileMenuOpen && (
+          <nav className="lg:hidden mt-4 flex flex-col gap-3 pb-4 border-t border-gray-700 pt-4">
+            {[
+              { to: "/trang-chu", label: "Trang chủ" },
+              { to: "/dashboard", label: "Dashboard" },
+              { to: "/hoat-dong", label: "Hoạt động" },
+              { to: "/quyen-gop", label: "Quyên góp" },
+              { to: "/tam-guong", label: "Tấm gương tình nguyện" },
+            ].map(({ to, label }) => {
+              const isActive = location.pathname === to;
+              return (
+                <Link
+                  key={to}
+                  to={to}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`text-lg font-semibold hover:text-white transition ${isActive ? "text-white" : "text-[#A0A0A7]"
                     }`}
-                    title={
-                      user?.status === "ACTIVE"
-                        ? "Đang hoạt động"
-                        : user?.status === "LOCKED"
-                        ? "Bị khóa"
-                        : "Không rõ"
-                    }
-                  ></span>
-                </div>
-              </div>
-            </Dropdown>
-          ) : (
-            <button
-              onClick={() => dispatch(openLogin())}
-              className="bg-[#DCBA58] text-black px-4 py-2 rounded-md font-medium hover:bg-[#CDA550] transition"
-            >
-              Đăng Nhập
-            </button>
-          )}
-        </div>
+                >
+                  {label}
+                </Link>
+              );
+            })}
+          </nav>
+        )}
 
         {/* Modal đăng nhập / đăng ký */}
         <AnimatePresence>

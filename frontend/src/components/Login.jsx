@@ -110,11 +110,11 @@ export default function Login() {
     const inputBg = form.remember ? "bg-[#e8f0fe]" : "bg-[#f5f5f5]";
 
     return (
-        <div className="fixed inset-0 flex items-center justify-center z-50 min-h-screen bg-black/50">
-            <div className="bg-white rounded-lg shadow-xl w-[520px] overflow-hidden">
+        <div className="fixed inset-0 flex items-center justify-center z-50 min-h-screen bg-black/50 px-4">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-[520px] overflow-hidden">
                 {/* Header */}
-                <div className="bg-[#2d2d3a] flex justify-between items-center px-5 py-5">
-                    <h2 className="text-2xl font-bold text-[#e6c675]">Đăng Nhập Tài Khoản</h2>
+                <div className="bg-[#2d2d3a] flex justify-between items-center px-4 md:px-5 py-4 md:py-5">
+                    <h2 className="text-xl md:text-2xl font-bold text-[#e6c675]">Đăng Nhập Tài Khoản</h2>
                     <button
                         onClick={() => dispatch(closeModal())}
                         className="bg-red-600 text-white rounded-md px-2 py-1 hover:bg-red-700"
@@ -124,7 +124,7 @@ export default function Login() {
                 </div>
 
                 {/* Form */}
-                <form onSubmit={handleSubmit} className="p-6">
+                <form onSubmit={handleSubmit} className="p-4 md:p-6">
                     {/* Username */}
                     <div className="mb-4">
                         <label className="flex items-center gap-2 text-gray-800 font-medium mb-1">

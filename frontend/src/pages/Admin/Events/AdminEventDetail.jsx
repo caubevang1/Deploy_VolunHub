@@ -12,7 +12,7 @@ const categoryMapping = {
   Technical: "Kỹ thuật",
   Emergency: "Cứu trợ khẩn cấp",
   Online: "Trực tuyến",
-  Corporate: "Doanh nghiệp",
+  Corporate: "Doanh nghiệp"
 };
 
 export default function AdminEventDetail() {
@@ -36,12 +36,7 @@ export default function AdminEventDetail() {
   }, [eventId]);
 
   if (loading) return <p className="text-center mt-10 text-lg">Đang tải...</p>;
-  if (!event)
-    return (
-      <p className="text-center mt-10 text-lg text-red-500">
-        Không tìm thấy sự kiện!
-      </p>
-    );
+  if (!event) return <p className="text-center mt-10 text-lg text-red-500">Không tìm thấy sự kiện!</p>;
 
   const formatDate = (dateStr) => {
     if (!dateStr) return "-";
@@ -81,112 +76,87 @@ export default function AdminEventDetail() {
   };
 
   return (
-    <div className="w-full bg-gradient-to-br from-gray-50 to-blue-50 min-h-screen p-6">
-      <div className="max-w-7xl mx-auto bg-white rounded-lg shadow-lg hover:shadow-xl transition-shadow overflow-hidden">
-        {/* Tiêu đề */}
-        <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-8 py-6">
-          <h1 className="text-3xl sm:text-4xl font-bold text-white">
-            {event.name}
-          </h1>
-        </div>
+    <div className="w-full bg-white rounded-2xl overflow-hidden text-[#111827]">
+      {/* Tiêu đề */}
+      <h1 className="text-4xl sm:text-4xl font-bold px-6 pt-8">{event.name}</h1>
 
-        {/* Ảnh */}
-        <div className="px-8 py-6">
-          <img
-            src={
-              event.coverImage
-                ? `http://localhost:5000${event.coverImage}`
-                : "/default-event.png"
-            }
-            alt={event.name}
-            className="w-full h-auto object-cover rounded-lg shadow-md"
-            style={{ maxHeight: "500px", objectFit: "cover" }}
-          />
-        </div>
+      {/* Ảnh */}
+      <img
+        src={event.coverImage ? `http://localhost:5000${event.coverImage}` : "/default-event.png"}
+        alt={event.name}
+        className="w-full h-full object-cover px-6 py-8"
+      />
 
-        {/* Nút quay lại */}
-        <div className="px-8 py-6">
-          <button
-            onClick={() => navigate(-1)}
-            className="bg-blue-500 hover:bg-blue-600 text-white font-semibold px-6 py-2 rounded-lg transition-all flex items-center gap-2 shadow-md hover:shadow-lg"
-          >
-            <span>←</span>
-            <span>Quay lại</span>
-          </button>
-        </div>
+      {/* Nút quay lại */}
+      <div className="px-6 py-4">
+        <button
+          onClick={() => navigate(-1)}
+          className="text-blue-600 hover:underline font-semibold"
+        >
+          ← Quay lại
+        </button>
+      </div>
 
-        {/* Thông tin chi tiết */}
-        <div className="mx-8 mb-6 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg border-2 border-blue-200">
-          <h2 className="text-2xl font-semibold mb-6 text-blue-900 flex items-center gap-2">
-            Thông Tin Sự Kiện
-          </h2>
-          <div className="flex flex-col sm:flex-row gap-10 text-gray-700 text-lg">
-            <div className="flex flex-col gap-6 flex-1">
-              <div className="flex items-center gap-3">
-                <Calendar size={20} />
-                <span>
-                  <strong>Ngày tổ chức:</strong> {formatDate(event.date)}
-                </span>
-              </div>
+      {/* Thông tin chi tiết */}
+      <div className="px-12 py-8 text-gray-700 flex flex-col sm:flex-row gap-10 text-lg">
+        <div className="flex flex-col gap-6 flex-1">
+          <div className="flex items-center gap-3">
+            <Calendar size={20} />
+            <span>
+              <strong>Ngày tổ chức:</strong> {formatDate(event.date)}
+            </span>
+          </div>
 
-              <div className="flex items-center gap-3">
-                <Tag size={20} />
-                <span>
-                  <strong>Loại sự kiện:</strong>{" "}
-                  {categoryMapping[event.category] || event.category || "Khác"}
-                </span>
-              </div>
+          <div className="flex items-center gap-3">
+            <Tag size={20} />
+            <span>
+              <strong>Loại sự kiện:</strong> {categoryMapping[event.category] || event.category || "Khác"}
+            </span>
+          </div>
 
-              <div className="flex items-center gap-3">
-                <MapPin size={20} />
-                <span>
-                  <strong>Địa điểm:</strong> {event.location}
-                </span>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-6 flex-1">
-              <div className="flex items-center gap-3">
-                <Calendar size={20} />
-                <span>
-                  <strong>Ngày kết thúc:</strong> {formatDate(event.endDate)}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Users size={20} />
-                <span>
-                  <strong>Số người tham gia:</strong>{" "}
-                  {event.currentParticipants || 0}/{event.maxParticipants || 50}
-                </span>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0">
-                  <Phone size={20} />
-                </div>
-                <span className="break-words">
-                  <strong>Thắc mắc liên hệ:</strong>{" "}
-                  {event.createdBy?.phone || "0123456789"} (
-                  {event.createdBy?.name || "Nguyễn Trường Nam"})
-                </span>
-              </div>
-            </div>
+          <div className="flex items-center gap-3">
+            <MapPin size={20} />
+            <span>
+              <strong>Địa điểm:</strong> {event.location}
+            </span>
           </div>
         </div>
 
-        {/* Mô tả sự kiện */}
-        <div className="px-8 pb-8">
-          <h2 className="text-2xl font-semibold mb-4 text-blue-900 flex items-center gap-2">
-            Mô Tả Sự Kiện
-          </h2>
-          <div
-            className="prose prose-lg max-w-none prose-img:m-auto bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-lg border-2 border-green-200"
-            dangerouslySetInnerHTML={{
-              __html: renderDescription(event.description, event.galleryImages),
-            }}
-          />
+        <div className="flex flex-col gap-6 flex-1">
+          <div className="flex items-center gap-3">
+            <Calendar size={20} />
+            <span>
+              <strong>Ngày kết thúc:</strong> {formatDate(event.endDate)}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Users size={20} />
+            <span>
+              <strong>Số người tham gia:</strong> {event.currentParticipants || 0}/{event.maxParticipants || 50}
+            </span>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0">
+              <Phone size={20} />
+            </div>
+            <span className="break-words">
+              <strong>Thắc mắc liên hệ:</strong> {event.createdBy?.phone || "0123456789"} ({event.createdBy?.name || "Nguyễn Trường Nam"})
+            </span>
+          </div>
         </div>
+      </div>
+
+      {/* Mô tả sự kiện */}
+      <div className="px-6 pb-12">
+        <h2 className="text-3xl font-semibold mb-4">Mô tả sự kiện</h2>
+        <div
+          className="prose prose-lg max-w-none prose-img:m-auto"
+          dangerouslySetInnerHTML={{
+            __html: renderDescription(event.description, event.galleryImages)
+          }}
+        />
       </div>
     </div>
   );

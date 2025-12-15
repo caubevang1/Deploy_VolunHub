@@ -1,35 +1,45 @@
-import { useState, useEffect, useCallback } from "react";
-import { Table, Input, Button, message, Tag } from "antd";
-import { debounce } from "lodash";
-import { GetEvents, DeleteEvent } from "../../../services/AdminService";
-import { ReloadOutlined } from "@ant-design/icons";
-import { useNavigate } from "react-router-dom";
-import Swal from "sweetalert2";
+import { useState, useEffect, useCallback } from 'react';
+import { Table, Input, Button, message, Tag, Select } from 'antd';
+import { debounce } from 'lodash';
+import { GetEvents, DeleteEvent } from '../../../services/AdminService';
+import { ReloadOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
+import Swal from 'sweetalert2';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTrash } from "@fortawesome/free-solid-svg-icons";
 
 const { Search } = Input;
 
+// Bảng ánh xạ loại tình nguyện
+const categoryMapping = {
+  Community: "Cộng đồng",
+  Education: "Giáo dục",
+  Healthcare: "Sức khỏe",
+  Environment: "Môi trường",
+  EventSupport: "Sự kiện",
+  Technical: "Kỹ thuật",
+  Emergency: "Cứu trợ khẩn cấp",
+  Online: "Trực tuyến",
+  Corporate: "Doanh nghiệp",
+};
+
+// Bảng ánh xạ trạng thái
+const statusMapping = {
+  approved: "Đã duyệt",
+  rejected: "Từ chối",
+  completed: "Hoàn thành",
+  pending: "Chờ duyệt",
+};
+
 export default function AdminEvents() {
   const [data, setData] = useState([]);
   const [originalData, setOriginalData] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState(null);
-  const [selectedStatus, setSelectedStatus] = useState(null);
   const navigate = useNavigate();
-
-  // Bảng ánh xạ loại tình nguyện
-  const categoryMapping = {
-    Community: "Cộng đồng",
-    Education: "Giáo dục",
-    Healthcare: "Sức khỏe",
-    Environment: "Môi trường",
-    EventSupport: "Sự kiện",
-    Technical: "Kỹ thuật",
-    Emergency: "Cứu trợ khẩn cấp",
-    Online: "Trực tuyến",
-    Corporate: "Doanh nghiệp",
-  };
+  const [filters, setFilters] = useState({
+    category: '',
+    status: '',
+  });
 
   // Fetch events
   const fetchEvents = async () => {
@@ -41,11 +51,15 @@ export default function AdminEvents() {
         setOriginalData(res.data);
       }
     } catch (error) {
-      console.error("Lỗi khi lấy danh sách sự kiện:", error);
-      message.error("Không thể tải danh sách sự kiện");
+      console.error('Lỗi khi lấy danh sách sự kiện:', error);
+      message.error('Không thể tải danh sách sự kiện');
     }
     setLoading(false);
   };
+
+  useEffect(() => {
+    fetchEvents();
+  }, []);
 
   const removeVietnameseTones = (str) => {
     return str
@@ -56,60 +70,54 @@ export default function AdminEvents() {
       .toLowerCase();
   };
 
-  const applyFilters = useCallback(
-    (
-      searchValue = "",
-      category = selectedCategory,
-      status = selectedStatus
-    ) => {
+  const searchKeyword = useCallback(
+    debounce((value) => {
+      const keyword = removeVietnameseTones(value.trim().toLowerCase());
+
       let filtered = [...originalData];
 
-      if (category) {
-        filtered = filtered.filter((event) => event.category === category);
+      // Lọc theo category
+      if (filters.category) {
+        filtered = filtered.filter(event => event.category === filters.category);
       }
 
-      if (status) {
-        filtered = filtered.filter((event) => event.status === status);
+      // Lọc theo status
+      if (filters.status) {
+        filtered = filtered.filter(event => event.status === filters.status);
       }
 
-      if (searchValue) {
-        const keyword = removeVietnameseTones(searchValue.trim().toLowerCase());
-        filtered = filtered.filter((event) => {
+      // Lọc theo keyword
+      if (keyword) {
+        filtered = filtered.filter(event => {
           const name = removeVietnameseTones(event.name || "");
           return name.includes(keyword);
         });
       }
 
       setData(filtered);
-    },
-    [originalData, selectedCategory, selectedStatus]
-  );
-
-  const searchKeyword = useCallback(
-    debounce((value) => {
-      applyFilters(value);
     }, 300),
-    [applyFilters]
+    [originalData, filters]
   );
 
-  useEffect(() => {
-    fetchEvents();
-  }, []);
+  const handleFilterChange = (key, value) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+  };
 
+  // Áp dụng filter khi filters thay đổi
   useEffect(() => {
-    applyFilters();
-  }, [selectedCategory, selectedStatus, applyFilters]);
+    searchKeyword('');
+  }, [filters, searchKeyword]);
 
   const handleDeleteEvent = async (eventId, name) => {
     const result = await Swal.fire({
       title: `Xác nhận xóa sự kiện?`,
       text: name,
-      icon: "warning",
+      icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: "#DDB958",
-      cancelButtonColor: "#d33",
-      confirmButtonText: "Xác nhận",
-      cancelButtonText: "Hủy",
+      confirmButtonColor: '#DDB958',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Xác nhận',
+      cancelButtonText: 'Hủy',
     });
 
     if (!result.isConfirmed) return;
@@ -117,13 +125,13 @@ export default function AdminEvents() {
     try {
       const res = await DeleteEvent(eventId);
       if (res.status === 200) {
-        Swal.fire("Đã xóa!", "", "success");
+        Swal.fire('Đã xóa!', '', 'success');
         fetchEvents();
       } else {
-        Swal.fire("Lỗi", "Không thể xóa sự kiện", "error");
+        Swal.fire('Lỗi', 'Không thể xóa sự kiện', 'error');
       }
     } catch (error) {
-      Swal.fire("Lỗi", "Đã xảy ra lỗi khi xóa sự kiện", "error");
+      Swal.fire('Lỗi', 'Đã xảy ra lỗi khi xóa sự kiện', 'error');
     }
   };
 
@@ -133,10 +141,9 @@ export default function AdminEvents() {
 
   const columns = [
     {
-      title: "Tên sự kiện",
-      dataIndex: "name",
-      sorter: (a, b) =>
-        a.name.toLowerCase().localeCompare(b.name.toLowerCase()),
+      title: 'Tên sự kiện',
+      dataIndex: 'name',
+      sorter: (a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()),
       render: (text, event) => (
         <Button
           type="link"
@@ -148,43 +155,43 @@ export default function AdminEvents() {
             {text}
           </span>
         </Button>
-      ),
+      )
     },
     {
-      title: "Ngày",
-      dataIndex: "date",
+      title: 'Ngày',
+      dataIndex: 'date',
       sorter: (a, b) => new Date(a.date) - new Date(b.date),
       render: (date) => new Date(date).toLocaleDateString(),
     },
     {
-      title: "Địa điểm",
-      dataIndex: "location",
+      title: 'Địa điểm',
+      dataIndex: 'location',
     },
     {
-      title: "Loại sự kiện",
-      dataIndex: "category",
+      title: 'Loại sự kiện',
+      dataIndex: 'category',
       render: (category) => categoryMapping[category] || category,
     },
     {
-      title: "Trạng thái",
-      dataIndex: "status",
+      title: 'Trạng thái',
+      dataIndex: 'status',
       render: (status) => {
-        const statusConfig = {
-          pending: { color: "warning", text: "CHỞ DUYỆT" },
-          completed: { color: "processing", text: "HOÀN THÀNH" },
-          approved: { color: "success", text: "ĐÃ DUYỆT" },
-          rejected: { color: "error", text: "TỪ CHỐI" },
-        }[status] || { color: "default", text: status.toUpperCase() };
+        const color = {
+          pending: '!text-[#DDB958]',
+          completed: '!text-blue-500',
+          approved: '!text-green-500',
+          rejected: '!text-red-500'
+        }[status] || '!text-gray-500';
         return (
-          <Tag color={statusConfig.color} className="font-semibold">
-            {statusConfig.text}
+          <Tag className={`ml-0 pl-0 !border-none !bg-transparent !font-semibold !text-[15px] ${color}`}>
+            {statusMapping[status] || status}
           </Tag>
         );
-      },
+      }
     },
     {
-      title: "Thao tác",
-      align: "center",
+      title: 'Thao tác',
+      align: 'center',
       render: (_, event) => (
         <Button
           type="text"
@@ -197,70 +204,71 @@ export default function AdminEvents() {
           }
           onClick={() => handleDeleteEvent(event._id, event.name)}
         />
-      ),
-    },
+      )
+    }
   ];
 
   return (
-    <div className="adminEvents p-6 bg-gradient-to-br from-gray-50 to-blue-50 min-h-screen">
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <div className="flex items-center gap-3">
-          <h2 className="text-3xl font-bold text-gray-800">Quản Lý Sự Kiện</h2>
-        </div>
+    <div className="adminEvents">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-2xl uppercase font-bold">Quản lý sự kiện</h2>
+        <Button icon={<ReloadOutlined />} onClick={fetchEvents}>
+          Tải lại
+        </Button>
       </div>
 
-      <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-        <div className="flex gap-3">
-          <Search
-            className="flex-1 shadow-sm"
-            placeholder="Tìm kiếm theo tên sự kiện..."
-            size="large"
-            onChange={(e) => searchKeyword(e.target.value)}
-            allowClear
-            style={{ borderRadius: 8 }}
-          />
-          <select
-            className="px-4 py-2 border rounded-lg text-base cursor-pointer hover:border-blue-500 transition-colors"
-            style={{ minWidth: 180 }}
-            value={selectedCategory || ""}
-            onChange={(e) => setSelectedCategory(e.target.value || null)}
-          >
-            <option value="">Tất cả loại</option>
-            {Object.entries(categoryMapping).map(([key, label]) => (
-              <option key={key} value={key}>
-                {label}
-              </option>
-            ))}
-          </select>
-          <select
-            className="px-4 py-2 border rounded-lg text-base cursor-pointer hover:border-blue-500 transition-colors"
-            style={{ minWidth: 150 }}
-            value={selectedStatus || ""}
-            onChange={(e) => setSelectedStatus(e.target.value || null)}
-          >
-            <option value="">Tất cả trạng thái</option>
-            <option value="pending">Chờ duyệt</option>
-            <option value="approved">Đã duyệt</option>
-            <option value="rejected">Từ chối</option>
-            <option value="completed">Hoàn thành</option>
-          </select>
-        </div>
-      </div>
+      <div className="flex items-center gap-4 mb-4">
+        <Search
+          className="flex-1"
+          placeholder="Tìm kiếm theo tên sự kiện"
+          size="large"
+          onChange={(e) => searchKeyword(e.target.value)}
+        />
 
-      <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6">
-        <Table
-          columns={columns}
-          dataSource={data}
-          rowKey="_id"
-          loading={loading}
-          pagination={{
-            pageSize: 8,
-            showSizeChanger: false,
-            showTotal: (total) => `Tổng ${total} sự kiện`,
-          }}
-          className="rounded-md"
+        <Select
+          placeholder="Loại sự kiện"
+          size="large"
+          style={{ width: 180 }}
+          allowClear
+          value={filters.category || undefined}
+          onChange={(value) => handleFilterChange('category', value)}
+          options={[
+            { value: 'Community', label: 'Cộng đồng' },
+            { value: 'Education', label: 'Giáo dục' },
+            { value: 'Healthcare', label: 'Sức khỏe' },
+            { value: 'Environment', label: 'Môi trường' },
+            { value: 'EventSupport', label: 'Sự kiện' },
+            { value: 'Technical', label: 'Kỹ thuật' },
+            { value: 'Emergency', label: 'Cứu trợ khẩn cấp' },
+            { value: 'Online', label: 'Trực tuyến' },
+            { value: 'Corporate', label: 'Doanh nghiệp' },
+          ]}
+        />
+
+        <Select
+          placeholder="Trạng thái"
+          size="large"
+          style={{ width: 150 }}
+          allowClear
+          value={filters.status || undefined}
+          onChange={(value) => handleFilterChange('status', value)}
+          options={[
+            { value: 'approved', label: 'Đã duyệt' },
+            { value: 'rejected', label: 'Từ chối' },
+            { value: 'completed', label: 'Hoàn thành' },
+            { value: 'pending', label: 'Chờ duyệt' },
+          ]}
         />
       </div>
+
+      <Table
+        columns={columns}
+        dataSource={data}
+        rowKey="_id"
+        loading={loading}
+        pagination={{ pageSize: 8 }}
+        className="shadow-md rounded-md"
+      />
     </div>
   );
 }

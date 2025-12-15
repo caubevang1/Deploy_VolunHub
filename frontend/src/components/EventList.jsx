@@ -102,11 +102,11 @@ export default function EventList() {
           prevEvents.map((ev) =>
             ev._id === eventId
               ? {
-                  ...ev,
-                  likes: likesCount,
-                  shares: sharesCount,
-                  views: viewsCount,
-                }
+                ...ev,
+                likes: likesCount,
+                shares: sharesCount,
+                views: viewsCount,
+              }
               : ev
           )
         );
@@ -409,12 +409,12 @@ export default function EventList() {
   if (loading) return <p className="text-center text-lg">Đang tải...</p>;
 
   return (
-    <div>
+    <div className="px-2 md:px-0">
       {/* FILTER UI */}
-      <div className="flex flex-wrap items-left gap-4 mb-8">
+      <div className="flex flex-col md:flex-row md:flex-wrap items-stretch md:items-left gap-3 md:gap-4 mb-6 md:mb-8">
         <select
           name="category"
-          className="border border-gray-300 rounded-md px-3 py-2"
+          className="border border-gray-300 rounded-md px-3 py-2 text-sm md:text-base w-full md:w-auto"
           value={filters.category}
           onChange={handleFilterChange}
         >
@@ -432,7 +432,7 @@ export default function EventList() {
 
         <select
           name="status"
-          className="border border-gray-300 rounded-md px-3 py-2 min-w-[150px]"
+          className="border border-gray-300 rounded-md px-3 py-2 text-sm md:text-base w-full md:min-w-[150px] md:w-auto"
           value={filters.status}
           onChange={handleFilterChange}
         >
@@ -445,7 +445,7 @@ export default function EventList() {
 
         <select
           name="dateOrder"
-          className="border border-gray-300 rounded-md px-3 py-2"
+          className="border border-gray-300 rounded-md px-3 py-2 text-sm md:text-base w-full md:w-auto"
           value={filters.dateOrder}
           onChange={handleFilterChange}
         >
@@ -455,19 +455,19 @@ export default function EventList() {
         </select>
 
         <button
-          className="bg-[#DCBA58] text-white px-6 py-2.5 rounded-lg font-medium hover:bg-[#caa445]"
+          className="bg-[#DCBA58] text-white px-4 md:px-6 py-2.5 rounded-lg font-medium hover:bg-[#caa445] text-sm md:text-base w-full md:w-auto"
           onClick={applyFilter}
         >
           Lọc
         </button>
 
-        <div className="flex w-[35vw] items-center border border-gray-300 rounded-full px-3 py-2 ml-10 shadow shadow-md">
+        <div className="flex w-full md:w-[35vw] items-center border border-gray-300 rounded-full px-3 py-2 md:ml-10 shadow shadow-md">
           <input
             type="text"
             name="query"
             value={filters.query}
             placeholder="Tìm kiếm tên sự kiện hoặc địa điểm..."
-            className="flex-1 outline-none"
+            className="flex-1 outline-none text-sm md:text-base"
             onChange={handleFilterChange}
           />
           <Search size={18} className="text-gray-500" />
@@ -475,7 +475,7 @@ export default function EventList() {
       </div>
 
       {/* TAB TAG */}
-      <div className="flex gap-12 border-b-2 border-gray-600 text-xl font-medium text-gray-600 mb-6 pl-4 mt-10 overflow-x-auto">
+      <div className="flex gap-6 md:gap-12 border-b-2 border-gray-600 text-base md:text-xl font-medium text-gray-600 mb-4 md:mb-6 pl-2 md:pl-4 mt-6 md:mt-10 overflow-x-auto scrollbar-hide">
         {[
           { key: "all", label: "Tất Cả" },
           { key: "joined", label: "Đã Đăng Ký" },
@@ -490,11 +490,10 @@ export default function EventList() {
             <button
               key={key}
               onClick={() => setTab(key)}
-              className={`relative pb-2 whitespace-nowrap ${
-                isActive
+              className={`relative pb-2 whitespace-nowrap text-sm md:text-base ${isActive
                   ? "text-[#DDB958] font-semibold"
                   : "hover:text-gray-900"
-              }`}
+                }`}
             >
               {label} ({count})
               {isActive && (
@@ -510,11 +509,11 @@ export default function EventList() {
 
       {/* EVENT LIST */}
       {filteredEvents.length === 0 ? (
-        <div className="text-center text-gray-500 py-20">
-          <p className="text-xl">Không tìm thấy sự kiện nào</p>
+        <div className="text-center text-gray-500 py-12 md:py-20">
+          <p className="text-lg md:text-xl">Không tìm thấy sự kiện nào</p>
         </div>
       ) : (
-        <div className="flex flex-wrap justify-center gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
           {filteredEvents.map((event) => {
             const isLiked = likedEvents[event._id] || false;
             const userStatus = userParticipationMap[event._id];
@@ -522,34 +521,33 @@ export default function EventList() {
             return (
               <div
                 key={event._id}
-                className="bg-white rounded-2xl shadow-md overflow-hidden w-[400px] hover:shadow-xl transition mt-4 h-[750px] flex flex-col cursor-pointer relative"
+                className="bg-white rounded-2xl shadow-md overflow-hidden w-full md:w-auto hover:shadow-xl transition mt-2 md:mt-4 h-auto md:h-[750px] flex flex-col cursor-pointer relative"
                 onClick={() => handleViewDetail(event._id)}
               >
                 {/* Badge trạng thái user */}
                 {userStatus && (
                   <div
-                    className={`absolute top-4 right-4 px-3 py-1 rounded-full text-white text-xs font-bold shadow-md z-10
-                        ${
-                          userStatus === "approved"
-                            ? "bg-green-500"
-                            : userStatus === "pending"
-                            ? "bg-yellow-500"
-                            : userStatus === "rejected"
+                    className={`absolute top-2 md:top-4 right-2 md:right-4 px-2 md:px-3 py-1 rounded-full text-white text-[10px] md:text-xs font-bold shadow-md z-10
+                        ${userStatus === "approved"
+                        ? "bg-green-500"
+                        : userStatus === "pending"
+                          ? "bg-yellow-500"
+                          : userStatus === "rejected"
                             ? "bg-red-500"
                             : userStatus === "completed"
-                            ? "bg-blue-500"
-                            : "bg-gray-500"
-                        }`}
+                              ? "bg-blue-500"
+                              : "bg-gray-500"
+                      }`}
                   >
                     {userStatus === "approved"
                       ? "Đã đăng ký"
                       : userStatus === "pending"
-                      ? "Chờ duyệt"
-                      : userStatus === "rejected"
-                      ? "Bị từ chối"
-                      : userStatus === "completed"
-                      ? "Hoàn thành"
-                      : userStatus}
+                        ? "Chờ duyệt"
+                        : userStatus === "rejected"
+                          ? "Bị từ chối"
+                          : userStatus === "completed"
+                            ? "Hoàn thành"
+                            : userStatus}
                   </div>
                 )}
 
@@ -560,25 +558,25 @@ export default function EventList() {
                       : `http://localhost:5000${event.coverImage}`
                   }
                   alt={event.name}
-                  className="h-[420px] w-full object-cover"
+                  className="h-[250px] md:h-[420px] w-full object-cover"
                 />
 
-                <div className="px-6 py-5 flex-1 flex flex-col justify-between">
-                  <h2 className="font-semibold text-xl leading-6 mb-4 line-clamp-2 h-[3rem]">
+                <div className="px-4 md:px-6 py-3 md:py-5 flex-1 flex flex-col justify-between">
+                  <h2 className="font-semibold text-lg md:text-xl leading-5 md:leading-6 mb-3 md:mb-4 line-clamp-2 min-h-[2.5rem] md:h-[3rem]">
                     {event.name}
                   </h2>
 
-                  <div className="flex gap-6 items-start flex-1">
-                    <div className="flex flex-col text-gray-700 text-[15px] gap-4 w-[140px] min-h-[120px]">
+                  <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-start flex-1">
+                    <div className="flex flex-col text-gray-700 text-sm md:text-[15px] gap-3 md:gap-4 w-full md:w-[140px] md:min-h-[120px]">
                       <div className="flex gap-2 items-center border-b pb-2">
-                        <Calendar size={18} />
+                        <Calendar size={16} className="md:w-[18px] md:h-[18px]" />
                         <span>
                           {new Date(event.date).toLocaleDateString("vi-VN")}
                         </span>
                       </div>
 
                       <div className="flex gap-2 items-center border-b pb-2">
-                        <Users size={18} />
+                        <Users size={16} className="md:w-[18px] md:h-[18px]" />
                         <span>
                           {event.currentParticipants || 0}/
                           {event.maxParticipants || 50}
@@ -586,33 +584,32 @@ export default function EventList() {
                       </div>
 
                       <div className="flex gap-2 items-center">
-                        <MapPin size={18} />
+                        <MapPin size={16} className="md:w-[18px] md:h-[18px]" />
                         <span className="line-clamp-2">{event.location}</span>
                       </div>
                     </div>
 
-                    <div className="text-gray-700 leading-6 border-l-[2px] border-[#DDB958] pl-2 w-[190px] min-h-[120px]">
+                    <div className="text-gray-700 leading-5 md:leading-6 border-t md:border-t-0 md:border-l-[2px] border-[#DDB958] pt-3 md:pt-0 md:pl-2 w-full md:w-[190px] md:min-h-[120px]">
                       <div
-                        className="prose prose-lg max-w-none text-[15px] line-clamp-6"
+                        className="prose prose-sm md:prose-lg max-w-none text-sm md:text-[15px] line-clamp-4 md:line-clamp-6"
                         dangerouslySetInnerHTML={{ __html: event.description }}
                       />
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between mt-6">
-                    <div className="flex items-center gap-6 text-[15px]">
+                  <div className="flex items-center justify-between mt-4 md:mt-6">
+                    <div className="flex items-center gap-4 md:gap-6 text-sm md:text-[15px]">
                       <button
-                        className="flex items-center gap-2 hover:scale-110 transition-transform"
+                        className="flex items-center gap-1.5 md:gap-2 hover:scale-110 transition-transform"
                         onClick={(e) => handleInteraction(e, event._id, "LIKE")}
                       >
                         <Heart
-                          size={24}
+                          size={20}
                           strokeWidth={1.5}
-                          className={`${
-                            isLiked
+                          className={`md:w-6 md:h-6 ${isLiked
                               ? "text-red-600 fill-red-600"
                               : "text-gray-600"
-                          }`}
+                            }`}
                         />
                         <span className="font-medium text-gray-700">
                           {event.likes || 0}
@@ -620,15 +617,15 @@ export default function EventList() {
                       </button>
 
                       <button
-                        className="flex items-center gap-2 hover:scale-110 transition-transform"
+                        className="flex items-center gap-1.5 md:gap-2 hover:scale-110 transition-transform"
                         onClick={(e) =>
                           handleInteraction(e, event._id, "SHARE")
                         }
                       >
                         <Share2
-                          size={24}
+                          size={20}
                           strokeWidth={1.5}
-                          className="text-blue-500"
+                          className="text-blue-500 md:w-6 md:h-6"
                         />
                         <span className="font-medium text-gray-700">
                           {event.shares || 0}
@@ -637,7 +634,7 @@ export default function EventList() {
                     </div>
 
                     <button
-                      className="bg-[#DCBA58] text-white px-6 py-2.5 rounded-lg font-medium text-[15px] hover:bg-[#caa445]"
+                      className="bg-[#DCBA58] text-white px-4 md:px-6 py-2 md:py-2.5 rounded-lg font-medium text-sm md:text-[15px] hover:bg-[#caa445]"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleViewDetail(event._id);

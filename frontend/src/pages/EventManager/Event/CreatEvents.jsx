@@ -107,8 +107,7 @@ export default function CreateEvent() {
       formData.append("description", descriptionWithPlaceholder);
 
       // Cover image: Nếu không chọn ảnh bìa, lấy ảnh đầu tiên trong gallery
-      const coverFile =
-        values.coverImage?.[0]?.originFileObj || galleryImages[0];
+      const coverFile = values.coverImage?.[0]?.originFileObj || galleryImages[0];
       if (coverFile) formData.append("coverImage", coverFile);
 
       // Gallery images
@@ -138,20 +137,18 @@ export default function CreateEvent() {
     { label: "Kỹ thuật", value: "Technical" },
     { label: "Cứu trợ khẩn cấp", value: "Emergency" },
     { label: "Trực tuyến", value: "Online" },
-    { label: "Doanh nghiệp", value: "Corporate" },
+    { label: "Doanh nghiệp", value: "Corporate" }
   ];
 
   return (
-    <div className="p-4 bg-white rounded-lg shadow-sm">
-      <h2 className="text-2xl uppercase font-bold text-gray-800 mb-6">
-        Tạo Sự Kiện
-      </h2>
+    <div>
+      <h2 className="text-2xl font-bold mb-4">TẠO SỰ KIỆN</h2>
 
       <Form
         form={form}
         layout="vertical"
         onFinish={handleCreateEvent}
-        initialValues={{ category: "Community", maxParticipants: 50 }}
+        initialValues={{ category: "Tình nguyện", maxParticipants: 50 }}
       >
         <Form.Item label="Tên sự kiện" name="name" rules={[{ required: true }]}>
           <Input size="large" />
@@ -161,7 +158,7 @@ export default function CreateEvent() {
           <CKEditor
             editor={ClassicEditor}
             onReady={onEditorReady}
-            onChange={(e, editor) => {}}
+            onChange={(e, editor) => { }}
             config={{
               toolbar: [
                 "heading",
@@ -175,48 +172,26 @@ export default function CreateEvent() {
                 "redo",
                 "imageUpload",
               ],
-              image: {
-                toolbar: [
-                  "imageTextAlternative",
-                  "imageStyle:full",
-                  "imageStyle:side",
-                ],
-              },
+              image: { toolbar: ["imageTextAlternative", "imageStyle:full", "imageStyle:side"] },
             }}
           />
         </Form.Item>
 
-        <Form.Item
-          label="Ngày bắt đầu"
-          name="date"
-          rules={[{ required: true }]}
-        >
+        <Form.Item label="Ngày bắt đầu" name="date" rules={[{ required: true }]}>
           <DatePicker size="large" style={{ width: "100%" }} />
         </Form.Item>
 
-        <Form.Item
-          label="Ngày kết thúc"
-          name="endDate"
-          rules={[{ required: true }]}
-        >
+        <Form.Item label="Ngày kết thúc" name="endDate" rules={[{ required: true }]}>
           <DatePicker size="large" style={{ width: "100%" }} />
         </Form.Item>
 
-        <Form.Item
-          label="Địa điểm"
-          name="location"
-          rules={[{ required: true }]}
-        >
+        <Form.Item label="Địa điểm" name="location" rules={[{ required: true }]}>
           <Input size="large" />
         </Form.Item>
 
-        <Form.Item
-          label="Loại sự kiện"
-          name="category"
-          rules={[{ required: true, message: "Vui lòng chọn loại sự kiện" }]}
-        >
+        <Form.Item label="Loại sự kiện" name="category" rules={[{ required: true, message: 'Vui lòng chọn loại sự kiện' }]}>
           <Select size="large">
-            {volunteerCategories.map((option) => (
+            {volunteerCategories.map(option => (
               <Option key={option.value} value={option.value}>
                 {option.label}
               </Option>
@@ -224,17 +199,8 @@ export default function CreateEvent() {
           </Select>
         </Form.Item>
 
-        <Form.Item
-          label="Số lượng tham gia tối đa"
-          name="maxParticipants"
-          rules={[{ required: true }]}
-        >
-          <InputNumber
-            size="large"
-            min={1}
-            max={1000}
-            style={{ width: "100%" }}
-          />
+        <Form.Item label="Số lượng tham gia tối đa" name="maxParticipants" rules={[{ required: true }]}>
+          <InputNumber size="large" min={1} max={1000} style={{ width: "100%" }} />
         </Form.Item>
 
         <Form.Item
@@ -245,9 +211,7 @@ export default function CreateEvent() {
           rules={[{ required: false }]}
         >
           <Upload beforeUpload={() => false} listType="picture" maxCount={1}>
-            <Button icon={<UploadOutlined />} size="large">
-              Chọn ảnh bìa
-            </Button>
+            <Button icon={<UploadOutlined />} size="large">Chọn ảnh bìa</Button>
           </Upload>
         </Form.Item>
 
@@ -256,7 +220,7 @@ export default function CreateEvent() {
           htmlType="submit"
           loading={loading}
           size="large"
-          className="!w-full !bg-[#DDB958] hover:!bg-[#c9a847] !border-none !font-semibold !shadow-md"
+          style={{ width: "100%", background: "#DDB958" }}
         >
           Tạo sự kiện
         </Button>

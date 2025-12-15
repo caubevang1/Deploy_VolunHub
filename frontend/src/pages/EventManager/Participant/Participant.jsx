@@ -173,8 +173,15 @@ export default function Participants() {
         // 3. Tiến hành gọi API
         setSubmittingRating(true);
 
+        console.log('Sending to API:', {
+            participantId: selectedParticipant._id,
+            performance: performance
+        });
+
         try {
             const res = await MarkCompletedParticipants(selectedParticipant._id, { performance });
+
+            console.log('API Response:', res.data);
 
             if (res.status === 200) {
                 setIsRatingModalOpen(false);
@@ -221,31 +228,65 @@ export default function Participants() {
             dataIndex: "status",
             width: 150,
             render: (status) => {
-                let color = "default";
-                let text = status.toUpperCase();
+                let color = "#999";
+                let text = status?.toUpperCase();
 
-                if (status === 'pending') { color = "gold"; text = "CHỜ DUYỆT"; }
-                if (status === 'approved') { color = "green"; text = "ĐÃ DUYỆT"; }
-                if (status === 'rejected') { color = "red"; text = "TỪ CHỐI"; }
-                if (status === 'completed') { color = "blue"; text = "HOÀN THÀNH"; }
+                if (status === 'pending') {
+                    color = "#DDB958";
+                    text = "Chờ duyệt";
+                }
+                if (status === 'approved') {
+                    color = "#00C950";
+                    text = "Đã duyệt";
+                }
+                if (status === 'rejected') {
+                    color = "red";
+                    text = "Từ chối";
+                }
+                if (status === 'completed') {
+                    color = "#2B7FFF";
+                    text = "Hoàn thành";
+                }
 
-                return <Tag color={color} className="!font-semibold !bg-transparent !border-none !text-[14px] !pl-0 !ml-0">{text}</Tag>;
+                return (
+                    <Tag
+                        style={{ color }}
+                        className="!font-semibold !bg-transparent !border-none !text-[14px] !pl-0 !ml-0"
+                    >
+                        {text}
+                    </Tag>
+                );
             },
         },
         {
             title: "Đánh giá",
             dataIndex: "performance",
             align: "center",
-            width: 150,
+            width: 160,
             render: (perf) => {
+                console.log('Performance value:', perf); // Debug: xem giá trị thực tế
+
                 if (!perf) return <span className="text-gray-400">—</span>;
                 const option = PERFORMANCE_OPTIONS.find(o => o.key === perf);
-                return option ? (
-                    <Tag color={option.tagColor} icon={option.icon} className="px-2 py-1 rounded-md flex items-center justify-center gap-1 w-fit mx-auto">
-                        {/* Chỉ render icon nhỏ trong bảng cho gọn */}
-                        {option.label}
-                    </Tag>
-                ) : perf;
+
+                console.log('Found option:', option); // Debug: xem option có tìm thấy không
+
+                if (!option) return <span className="text-gray-500">{perf}</span>;
+
+                // Tạo icon phù hợp cho từng loại đánh giá
+                const iconMap = {
+                    "GOOD": <SmileFilled className="text-lg" />,
+                    "AVERAGE": <MehFilled className="text-lg" />,
+                    "BAD": <FrownFilled className="text-lg" />,
+                    "NO_SHOW": <UserDeleteOutlined className="text-lg" />
+                };
+
+                return (
+                    <div className={`${option.color} px-3 py-1 rounded-md flex items-center justify-center gap-2 w-[130px] mx-auto whitespace-nowrap`}>
+                        {iconMap[option.key]}
+                        <span className="font-semibold">{option.label}</span>
+                    </div>
+                );
             }
         },
         {
@@ -326,7 +367,7 @@ export default function Participants() {
                 className="shadow-sm border border-gray-100 rounded-md"
             />
 
-            {/* --- MODAL ĐÁNH GIÁ SÁNG TẠO --- */}
+            {/* --- MODAL ĐÁNH GIÁ  --- */}
             <Modal
                 title={null}
                 footer={null}

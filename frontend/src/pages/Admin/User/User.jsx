@@ -1,17 +1,9 @@
-import { useState, useEffect, useCallback } from "react";
-import { Table, Input, Button, message, Select } from "antd";
-import { debounce } from "lodash";
-import {
-  GetUsers,
-  UpdateUserStatus,
-  UpdateUserRole,
-} from "../../../services/AdminService";
-import {
-  ReloadOutlined,
-  LockOutlined,
-  UnlockOutlined,
-} from "@ant-design/icons";
-import Swal from "sweetalert2";
+import { useState, useEffect, useCallback } from 'react';
+import { Table, Input, Button, message, Select } from 'antd';
+import { debounce } from 'lodash';
+import { GetUsers, UpdateUserStatus, UpdateUserRole } from '../../../services/AdminService';
+import { ReloadOutlined, LockOutlined, UnlockOutlined } from '@ant-design/icons';
+import Swal from 'sweetalert2';
 
 const { Search } = Input;
 
@@ -19,8 +11,10 @@ export default function Users() {
   const [data, setData] = useState([]);
   const [originalData, setOriginalData] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [selectedRole, setSelectedRole] = useState(null);
-  const [selectedStatus, setSelectedStatus] = useState(null);
+  const [filters, setFilters] = useState({
+    role: '',
+    status: '',
+  });
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -31,11 +25,15 @@ export default function Users() {
         setOriginalData(res.data);
       }
     } catch (error) {
-      console.error("Lỗi khi lấy danh sách người dùng:", error);
-      message.error("Không thể tải danh sách người dùng");
+      console.error('Lỗi khi lấy danh sách người dùng:', error);
+      message.error('Không thể tải danh sách người dùng');
     }
     setLoading(false);
   };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
 
   const removeVietnameseTones = (str) => {
     return str
@@ -46,21 +44,25 @@ export default function Users() {
       .toLowerCase();
   };
 
-  const applyFilters = useCallback(
-    (searchValue = "", role = selectedRole, status = selectedStatus) => {
+  const searchKeyword = useCallback(
+    debounce((value) => {
+      const keyword = removeVietnameseTones(value.trim().toLowerCase());
+
       let filtered = [...originalData];
 
-      if (role) {
-        filtered = filtered.filter((user) => user.role === role);
+      // Lọc theo role
+      if (filters.role) {
+        filtered = filtered.filter(user => user.role === filters.role);
       }
 
-      if (status) {
-        filtered = filtered.filter((user) => user.status === status);
+      // Lọc theo status
+      if (filters.status) {
+        filtered = filtered.filter(user => user.status === filters.status);
       }
 
-      if (searchValue) {
-        const keyword = removeVietnameseTones(searchValue.trim().toLowerCase());
-        filtered = filtered.filter((user) => {
+      // Lọc theo keyword
+      if (keyword) {
+        filtered = filtered.filter(user => {
           const name = removeVietnameseTones(user.name || "");
           const username = removeVietnameseTones(user.username || "");
           return name.includes(keyword) || username.includes(keyword);
@@ -68,38 +70,30 @@ export default function Users() {
       }
 
       setData(filtered);
-    },
-    [originalData, selectedRole, selectedStatus]
-  );
-
-  const searchKeyword = useCallback(
-    debounce((value) => {
-      applyFilters(value);
     }, 300),
-    [applyFilters]
+    [originalData, filters]
   );
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
+  const handleFilterChange = (key, value) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+  };
 
+  // Áp dụng filter khi filters thay đổi
   useEffect(() => {
-    applyFilters();
-  }, [selectedRole, selectedStatus, applyFilters]);
+    searchKeyword('');
+  }, [filters, searchKeyword]);
 
   const handleUpdateStatus = async (user) => {
-    const newStatus = user.status === "ACTIVE" ? "LOCKED" : "ACTIVE";
+    const newStatus = user.status === 'ACTIVE' ? 'LOCKED' : 'ACTIVE';
     const result = await Swal.fire({
-      title: `Bạn có chắc muốn ${
-        newStatus === "LOCKED" ? "KHÓA" : "MỞ KHÓA"
-      } tài khoản này?`,
+      title: `Bạn có chắc muốn ${newStatus === 'LOCKED' ? 'KHÓA' : 'MỞ KHÓA'} tài khoản này?`,
       text: `Tài khoản: ${user.username}`,
-      icon: "warning",
+      icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: "#DDB958",
-      cancelButtonColor: "#d33",
-      confirmButtonText: "Xác nhận",
-      cancelButtonText: "Hủy",
+      confirmButtonColor: '#DDB958',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Xác nhận',
+      cancelButtonText: 'Hủy',
     });
 
     if (!result.isConfirmed) return;
@@ -109,19 +103,19 @@ export default function Users() {
 
       if (res.status === 200) {
         Swal.fire({
-          icon: "success",
-          title: "Thành công!",
-          text: res.data.message || "Cập nhật trạng thái thành công",
+          icon: 'success',
+          title: 'Thành công!',
+          text: res.data.message || 'Cập nhật trạng thái thành công',
           timer: 1500,
           showConfirmButton: false,
         });
         fetchUsers();
       } else {
-        Swal.fire("Lỗi", "Không thể cập nhật trạng thái", "error");
+        Swal.fire('Lỗi', 'Không thể cập nhật trạng thái', 'error');
       }
     } catch (error) {
-      console.error("❌ Lỗi khi cập nhật trạng thái:", error);
-      Swal.fire("Lỗi", "Đã xảy ra lỗi khi cập nhật trạng thái", "error");
+      console.error('❌ Lỗi khi cập nhật trạng thái:', error);
+      Swal.fire('Lỗi', 'Đã xảy ra lỗi khi cập nhật trạng thái', 'error');
     }
   };
 
@@ -131,12 +125,12 @@ export default function Users() {
     const result = await Swal.fire({
       title: `Xác nhận thay đổi quyền?`,
       text: `${user.username}: ${user.role} → ${newRole}`,
-      icon: "warning",
+      icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: "#DDB958",
-      cancelButtonColor: "#d33",
-      confirmButtonText: "Xác nhận",
-      cancelButtonText: "Hủy",
+      confirmButtonColor: '#DDB958',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Xác nhận',
+      cancelButtonText: 'Hủy',
     });
 
     if (!result.isConfirmed) return;
@@ -146,162 +140,150 @@ export default function Users() {
 
       if (res.status === 200) {
         Swal.fire({
-          icon: "success",
-          title: "Đã cập nhật quyền!",
+          icon: 'success',
+          title: 'Đã cập nhật quyền!',
           timer: 1500,
           showConfirmButton: false,
         });
 
         fetchUsers();
       } else {
-        Swal.fire("Lỗi", "Không thể cập nhật quyền", "error");
+        Swal.fire('Lỗi', 'Không thể cập nhật quyền', 'error');
       }
     } catch (error) {
-      console.error("❌ Lỗi cập nhật quyền:", error);
-      Swal.fire("Lỗi", "Đã xảy ra lỗi khi cập nhật quyền", "error");
+      console.error('❌ Lỗi cập nhật quyền:', error);
+      Swal.fire('Lỗi', 'Đã xảy ra lỗi khi cập nhật quyền', 'error');
     }
   };
 
   const columns = [
     {
-      title: "Tài khoản",
-      dataIndex: "username",
-      sorter: (a, b) =>
-        a.username.toLowerCase().localeCompare(b.username.toLowerCase()),
-      render: (text) => (text.length > 80 ? text.slice(0, 80) + "..." : text),
+      title: 'Tài khoản',
+      dataIndex: 'username',
+      sorter: (a, b) => a.username.toLowerCase().localeCompare(b.username.toLowerCase()),
+      render: text => text.length > 80 ? text.slice(0, 80) + '...' : text,
     },
     {
-      title: "Tên người dùng",
-      dataIndex: "name",
-      sorter: (a, b) =>
-        (a.name ?? "")
-          .toLowerCase()
-          .localeCompare((b.name ?? "").toLowerCase()),
-      render: (text) => (text?.length > 50 ? text.slice(0, 50) + "..." : text),
+      title: 'Tên người dùng',
+      dataIndex: 'name',
+      sorter: (a, b) => (a.name ?? '').toLowerCase().localeCompare((b.name ?? '').toLowerCase()),
+      render: text => text?.length > 50 ? text.slice(0, 50) + '...' : text,
     },
     {
-      title: "Email",
-      dataIndex: "email",
-      render: (text) => (text?.length > 80 ? text.slice(0, 80) + "..." : text),
+      title: 'Email',
+      dataIndex: 'email',
+      render: text => text?.length > 80 ? text.slice(0, 80) + '...' : text,
     },
     {
-      title: "Số điện thoại",
-      dataIndex: "phone",
-      sorter: (a, b) => (a.phone ?? "").localeCompare(b.phone ?? ""),
-      render: (text) => text || "—",
+      title: 'Số điện thoại',
+      dataIndex: 'phone',
+      sorter: (a, b) => (a.phone ?? '').localeCompare(b.phone ?? ''),
+      render: text => text || '—'
     },
     {
-      title: "Loại người dùng",
-      dataIndex: "role",
-      sorter: (a, b) => (a.role ?? "").localeCompare(b.role ?? ""),
-      align: "center",
-      render: (_, user) => {
-        const roleColors = {
-          VOLUNTEER: "#3b82f6",
-          EVENTMANAGER: "#f59e0b",
-          ADMIN: "#ef4444",
-        };
-        return (
-          <Select
-            value={user.role}
-            style={{
-              width: 170,
-              fontWeight: 600,
-            }}
-            onChange={(newRole) => handleUpdateRole(user, newRole)}
-            options={[
-              { value: "VOLUNTEER", label: "👥 VOLUNTEER" },
-              { value: "EVENTMANAGER", label: "📅 EVENTMANAGER" },
-              { value: "ADMIN", label: "🔑 ADMIN" },
-            ]}
-          />
-        );
-      },
-    },
-    {
-      title: "Trạng thái",
-      dataIndex: "status",
-      align: "center",
-      sorter: (a, b) => a.status.localeCompare(b.status),
-      sortDirections: ["ascend", "descend"],
+      title: 'Loại người dùng',
+      dataIndex: 'role',
+      sorter: (a, b) => (a.role ?? '').localeCompare(b.role ?? ''),
+      align: 'center',
       render: (_, user) => (
-        <Button
-          type="primary"
-          icon={
-            user.status === "ACTIVE" ? <UnlockOutlined /> : <LockOutlined />
-          }
-          onClick={() => handleUpdateStatus(user)}
-          className="transition-all duration-300 hover:scale-105"
-          style={{
-            backgroundColor: user.status === "ACTIVE" ? "#52c41a" : "#ff4d4f",
-            borderColor: user.status === "ACTIVE" ? "#52c41a" : "#ff4d4f",
-            fontWeight: 600,
-          }}
-        >
-          {user.status === "ACTIVE" ? "ACTIVE" : "LOCKED"}
-        </Button>
+        <Select
+          value={user.role}
+          style={{ width: 150 }}
+          onChange={(newRole) => handleUpdateRole(user, newRole)}
+          options={[
+            { value: 'VOLUNTEER', label: 'VOLUNTEER' },
+            { value: 'EVENTMANAGER', label: 'EVENTMANAGER' },
+            { value: 'ADMIN', label: 'ADMIN' },
+          ]}
+        />
       ),
     },
+    {
+      title: 'Trạng thái',
+      dataIndex: 'status',
+      align: 'center',
+      sorter: (a, b) => a.status.localeCompare(b.status),
+      sortDirections: ['ascend', 'descend'],
+      render: (_, user) => (
+        <div
+          className="flex items-center justify-center gap-2 cursor-pointer select-none transition-transform duration-300 hover:scale-110"
+          onClick={() => handleUpdateStatus(user)}
+        >
+          {user.status === 'ACTIVE' ? (
+            <>
+              <UnlockOutlined style={{ color: 'green', fontSize: 18 }} />
+              <span style={{ color: 'green', fontWeight: 500 }}>ACTIVE</span>
+            </>
+          ) : (
+            <>
+              <LockOutlined style={{ color: 'red', fontSize: 18 }} />
+              <span style={{ color: 'red', fontWeight: 500 }}>LOCKED</span>
+            </>
+          )}
+        </div>
+      ),
+    }
+
   ];
 
+
   return (
-    <div className="adminUsers p-6 bg-gradient-to-br from-gray-50 to-purple-50 min-h-screen">
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <div className="flex items-center gap-3">
-          <h2 className="text-3xl font-bold text-gray-800">
-            Quản Lý Người Dùng
-          </h2>
-        </div>
+    <div className="adminUsers">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-2xl uppercase font-bold">Quản lý người dùng</h2>
+        <Button
+          icon={<ReloadOutlined />}
+          onClick={fetchUsers}
+          type="default"
+        >
+          Tải lại
+        </Button>
       </div>
 
-      <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-        <div className="flex gap-3">
-          <Search
-            className="flex-1 shadow-sm"
-            placeholder="Tìm kiếm theo tài khoản hoặc tên..."
-            size="large"
-            onChange={(e) => searchKeyword(e.target.value)}
-            allowClear
-            style={{ borderRadius: 8 }}
-          />
-          <select
-            className="px-4 py-2 border rounded-lg text-base cursor-pointer hover:border-blue-500 transition-colors"
-            style={{ minWidth: 180 }}
-            value={selectedRole || ""}
-            onChange={(e) => setSelectedRole(e.target.value || null)}
-          >
-            <option value="">Tất cả vai trò</option>
-            <option value="VOLUNTEER">Tình nguyện viên</option>
-            <option value="EVENTMANAGER">Quản lý sự kiện</option>
-            <option value="ADMIN">Quản trị viên</option>
-          </select>
-          <select
-            className="px-4 py-2 border rounded-lg text-base cursor-pointer hover:border-blue-500 transition-colors"
-            style={{ minWidth: 150 }}
-            value={selectedStatus || ""}
-            onChange={(e) => setSelectedStatus(e.target.value || null)}
-          >
-            <option value="">Tất cả trạng thái</option>
-            <option value="ACTIVE">Hoạt động</option>
-            <option value="LOCKED">Đã khóa</option>
-          </select>
-        </div>
-      </div>
+      <div className="flex items-center gap-4 mb-4">
+        <Search
+          className="flex-1"
+          placeholder="Tìm kiếm theo tài khoản hoặc tên"
+          size="large"
+          onChange={e => searchKeyword(e.target.value)}
+        />
 
-      <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6">
-        <Table
-          columns={columns}
-          dataSource={data}
-          rowKey="_id"
-          loading={loading}
-          pagination={{
-            pageSize: 8,
-            showSizeChanger: false,
-            showTotal: (total) => `Tổng ${total} người dùng`,
-          }}
-          className="rounded-md"
+        <Select
+          placeholder="Loại người dùng"
+          size="large"
+          style={{ width: 180 }}
+          allowClear
+          value={filters.role || undefined}
+          onChange={(value) => handleFilterChange('role', value)}
+          options={[
+            { value: 'VOLUNTEER', label: 'VOLUNTEER' },
+            { value: 'EVENTMANAGER', label: 'EVENTMANAGER' },
+            { value: 'ADMIN', label: 'ADMIN' },
+          ]}
+        />
+
+        <Select
+          placeholder="Trạng thái"
+          size="large"
+          style={{ width: 150 }}
+          allowClear
+          value={filters.status || undefined}
+          onChange={(value) => handleFilterChange('status', value)}
+          options={[
+            { value: 'ACTIVE', label: 'ACTIVE' },
+            { value: 'LOCKED', label: 'LOCKED' },
+          ]}
         />
       </div>
+
+      <Table
+        columns={columns}
+        dataSource={data}
+        rowKey="_id"
+        loading={loading}
+        pagination={{ pageSize: 8 }}
+        className='shadow shadow-md rounded-md'
+      />
     </div>
   );
 }

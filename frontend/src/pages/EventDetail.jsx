@@ -265,22 +265,22 @@ export default function EventDetail() {
     };
 
     return (
-        <div className="flex gap-6 max-w-7xl mx-auto mt-10 my-4">
+        <div className="flex flex-col lg:flex-row gap-6 max-w-7xl mx-auto mt-6 lg:mt-10 my-4 px-4">
             {/* Phần nội dung chính */}
             <div className="flex-1 bg-white shadow-lg rounded-2xl overflow-hidden text-[#111827]">
                 {/* Tiêu đề */}
-                <h1 className="text-4xl sm:text-4xl font-bold px-6 !pt-8">{event.name}</h1>
+                <h1 className="text-2xl md:text-4xl font-bold px-4 md:px-6 !pt-6 md:!pt-8">{event.name}</h1>
 
                 {/* Ảnh */}
                 <img
                     src={event.coverImage ? `http://localhost:5000${event.coverImage}` : "/default-event.png"}
                     alt={event.name}
-                    className="w-full max-h-[500px] object-cover px-6 py-8"
+                    className="w-full max-h-[300px] md:max-h-[500px] object-cover px-4 md:px-6 py-4 md:py-8"
                 />
 
                 {/* Thông tin chi tiết */}
-                <div className="px-12 py-8 text-gray-700 flex flex-col sm:flex-row gap-10">
-                    <div className="flex flex-col gap-6 flex-1">
+                <div className="px-4 md:px-12 py-4 md:py-8 text-gray-700 flex flex-col sm:flex-row gap-6 md:gap-10">
+                    <div className="flex flex-col gap-4 md:gap-6 flex-1">
                         <div className="flex items-center gap-3">
                             <Calendar size={20} />
                             <span>
@@ -303,7 +303,7 @@ export default function EventDetail() {
                         </div>
                     </div>
 
-                    <div className="flex flex-col gap-6 flex-1">
+                    <div className="flex flex-col gap-4 md:gap-6 flex-1">
                         <div className="flex items-center gap-3">
                             <Calendar size={20} />
                             <span>
@@ -330,10 +330,10 @@ export default function EventDetail() {
                 </div>
 
                 {/* Mô tả sự kiện */}
-                <div className="px-6 pb-12">
-                    <h2 className="text-3xl font-semibold mb-4">Mô tả sự kiện</h2>
+                <div className="px-4 md:px-6 pb-8 md:pb-12">
+                    <h2 className="text-2xl md:text-3xl font-semibold mb-3 md:mb-4">Mô tả sự kiện</h2>
                     <div
-                        className="prose prose-lg max-w-none"
+                        className="prose prose-sm md:prose-lg max-w-none"
                         dangerouslySetInnerHTML={{
                             __html: renderDescription(event.description, event.galleryImages)
                         }}
@@ -341,7 +341,7 @@ export default function EventDetail() {
                 </div>
 
                 {/* Xử lý hiển thị trạng thái và nút bấm */}
-                <div className="flex items-center justify-center mt-4 px-6 pb-8 relative">
+                <div className="flex flex-col md:flex-row items-center justify-center mt-4 px-4 md:px-6 pb-6 md:pb-8 relative gap-3 md:gap-0">
 
                     {/* --- CASE: PENDING --- */}
                     {registrationStatus === "pending" && (
@@ -385,7 +385,7 @@ export default function EventDetail() {
                     {(registrationStatus === "pending" || registrationStatus === "approved") && (
                         <button
                             onClick={handleCancelRegistration}
-                            className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 font-semibold absolute right-6"
+                            className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 font-semibold md:absolute md:right-6"
                         >
                             Hủy đăng ký
                         </button>
@@ -394,7 +394,7 @@ export default function EventDetail() {
             </div>
 
             {/* Sidebar bên phải */}
-            <div className="w-80 flex-shrink-0 space-y-6 sticky top-24 self-start">
+            <div className="w-full lg:w-80 flex-shrink-0 space-y-6 lg:sticky lg:top-24 self-start">
                 {/* Box Thao tác */}
                 <div className="bg-white shadow-md rounded-2xl p-6 border-1 border-gray-100">
                     <h3 className="text-xl font-bold mb-6 text-[#111827]">Thao tác</h3>

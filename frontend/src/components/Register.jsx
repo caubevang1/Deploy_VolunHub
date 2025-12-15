@@ -129,11 +129,11 @@ export default function Register() {
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 min-h-screen">
-            <div className="bg-white rounded-lg shadow-xl w-[540px] overflow-hidden">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 min-h-screen px-4 py-8 overflow-y-auto">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-[540px] overflow-hidden my-auto">
                 {/* Header */}
-                <div className="bg-[#2d2d3a] flex justify-between items-center px-5 py-5">
-                    <h2 className="text-2xl font-bold text-[#e6c675]">Đăng Ký Tài Khoản</h2>
+                <div className="bg-[#2d2d3a] flex justify-between items-center px-4 md:px-5 py-4 md:py-5">
+                    <h2 className="text-xl md:text-2xl font-bold text-[#e6c675]">Đăng Ký Tài Khoản</h2>
                     <button
                         onClick={() => dispatch(closeModal())}
                         className="bg-red-600 text-white rounded-md px-2 py-1 hover:bg-red-700"
@@ -143,11 +143,11 @@ export default function Register() {
                 </div>
 
                 {/* Form */}
-                <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                <form onSubmit={handleSubmit} className="p-4 md:p-6 space-y-3 md:space-y-4">
 
                     {/* Họ tên + Ngày sinh + Giới tính */}
-                    <div className="flex space-x-4">
-                        <div className="w-3/5">
+                    <div className="flex flex-col md:flex-row md:space-x-4 space-y-3 md:space-y-0">
+                        <div className="w-full md:w-3/5">
                             <label className="flex items-center gap-2 text-gray-800 font-medium mb-1">
                                 <User size={18} /> Họ và tên:
                             </label>
@@ -161,7 +161,7 @@ export default function Register() {
                             />
                         </div>
 
-                        <div className="w-2/5">
+                        <div className="w-full md:w-2/5">
                             <label className="flex items-center gap-2 text-gray-800 font-medium mb-1">
                                 <Calendar size={18} /> Ngày sinh:
                             </label>
@@ -175,7 +175,7 @@ export default function Register() {
                             />
                         </div>
 
-                        <div className="w-1/5">
+                        <div className="w-full md:w-1/5">
                             <label className="flex items-center gap-2 text-gray-800 font-medium mb-1">
                                 Giới tính:
                             </label>
@@ -195,8 +195,8 @@ export default function Register() {
                     </div>
 
                     {/* Tên đăng nhập + Số điện thoại */}
-                    <div className="flex space-x-4">
-                        <div className="w-1/2">
+                    <div className="flex flex-col md:flex-row md:space-x-4 space-y-3 md:space-y-0">
+                        <div className="w-full md:w-1/2">
                             <label className="flex items-center gap-2 text-gray-800 font-medium mb-1">
                                 <User size={18} /> Tên đăng nhập:
                             </label>
@@ -210,7 +210,7 @@ export default function Register() {
                             />
                         </div>
 
-                        <div className="w-1/2">
+                        <div className="w-full md:w-1/2">
                             <label className="flex items-center gap-2 text-gray-800 font-medium mb-1">
                                 <Phone size={18} /> Số điện thoại:
                             </label>
@@ -226,8 +226,8 @@ export default function Register() {
                     </div>
 
                     {/* Mật khẩu + Xác nhận mật khẩu */}
-                    <div className="flex space-x-4">
-                        <div className="w-1/2">
+                    <div className="flex flex-col md:flex-row md:space-x-4 space-y-3 md:space-y-0">
+                        <div className="w-full md:w-1/2">
                             <label className="flex items-center gap-2 text-gray-800 font-medium mb-1">
                                 <Lock size={18} /> Mật khẩu:
                             </label>
@@ -241,7 +241,7 @@ export default function Register() {
                             />
                         </div>
 
-                        <div className="w-1/2">
+                        <div className="w-full md:w-1/2">
                             <label className="flex items-center gap-2 text-gray-800 font-medium mb-1">
                                 <Lock size={18} /> Nhập lại mật khẩu:
                             </label>
@@ -308,8 +308,8 @@ export default function Register() {
                     </div>
 
                     {/* Email + OTP */}
-                    <div className="flex gap-4">
-                        <div className="w-[300px]">
+                    <div className="flex flex-col md:flex-row gap-3 md:gap-4">
+                        <div className="w-full md:w-[300px]">
                             <label className="flex items-center gap-2 text-gray-800 font-medium mb-1">
                                 <Mail size={18} /> Email:
                             </label>
