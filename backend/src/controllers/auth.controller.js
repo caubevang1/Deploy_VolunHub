@@ -79,7 +79,11 @@ export const login = async (req, res) => {
   try {
     const { identifier, password } = req.body;
     const user = await User.findOne(identifier.includes("@") ? { email: identifier } : { username: identifier });
-    if (!user || !(await bcrypt.compare(password, user.password))) return res.status(400).json({ message: "Thông tin sai." });
+    
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+      return res.status(400).json({ message: "Sai tài khoản hoặc mật khẩu." });
+    }
+    
     if (user.status !== "ACTIVE") return res.status(403).json({ message: "Tài khoản bị khóa." });
 
     const token = jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: "1d" });

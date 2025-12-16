@@ -1,13 +1,10 @@
+// backend/src/utils/sendPush.js
 import webpush from 'web-push';
 import Subscription from '../models/subscription.js';
 import Notification from '../models/notification.js';
 
 /**
  * Hàm gửi Push Notification VÀ lưu vào DB
- * @param {string} userId - ID của người nhận
- * @param {string} title - Tiêu đề (VD: "Đánh giá: Tốt 🌟")
- * @param {string} message - Nội dung (VD: "Hoàn thành tốt nhiệm vụ...")
- * @param {string} url - Link mở khi click
  */
 export const sendPushNotification = async (userId, title, message, url = '/') => {
   try {
@@ -22,15 +19,20 @@ export const sendPushNotification = async (userId, title, message, url = '/') =>
     }
 
     // 1. Lưu thông báo vào Database (Non-blocking)
+    // Trường 'type' sẽ lưu tiêu đề tiếng Việt để hiển thị trên Dashboard
     Notification.create({
       user: userId,
       type: title, 
       message: message,
-    }).catch(err => console.error('❌ DB Error:', err.message));
+    }).then(doc => console.log('✅ Đã lưu thông báo vào DB:', doc._id))
+      .catch(err => console.error('❌ Lỗi lưu thông báo DB:', err.message));
 
     // 2. Lấy danh sách thiết bị đã đăng ký
     const userSubscriptions = await Subscription.find({ user: userId });
-    if (!userSubscriptions || userSubscriptions.length === 0) return;
+    if (!userSubscriptions || userSubscriptions.length === 0) {
+      console.log(`🔕 Người dùng ${userId} chưa đăng ký nhận Push.`);
+      return;
+    }
 
     // 3. Payload chuẩn gửi sang Service Worker
     const payload = JSON.stringify({
