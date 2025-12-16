@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { GetEventDetail, GetEventActionStats } from "../services/EventService";
-import { Calendar, Users, MapPin, Tag, Phone, MessageSquare, Heart, Share2, Eye, ArrowLeft } from "lucide-react";
+import { Calendar, Users, MapPin, Tag, Phone, MessageSquare, Heart, Share2, Eye, ArrowLeft, X, CheckCircle } from "lucide-react";
 import { Registration, CancelRegistration, GetMyEvent, CheckEventStatus, EventActions } from "../services/UserService";
 import Swal from "sweetalert2";
 
@@ -329,6 +329,32 @@ export default function EventDetail() {
                     </div>
                 </div>
 
+                {/* Hiển thị trạng thái */}
+                {registrationStatus && (
+                    <div className="flex items-center justify-center mt-4 px-4 md:px-6 pb-6 md:pb-8">
+                        {registrationStatus === "pending" && (
+                            <span className="text-white bg-gray-500 px-4 py-2 rounded-md font-semibold">
+                                Đang chờ duyệt
+                            </span>
+                        )}
+                        {registrationStatus === "approved" && (
+                            <span className="text-green-600 bg-green-50 px-4 py-2 rounded-md font-semibold">
+                                Đăng ký thành công
+                            </span>
+                        )}
+                        {registrationStatus === "completed" && (
+                            <span className="text-blue-600 bg-blue-50 px-4 py-2 rounded-md font-semibold">
+                                Bạn đã hoàn thành sự kiện này
+                            </span>
+                        )}
+                        {registrationStatus === "rejected" && (
+                            <span className="text-red-600 bg-red-50 px-4 py-2 rounded-md font-semibold">
+                                Yêu cầu đăng ký tham gia của bạn bị từ chối
+                            </span>
+                        )}
+                    </div>
+                )}
+
                 {/* Mô tả sự kiện */}
                 <div className="px-4 md:px-6 pb-8 md:pb-12">
                     <h2 className="text-2xl md:text-3xl font-semibold mb-3 md:mb-4">Mô tả sự kiện</h2>
@@ -338,58 +364,6 @@ export default function EventDetail() {
                             __html: renderDescription(event.description, event.galleryImages)
                         }}
                     />
-                </div>
-
-                {/* Xử lý hiển thị trạng thái và nút bấm */}
-                <div className="flex flex-col md:flex-row items-center justify-center mt-4 px-4 md:px-6 pb-6 md:pb-8 relative gap-3 md:gap-0">
-
-                    {/* --- CASE: PENDING --- */}
-                    {registrationStatus === "pending" && (
-                        <span className="text-white bg-gray-500 p-2 rounded-md font-semibold">
-                            Đang chờ duyệt
-                        </span>
-                    )}
-
-                    {/* --- CASE: APPROVED --- */}
-                    {registrationStatus === "approved" && (
-                        <span className="text-green-600 font-medium">
-                            Đăng ký thành công
-                        </span>
-                    )}
-
-                    {/* --- CASE: COMPLETED (MỚI) --- */}
-                    {registrationStatus === "completed" && (
-                        <span className="text-blue-500 font-medium">
-                            Bạn đã hoàn thành sự kiện này
-                        </span>
-                    )}
-
-                    {/* --- CASE: REJECTED (MỚI) --- */}
-                    {registrationStatus === "rejected" && (
-                        <span className="text-red-500 font-medium">
-                            Yêu cầu đăng ký tham gia của bạn bị từ chối
-                        </span>
-                    )}
-
-                    {/* --- BUTTON: ĐĂNG KÝ (Chỉ hiện khi chưa đăng ký) --- */}
-                    {registrationStatus === "" && (
-                        <button
-                            onClick={handleRegister}
-                            className="px-4 py-2 bg-[#DDB958] text-white rounded-md hover:bg-[#CDA550] font-semibold"
-                        >
-                            Đăng ký tham gia
-                        </button>
-                    )}
-
-                    {/* --- BUTTON: HỦY ĐĂNG KÝ (Chỉ hiện khi Pending hoặc Approved) --- */}
-                    {(registrationStatus === "pending" || registrationStatus === "approved") && (
-                        <button
-                            onClick={handleCancelRegistration}
-                            className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 font-semibold md:absolute md:right-6"
-                        >
-                            Hủy đăng ký
-                        </button>
-                    )}
                 </div>
             </div>
 
@@ -430,10 +404,32 @@ export default function EventDetail() {
                         {registrationStatus === "approved" && event.status === 'approved' && (
                             <button
                                 onClick={() => navigate(`/su-kien/${eventId}/trao-doi`)}
-                                className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-[#DCBA58] text-[#DCBA58] rounded-lg hover:bg-[#DCBA58]/10 transition font-medium"
+                                className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-purple-500 text-purple-600 rounded-lg hover:bg-purple-50 transition font-medium"
                             >
                                 <MessageSquare size={20} />
                                 <span>Kênh Trao Đổi</span>
+                            </button>
+                        )}
+
+                        {/* Nút Đăng ký tham gia */}
+                        {registrationStatus === "" && (
+                            <button
+                                onClick={handleRegister}
+                                className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-[#DDB958] text-[#DDB958] rounded-lg hover:bg-yellow-50 transition font-medium"
+                            >
+                                <CheckCircle size={20} />
+                                <span>Đăng ký tham gia</span>
+                            </button>
+                        )}
+
+                        {/* Nút Hủy đăng ký */}
+                        {(registrationStatus === "pending" || registrationStatus === "approved") && (
+                            <button
+                                onClick={handleCancelRegistration}
+                                className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-gray-500 text-gray-600 rounded-lg hover:bg-gray-50 transition font-medium"
+                            >
+                                <X size={20} />
+                                <span>Hủy đăng ký</span>
                             </button>
                         )}
                     </div>

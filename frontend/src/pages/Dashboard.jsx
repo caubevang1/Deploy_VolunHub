@@ -46,7 +46,7 @@ export default function Dashboard() {
   const renderMessage = (text) => {
     if (!text) return null;
     const parts = text.split(/(".*?"|\(.*?\))/g);
-    
+
     return (
       <span>
         {parts.map((part, i) => {
@@ -140,7 +140,7 @@ export default function Dashboard() {
       render: (text, record) => <a onClick={() => navigate(`/su-kien/${record._id}`)} className="text-blue-600 font-medium">{text || record.title}</a>,
     },
     {
-      title: "Danh mục",
+      title: "Loại sự kiện",
       dataIndex: "category",
       render: (cat) => <Tag color="blue">{categoryMapping[cat] || cat}</Tag>,
     },
