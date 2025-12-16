@@ -1,6 +1,9 @@
 // src/routes/user.routes.js
 import express from "express";
-import { getVolunteerRanking } from "../controllers/admin.controller.js";
+import {
+  getVolunteerRanking,
+  getEventManagerRanking,
+} from "../controllers/admin.controller.js";
 
 const router = express.Router();
 
@@ -13,5 +16,11 @@ const router = express.Router();
 // - Chức năng: Public route để mọi người xem ranking
 // - Trả về: Mảng volunteers với rank, points, completedEvents
 router.get("/ranking", getVolunteerRanking);
+
+// [GET] /api/users/ranking/managers
+// 🏆 Lấy bảng xếp hạng quản lý sự kiện
+// - Chức năng: Public route để mọi người xem ranking event managers
+// - Trả về: Mảng managers với rank, totalEvents, completedEvents, totalVolunteers, score
+router.get("/ranking/managers", getEventManagerRanking);
 
 export default router;

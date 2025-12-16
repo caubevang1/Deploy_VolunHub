@@ -8,11 +8,14 @@ import {
   getAllUsers,
   updateUserStatus,
   exportUsers,
+  exportEvents,
+  exportVolunteers,
   getDashboardStats,
   updateUserRole,
   getTrendingEvents,
   getRecentActivity,
   getVolunteerRanking,
+  getEventManagerRanking,
 } from "../controllers/admin.controller.js";
 
 const router = express.Router();
@@ -81,6 +84,16 @@ router.put("/users/:id/role", updateUserRole);
 // - Trả về: File stream (download).
 router.get("/export/users", exportUsers);
 
+// [GET] /api/admin/export/events
+// 📤 Xuất danh sách sự kiện
+// - Query: ?format=csv|json (mặc định csv)
+router.get("/export/events", exportEvents);
+
+// [GET] /api/admin/export/volunteers
+// 📤 Xuất danh sách tình nguyện viên
+// - Query: ?format=csv|json (mặc định csv)
+router.get("/export/volunteers", exportVolunteers);
+
 // --- DASHBOARD ---
 
 // [GET] /api/admin/dashboard
@@ -107,5 +120,11 @@ router.get("/recent-activity", getRecentActivity);
 // - Chức năng: Lấy danh sách volunteers xếp hạng theo points
 // - Trả về: Mảng volunteers với rank, points, completedEvents
 router.get("/ranking", getVolunteerRanking);
+
+// [GET] /api/admin/ranking/managers
+// 🏆 Bảng xếp hạng quản lý sự kiện
+// - Chức năng: Lấy danh sách event managers xếp hạng theo số sự kiện và tình nguyện viên
+// - Trả về: Mảng managers với rank, totalEvents, completedEvents, totalVolunteers, score
+router.get("/ranking/managers", getEventManagerRanking);
 
 export default router;

@@ -28,5 +28,6 @@ export const EventActions = (eventId, data) =>
 export const CheckEventStatus = (eventId) =>
   http.get(`/actions/${eventId}/status`);
 
-//Volunteer Ranking
+//Ranking
 export const GetVolunteerRanking = () => http.get(`/users/ranking`);
+export const GetEventManagerRanking = () => http.get(`/users/ranking/managers`);

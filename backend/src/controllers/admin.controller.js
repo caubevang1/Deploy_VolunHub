@@ -9,6 +9,49 @@ import fs from "fs";
 import path from "path";
 import { Parser } from "json2csv";
 
+const formatDateValue = (value) =>
+  value instanceof Date
+    ? value.toISOString()
+    : value
+    ? new Date(value).toISOString()
+    : "";
+
+const sendExportResponse = (res, data, filenamePrefix, format, fields) => {
+  const normalizedFormat = format === "json" ? "json" : "csv";
+  const dateStamp = new Date().toISOString().split("T")[0];
+  const filename = `${filenamePrefix}-${dateStamp}.${normalizedFormat}`;
+
+  if (normalizedFormat === "json") {
+    res.header("Content-Type", "application/json");
+    res.attachment(filename);
+    res.send(JSON.stringify(data, null, 2));
+    return;
+  }
+
+  const derivedFields =
+    fields && fields.length
+      ? fields
+      : Array.from(
+          data.reduce((set, item) => {
+            Object.keys(item || {}).forEach((key) => set.add(key));
+            return set;
+          }, new Set())
+        );
+
+  if (!derivedFields.length) {
+    res.header("Content-Type", "text/csv");
+    res.attachment(filename);
+    res.send("");
+    return;
+  }
+
+  const parser = new Parser({ fields: derivedFields });
+  const csv = parser.parse(data);
+  res.header("Content-Type", "text/csv");
+  res.attachment(filename);
+  res.send(csv);
+};
+
 // --- HÀM HỖ TRỢ XÓA FILE ---
 const deleteEventFiles = (event) => {
   const defaultCover = "default-event-image.jpg";
@@ -169,12 +212,161 @@ export const updateUserRole = async (req, res) => {
 // --- XUẤT DỮ LIỆU ---
 export const exportUsers = async (req, res) => {
   try {
-    const users = await User.find({}).select("-password -__v").lean();
-    const json2csvParser = new Parser();
-    const csv = json2csvParser.parse(users);
-    res.header("Content-Type", "text/csv");
-    res.attachment("users-export.csv");
-    res.send(csv);
+    const format = (req.query.format || "csv").toLowerCase();
+    const { startDate, endDate } = req.query;
+
+    // Build query filter
+    const filter = {};
+    if (startDate && endDate) {
+      filter.createdAt = {
+        $gte: new Date(startDate),
+        $lte: new Date(new Date(endDate).setHours(23, 59, 59, 999)),
+      };
+    }
+
+    const users = await User.find(filter).select("-password -__v").lean();
+
+    const normalizedUsers = users.map((user) => ({
+      id: user._id.toString(),
+      name: user.name || "",
+      birthday: formatDateValue(user.birthday),
+      gender: user.gender || "",
+      phone: user.phone || "",
+      email: user.email,
+      username: user.username,
+      role: user.role,
+      status: user.status,
+      points: typeof user.points === "number" ? user.points : 0,
+      createdAt: formatDateValue(user.createdAt),
+      updatedAt: formatDateValue(user.updatedAt),
+    }));
+
+    sendExportResponse(res, normalizedUsers, "users-export", format, [
+      "id",
+      "name",
+      "birthday",
+      "gender",
+      "phone",
+      "email",
+      "username",
+      "role",
+      "status",
+      "points",
+      "createdAt",
+      "updatedAt",
+    ]);
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi server", error: error.message });
+  }
+};
+
+export const exportEvents = async (req, res) => {
+  try {
+    const format = (req.query.format || "csv").toLowerCase();
+    const { startDate, endDate } = req.query;
+
+    // Build query filter
+    const filter = {};
+    if (startDate && endDate) {
+      filter.date = {
+        $gte: new Date(startDate),
+        $lte: new Date(new Date(endDate).setHours(23, 59, 59, 999)),
+      };
+    }
+
+    const events = await Event.find(filter)
+      .populate("createdBy", "name email")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const normalizedEvents = events.map((event) => ({
+      id: event._id.toString(),
+      name: event.name || "",
+      category: event.category || "",
+      startDate: formatDateValue(event.date),
+      endDate: formatDateValue(event.endDate),
+      location: event.location || "",
+      status: event.status || "",
+      points: typeof event.points === "number" ? event.points : 0,
+      maxParticipants:
+        typeof event.maxParticipants === "number" ? event.maxParticipants : 0,
+      managerName: event.createdBy?.name || "",
+      managerEmail: event.createdBy?.email || "",
+      createdAt: formatDateValue(event.createdAt),
+      updatedAt: formatDateValue(event.updatedAt),
+    }));
+
+    sendExportResponse(res, normalizedEvents, "events-export", format, [
+      "id",
+      "name",
+      "category",
+      "startDate",
+      "endDate",
+      "location",
+      "status",
+      "points",
+      "maxParticipants",
+      "managerName",
+      "managerEmail",
+      "createdAt",
+      "updatedAt",
+    ]);
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi server", error: error.message });
+  }
+};
+
+export const exportVolunteers = async (req, res) => {
+  try {
+    const format = (req.query.format || "csv").toLowerCase();
+    const { startDate, endDate } = req.query;
+
+    // Build query filter
+    const filter = { role: "VOLUNTEER" };
+    if (startDate && endDate) {
+      filter.createdAt = {
+        $gte: new Date(startDate),
+        $lte: new Date(new Date(endDate).setHours(23, 59, 59, 999)),
+      };
+    }
+
+    const volunteers = await User.find(filter)
+      .select("name email phone points status createdAt updatedAt")
+      .lean();
+
+    const completedCounts = await Registration.aggregate([
+      { $match: { status: "completed" } },
+      { $group: { _id: "$volunteer", completedEvents: { $sum: 1 } } },
+    ]);
+
+    const completedMap = completedCounts.reduce((acc, item) => {
+      acc.set(item._id.toString(), item.completedEvents || 0);
+      return acc;
+    }, new Map());
+
+    const normalizedVolunteers = volunteers.map((volunteer) => ({
+      id: volunteer._id.toString(),
+      name: volunteer.name || "",
+      email: volunteer.email || "",
+      phone: volunteer.phone || "",
+      status: volunteer.status || "",
+      points: typeof volunteer.points === "number" ? volunteer.points : 0,
+      completedEvents: completedMap.get(volunteer._id.toString()) ?? 0,
+      createdAt: formatDateValue(volunteer.createdAt),
+      updatedAt: formatDateValue(volunteer.updatedAt),
+    }));
+
+    sendExportResponse(res, normalizedVolunteers, "volunteers-export", format, [
+      "id",
+      "name",
+      "email",
+      "phone",
+      "status",
+      "points",
+      "completedEvents",
+      "createdAt",
+      "updatedAt",
+    ]);
   } catch (error) {
     res.status(500).json({ message: "Lỗi server", error: error.message });
   }
@@ -358,6 +550,79 @@ export const getVolunteerRanking = async (req, res) => {
     res.status(200).json(sortedVolunteers);
   } catch (error) {
     console.error("❌ Lỗi lấy ranking:", error);
+    res.status(500).json({ message: "Lỗi server", error: error.message });
+  }
+};
+
+// --- EVENT MANAGER RANKING ---
+export const getEventManagerRanking = async (req, res) => {
+  try {
+    // Lấy tất cả event managers
+    const managers = await User.find({ role: "EVENTMANAGER" })
+      .select("name email avatar")
+      .lean();
+
+    // Đếm số liệu cho từng manager
+    const managersWithStats = await Promise.all(
+      managers.map(async (manager) => {
+        // Tổng số sự kiện đã tạo
+        const totalEvents = await Event.countDocuments({
+          createdBy: manager._id,
+        });
+
+        // Số sự kiện đã được approved
+        const approvedEvents = await Event.countDocuments({
+          createdBy: manager._id,
+          status: "approved",
+        });
+
+        // Số sự kiện đã completed
+        const completedEvents = await Event.countDocuments({
+          createdBy: manager._id,
+          status: "completed",
+        });
+
+        // Tổng số tình nguyện viên đã tham gia (approved + completed)
+        const events = await Event.find({ createdBy: manager._id }).select(
+          "_id"
+        );
+        const eventIds = events.map((e) => e._id);
+
+        const totalVolunteers = await Registration.countDocuments({
+          event: { $in: eventIds },
+          status: { $in: ["approved", "completed"] },
+        });
+
+        // Tính điểm: 10 điểm/sự kiện hoàn thành + 1 điểm/tình nguyện viên
+        const score = completedEvents * 10 + totalVolunteers;
+
+        return {
+          ...manager,
+          totalEvents,
+          approvedEvents,
+          completedEvents,
+          totalVolunteers,
+          score,
+        };
+      })
+    );
+
+    // Sắp xếp theo score giảm dần
+    const sortedManagers = managersWithStats
+      .sort((a, b) => b.score - a.score)
+      .map((manager, index) => ({
+        ...manager,
+        rank: index + 1,
+        // Thêm đầy đủ URL cho avatar
+        avatar:
+          manager.avatar && !manager.avatar.startsWith("http")
+            ? `http://localhost:5000${manager.avatar}`
+            : manager.avatar,
+      }));
+
+    res.status(200).json(sortedManagers);
+  } catch (error) {
+    console.error("❌ Lỗi lấy ranking event manager:", error);
     res.status(500).json({ message: "Lỗi server", error: error.message });
   }
 };

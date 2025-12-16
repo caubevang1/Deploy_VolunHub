@@ -130,11 +130,11 @@ export default function EventManagerDashboard() {
                 detailRes.status === 200
                   ? detailRes.data.stats
                   : {
-                    totalRegistrations: 0,
-                    approvedCount: 0,
-                    pendingCount: 0,
-                    rejectedCount: 0,
-                  };
+                      totalRegistrations: 0,
+                      approvedCount: 0,
+                      pendingCount: 0,
+                      rejectedCount: 0,
+                    };
 
               return {
                 ...event,
@@ -338,7 +338,9 @@ export default function EventManagerDashboard() {
       key: "name",
       render: (text, record) => (
         <a
-          onClick={() => navigate(`/quanlisukien/su-kien/${record._id}`)}
+          onClick={() =>
+            navigate(`/quanlisukien/su-kien/${record.slug || record._id}`)
+          }
           className="text-blue-600 hover:text-blue-800 font-medium cursor-pointer"
         >
           {text}
@@ -382,15 +384,18 @@ export default function EventManagerDashboard() {
       width: 120,
       align: "center",
       render: (status) => {
-        const color = {
-          pending: '!text-[#DDB958]',
-          completed: '!text-blue-500',
-          approved: '!text-green-500',
-          rejected: '!text-red-500'
-        }[status] || '!text-gray-500';
+        const color =
+          {
+            pending: "!text-[#DDB958]",
+            completed: "!text-blue-500",
+            approved: "!text-green-500",
+            rejected: "!text-red-500",
+          }[status] || "!text-gray-500";
 
         return (
-          <Tag className={`!ml-0 !pl-0 !border-none !bg-transparent !font-semibold !text-[14px] ${color}`}>
+          <Tag
+            className={`!ml-0 !pl-0 !border-none !bg-transparent !font-semibold !text-[14px] ${color}`}
+          >
             {statusMapping[status]?.text || status}
           </Tag>
         );
@@ -414,7 +419,9 @@ export default function EventManagerDashboard() {
       key: "name",
       render: (text, record) => (
         <a
-          onClick={() => navigate(`/quanlisukien/su-kien/${record._id}`)}
+          onClick={() =>
+            navigate(`/quanlisukien/su-kien/${record.slug || record._id}`)
+          }
           className="text-blue-600 hover:text-blue-800 font-medium cursor-pointer"
         >
           {text}
@@ -456,7 +463,9 @@ export default function EventManagerDashboard() {
       key: "volunteer",
       render: (_, record) => (
         <Space direction="vertical" size={0}>
-          <span className="font-medium">{record.volunteer?.name || record.user?.name || "N/A"}</span>
+          <span className="font-medium">
+            {record.volunteer?.name || record.user?.name || "N/A"}
+          </span>
           <span className="text-gray-500 text-xs">
             {record.volunteer?.email || record.user?.email || ""}
           </span>
@@ -469,7 +478,11 @@ export default function EventManagerDashboard() {
       key: "eventName",
       render: (text, record) => (
         <a
-          onClick={() => navigate(`/quanlisukien/su-kien/${record.eventId}`)}
+          onClick={() =>
+            navigate(
+              `/quanlisukien/su-kien/${record.eventSlug || record.eventId}`
+            )
+          }
           className="text-blue-600 hover:text-blue-800 font-medium cursor-pointer"
         >
           {text}
@@ -523,7 +536,9 @@ export default function EventManagerDashboard() {
       key: "name",
       render: (text, record) => (
         <a
-          onClick={() => navigate(`/quanlisukien/su-kien/${record._id}`)}
+          onClick={() =>
+            navigate(`/quanlisukien/su-kien/${record.slug || record._id}`)
+          }
           className="text-blue-600 hover:text-blue-800 cursor-pointer font-medium"
         >
           {text}
@@ -546,9 +561,9 @@ export default function EventManagerDashboard() {
           <Tag
             style={{
               backgroundColor: color,
-              color: 'white',
-              border: 'none',
-              fontWeight: 500
+              color: "white",
+              border: "none",
+              fontWeight: 500,
             }}
           >
             {eventDate.format("DD/MM/YYYY")}
@@ -566,7 +581,11 @@ export default function EventManagerDashboard() {
             size="small"
             icon={<TeamOutlined />}
             onClick={() =>
-              navigate(`/quanlisukien/su-kien/${record._id}/participants`)
+              navigate(
+                `/quanlisukien/su-kien/${
+                  record.slug || record._id
+                }/participants`
+              )
             }
           >
             Danh sách
@@ -574,7 +593,9 @@ export default function EventManagerDashboard() {
           <Button
             size="small"
             icon={<EyeOutlined />}
-            onClick={() => navigate(`/quanlisukien/su-kien/${record._id}`)}
+            onClick={() =>
+              navigate(`/quanlisukien/su-kien/${record.slug || record._id}`)
+            }
           >
             Chi tiết
           </Button>
@@ -602,8 +623,8 @@ export default function EventManagerDashboard() {
   const participantApprovalRate =
     stats.totalRegistrations > 0
       ? Math.round(
-        (stats.approvedRegistrations / stats.totalRegistrations) * 100
-      )
+          (stats.approvedRegistrations / stats.totalRegistrations) * 100
+        )
       : 0;
 
   if (loading) {
@@ -669,21 +690,23 @@ export default function EventManagerDashboard() {
                 Sự kiện
               </span>
             ),
-            children: <EventsTab
-              stats={stats}
-              recentEvents={recentEvents}
-              topEvents={topEvents}
-              upcomingEvents={upcomingEvents}
-              navigate={navigate}
-              approvalRate={approvalRate}
-              completionRate={completionRate}
-              submittedEvents={submittedEvents}
-              statusMapping={statusMapping}
-              categoryMapping={categoryMapping}
-              eventColumns={eventColumns}
-              topEventColumns={topEventColumns}
-              upcomingEventColumns={upcomingEventColumns}
-            />
+            children: (
+              <EventsTab
+                stats={stats}
+                recentEvents={recentEvents}
+                topEvents={topEvents}
+                upcomingEvents={upcomingEvents}
+                navigate={navigate}
+                approvalRate={approvalRate}
+                completionRate={completionRate}
+                submittedEvents={submittedEvents}
+                statusMapping={statusMapping}
+                categoryMapping={categoryMapping}
+                eventColumns={eventColumns}
+                topEventColumns={topEventColumns}
+                upcomingEventColumns={upcomingEventColumns}
+              />
+            ),
           },
           {
             key: "volunteers",
@@ -693,14 +716,16 @@ export default function EventManagerDashboard() {
                 Tình nguyện viên
               </span>
             ),
-            children: <VolunteersTab
-              stats={stats}
-              pendingRegistrations={pendingRegistrations}
-              participantApprovalRate={participantApprovalRate}
-              pendingRegistrationColumns={pendingRegistrationColumns}
-              navigate={navigate}
-            />
-          }
+            children: (
+              <VolunteersTab
+                stats={stats}
+                pendingRegistrations={pendingRegistrations}
+                participantApprovalRate={participantApprovalRate}
+                pendingRegistrationColumns={pendingRegistrationColumns}
+                navigate={navigate}
+              />
+            ),
+          },
         ]}
       />
     </>
@@ -723,7 +748,7 @@ const EventsTab = ({
   categoryMapping,
   eventColumns,
   topEventColumns,
-  upcomingEventColumns
+  upcomingEventColumns,
 }) => {
   return (
     <>
@@ -804,7 +829,9 @@ const EventsTab = ({
             title={
               <Space>
                 <CheckCircleOutlined style={{ color: "#52c41a" }} />
-                <span className="font-semibold">Tỷ Lệ Sự Kiện Được Phê Duyệt</span>
+                <span className="font-semibold">
+                  Tỷ Lệ Sự Kiện Được Phê Duyệt
+                </span>
               </Space>
             }
             className="shadow-md hover:shadow-lg transition-shadow"
@@ -862,9 +889,7 @@ const EventsTab = ({
           title={
             <Space>
               <CalendarOutlined style={{ color: "#1890ff" }} />
-              <span className="font-semibold text-lg">
-                Sự Kiện Sắp Diễn Ra
-              </span>
+              <span className="font-semibold text-lg">Sự Kiện Sắp Diễn Ra</span>
             </Space>
           }
           className="shadow-md hover:shadow-lg transition-shadow"
@@ -979,7 +1004,7 @@ const VolunteersTab = ({
   pendingRegistrations,
   participantApprovalRate,
   pendingRegistrationColumns,
-  navigate
+  navigate,
 }) => {
   return (
     <>

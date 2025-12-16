@@ -20,6 +20,7 @@ import {
   Skeleton,
   Tooltip,
   Popconfirm,
+  Modal,
 } from "antd";
 import {
   UserOutlined,
@@ -48,6 +49,9 @@ import {
   UpdateUserStatus,
   GetTrendingEvents,
   GetRecentActivity,
+  ExportUsers,
+  ExportEvents,
+  ExportVolunteers,
 } from "../../services/AdminService";
 import { useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
@@ -83,6 +87,13 @@ export default function EnhancedDashboard() {
   const [loadingPending, setLoadingPending] = useState(false);
   const [loadingTrending, setLoadingTrending] = useState(false);
   const [loadingActivity, setLoadingActivity] = useState(false);
+
+  // Export modal states
+  const [exportModalVisible, setExportModalVisible] = useState(false);
+  const [exportDataType, setExportDataType] = useState("users");
+  const [exportFormat, setExportFormat] = useState("csv");
+  const [exportLoading, setExportLoading] = useState(false);
+  const [exportDateRange, setExportDateRange] = useState(null);
 
   const navigate = useNavigate();
 
@@ -223,23 +234,60 @@ export default function EnhancedDashboard() {
     }
   };
 
-  const handleExportData = async (type) => {
+  const handleExportData = async () => {
+    setExportLoading(true);
     try {
-      message.loading("Đang xuất dữ liệu...", 0);
-      if (type === "users") {
-        const res = await exportUsers();
-        const blob = new Blob([res.data], { type: "text/csv" });
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `users-${Date.now()}.csv`;
-        link.click();
+      let response;
+      let filename;
+      const timestamp = new Date().toISOString().split("T")[0];
+      const extension = exportFormat === "json" ? "json" : "csv";
+
+      // Build query params for date range
+      let queryParams = exportFormat;
+      if (exportDateRange && exportDateRange[0] && exportDateRange[1]) {
+        const startDate = exportDateRange[0].format("YYYY-MM-DD");
+        const endDate = exportDateRange[1].format("YYYY-MM-DD");
+        queryParams = `${exportFormat}&startDate=${startDate}&endDate=${endDate}`;
       }
-      message.destroy();
-      message.success("Xuất dữ liệu thành công");
+
+      // Determine which export function to call
+      switch (exportDataType) {
+        case "users":
+          response = await ExportUsers(queryParams);
+          filename = `users-export-${timestamp}.${extension}`;
+          break;
+        case "events":
+          response = await ExportEvents(queryParams);
+          filename = `events-export-${timestamp}.${extension}`;
+          break;
+        case "volunteers":
+          response = await ExportVolunteers(queryParams);
+          filename = `volunteers-export-${timestamp}.${extension}`;
+          break;
+        default:
+          throw new Error("Invalid export type");
+      }
+
+      // Create download link
+      const blob = new Blob([response.data], {
+        type: exportFormat === "json" ? "application/json" : "text/csv",
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      message.success("Xuất dữ liệu thành công!");
+      setExportModalVisible(false);
     } catch (error) {
-      message.destroy();
-      message.error("Không thể xuất dữ liệu");
+      console.error("Export error:", error);
+      message.error("Không thể xuất dữ liệu. Vui lòng thử lại!");
+    } finally {
+      setExportLoading(false);
     }
   };
 
@@ -506,6 +554,14 @@ export default function EnhancedDashboard() {
         </Col>
         <Col>
           <Space>
+            <Button
+              type="primary"
+              icon={<DownloadOutlined />}
+              onClick={() => setExportModalVisible(true)}
+              className="bg-green-600 hover:bg-green-700 border-green-600"
+            >
+              Xuất Dữ Liệu
+            </Button>
             <Select
               value={timeRange}
               onChange={setTimeRange}
@@ -515,12 +571,6 @@ export default function EnhancedDashboard() {
               <Option value={30}>30 ngày qua</Option>
               <Option value={90}>90 ngày qua</Option>
             </Select>
-            <Button
-              icon={<DownloadOutlined />}
-              onClick={() => handleExportData("users")}
-            >
-              Xuất dữ liệu
-            </Button>
             <Button icon={<ReloadOutlined />} onClick={fetchAllData}>
               Làm mới
             </Button>
@@ -844,6 +894,110 @@ export default function EnhancedDashboard() {
           />
         </Card>
       </div>
+
+      {/* Export Modal */}
+      <Modal
+        title={
+          <Space>
+            <DownloadOutlined style={{ color: "#1890ff" }} />
+            <span className="font-semibold">Xuất Dữ Liệu</span>
+          </Space>
+        }
+        open={exportModalVisible}
+        onOk={handleExportData}
+        onCancel={() => setExportModalVisible(false)}
+        okText="Xuất dữ liệu"
+        cancelText="Hủy"
+        confirmLoading={exportLoading}
+        width={500}
+      >
+        <div className="space-y-4 mt-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Loại dữ liệu
+            </label>
+            <Select
+              value={exportDataType}
+              onChange={setExportDataType}
+              style={{ width: "100%" }}
+              size="large"
+            >
+              <Option value="users">
+                <Space>
+                  <UserOutlined />
+                  <span>Tất cả người dùng</span>
+                </Space>
+              </Option>
+              <Option value="events">
+                <Space>
+                  <CalendarOutlined />
+                  <span>Danh sách sự kiện</span>
+                </Space>
+              </Option>
+              <Option value="volunteers">
+                <Space>
+                  <TrophyOutlined />
+                  <span>Tình nguyện viên</span>
+                </Space>
+              </Option>
+            </Select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Khoảng thời gian (tùy chọn)
+            </label>
+            <RangePicker
+              value={exportDateRange}
+              onChange={setExportDateRange}
+              style={{ width: "100%" }}
+              size="large"
+              format="DD/MM/YYYY"
+              placeholder={["Từ ngày", "Đến ngày"]}
+              allowClear
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Để trống để xuất toàn bộ dữ liệu
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Định dạng file
+            </label>
+            <Select
+              value={exportFormat}
+              onChange={setExportFormat}
+              style={{ width: "100%" }}
+              size="large"
+            >
+              <Option value="csv">
+                <Space>
+                  <DownloadOutlined />
+                  <span>CSV (Excel)</span>
+                </Space>
+              </Option>
+              <Option value="json">
+                <Space>
+                  <DownloadOutlined />
+                  <span>JSON</span>
+                </Space>
+              </Option>
+            </Select>
+          </div>
+
+          <div className="bg-blue-50 border border-blue-200 rounded p-3 mt-4">
+            <p className="text-sm text-blue-800">
+              <strong>Lưu ý:</strong> File sẽ được tải về máy tính của bạn
+              {exportDataType === "users" &&
+                " với thông tin tất cả người dùng trong hệ thống."}
+              {exportDataType === "events" && " với thông tin tất cả sự kiện."}
+              {exportDataType === "volunteers" &&
+                " với thông tin tình nguyện viên và số sự kiện đã hoàn thành."}
+            </p>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

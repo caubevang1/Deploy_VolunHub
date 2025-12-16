@@ -1,10 +1,14 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Table, Input, Button, message, Select } from 'antd';
-import { debounce } from 'lodash';
-import { GetPendingEvents, ApproveEvent, } from '../../../services/AdminService';
-import { ReloadOutlined, CheckOutlined, CloseOutlined } from '@ant-design/icons';
-import Swal from 'sweetalert2';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useCallback } from "react";
+import { Table, Input, Button, message, Select, AutoComplete } from "antd";
+import { debounce } from "lodash";
+import { GetPendingEvents, ApproveEvent } from "../../../services/AdminService";
+import {
+  ReloadOutlined,
+  CheckOutlined,
+  CloseOutlined,
+} from "@ant-design/icons";
+import Swal from "sweetalert2";
+import { useNavigate } from "react-router-dom";
 
 const { Search } = Input;
 
@@ -27,8 +31,10 @@ export default function PendingAdminEvents() {
   const [loading, setLoading] = useState(false);
   var navigate = useNavigate();
   const [filters, setFilters] = useState({
-    category: '',
+    category: "",
   });
+  const [searchOptions, setSearchOptions] = useState([]);
+  const [searchValue, setSearchValue] = useState("");
 
   const fetchPendingEvents = async () => {
     setLoading(true);
@@ -39,7 +45,7 @@ export default function PendingAdminEvents() {
         setOriginalData(res.data);
       }
     } catch (error) {
-      message.error('Không thể tải danh sách sự kiện pending');
+      message.error("Không thể tải danh sách sự kiện pending");
     }
     setLoading(false);
   };
@@ -57,6 +63,38 @@ export default function PendingAdminEvents() {
       .toLowerCase();
   };
 
+  const handleSearchChange = (value) => {
+    setSearchValue(value);
+
+    if (!value || value.trim() === "") {
+      setSearchOptions([]);
+      searchKeyword("");
+      return;
+    }
+
+    const keyword = removeVietnameseTones(value.trim().toLowerCase());
+    const suggestions = originalData
+      .filter((event) => {
+        const name = removeVietnameseTones(event.name || "");
+        return name.includes(keyword);
+      })
+      .slice(0, 10)
+      .map((event) => ({
+        value: event.name,
+        label: (
+          <div className="flex justify-between items-center">
+            <span className="truncate flex-1">{event.name}</span>
+            <span className="text-xs text-gray-500 ml-2">
+              {categoryMapping[event.category]}
+            </span>
+          </div>
+        ),
+      }));
+
+    setSearchOptions(suggestions);
+    searchKeyword(value);
+  };
+
   const searchKeyword = useCallback(
     debounce((value) => {
       const keyword = removeVietnameseTones(value.trim().toLowerCase());
@@ -65,12 +103,14 @@ export default function PendingAdminEvents() {
 
       // Lọc theo category
       if (filters.category) {
-        filtered = filtered.filter(event => event.category === filters.category);
+        filtered = filtered.filter(
+          (event) => event.category === filters.category
+        );
       }
 
       // Lọc theo keyword
       if (keyword) {
-        filtered = filtered.filter(event => {
+        filtered = filtered.filter((event) => {
           const name = removeVietnameseTones(event.name || "");
           return name.includes(keyword);
         });
@@ -82,12 +122,12 @@ export default function PendingAdminEvents() {
   );
 
   const handleFilterChange = (key, value) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
+    setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
   // Áp dụng filter khi filters thay đổi
   useEffect(() => {
-    searchKeyword('');
+    searchKeyword(searchValue);
   }, [filters, searchKeyword]);
 
   // Duyệt sự kiện
@@ -95,26 +135,26 @@ export default function PendingAdminEvents() {
     const result = await Swal.fire({
       title: `Duyệt sự kiện?`,
       text: name,
-      icon: 'warning',
+      icon: "warning",
       showCancelButton: true,
-      confirmButtonColor: '#DDB958',
-      cancelButtonColor: '#d33',
-      confirmButtonText: 'Xác nhận',
-      cancelButtonText: 'Hủy',
+      confirmButtonColor: "#DDB958",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Xác nhận",
+      cancelButtonText: "Hủy",
     });
     if (!result.isConfirmed) return;
 
     try {
       const res = await ApproveEvent(eventId);
       if (res.status === 200) {
-        Swal.fire('Đã duyệt!', '', 'success');
+        Swal.fire("Đã duyệt!", "", "success");
         fetchPendingEvents();
       } else {
-        Swal.fire('Lỗi', 'Không thể duyệt sự kiện', 'error');
+        Swal.fire("Lỗi", "Không thể duyệt sự kiện", "error");
       }
     } catch (error) {
-      console.error('❌ Lỗi khi duyệt sự kiện:', error);
-      Swal.fire('Lỗi', 'Đã xảy ra lỗi khi duyệt sự kiện', 'error');
+      console.error("❌ Lỗi khi duyệt sự kiện:", error);
+      Swal.fire("Lỗi", "Đã xảy ra lỗi khi duyệt sự kiện", "error");
     }
   };
 
@@ -123,26 +163,26 @@ export default function PendingAdminEvents() {
     const result = await Swal.fire({
       title: `Từ chối sự kiện?`,
       text: name,
-      icon: 'warning',
+      icon: "warning",
       showCancelButton: true,
-      confirmButtonColor: '#d33',
-      cancelButtonColor: '#DDB958',
-      confirmButtonText: 'Từ chối',
-      cancelButtonText: 'Hủy',
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#DDB958",
+      confirmButtonText: "Từ chối",
+      cancelButtonText: "Hủy",
     });
     if (!result.isConfirmed) return;
 
     try {
       const res = await ApproveEvent(eventId); // Sử dụng API tương tự, backend sẽ xử lý
       if (res.status === 200) {
-        Swal.fire('Đã từ chối!', '', 'success');
+        Swal.fire("Đã từ chối!", "", "success");
         fetchPendingEvents();
       } else {
-        Swal.fire('Lỗi', 'Không thể từ chối sự kiện', 'error');
+        Swal.fire("Lỗi", "Không thể từ chối sự kiện", "error");
       }
     } catch (error) {
-      console.error('❌ Lỗi khi từ chối sự kiện:', error);
-      Swal.fire('Lỗi', 'Đã xảy ra lỗi khi từ chối sự kiện', 'error');
+      console.error("❌ Lỗi khi từ chối sự kiện:", error);
+      Swal.fire("Lỗi", "Đã xảy ra lỗi khi từ chối sự kiện", "error");
     }
   };
 
@@ -152,9 +192,10 @@ export default function PendingAdminEvents() {
 
   const columns = [
     {
-      title: 'Tên sự kiện',
-      dataIndex: 'name',
-      sorter: (a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()),
+      title: "Tên sự kiện",
+      dataIndex: "name",
+      sorter: (a, b) =>
+        a.name.toLowerCase().localeCompare(b.name.toLowerCase()),
       render: (text, event) => (
         <Button
           type="link"
@@ -166,26 +207,26 @@ export default function PendingAdminEvents() {
             {text}
           </span>
         </Button>
-      )
+      ),
     },
     {
-      title: 'Ngày',
-      dataIndex: 'date',
-      render: date => new Date(date).toLocaleDateString(),
+      title: "Ngày",
+      dataIndex: "date",
+      render: (date) => new Date(date).toLocaleDateString(),
       sorter: (a, b) => new Date(a.date) - new Date(b.date),
     },
     {
-      title: 'Địa điểm',
-      dataIndex: 'location',
+      title: "Địa điểm",
+      dataIndex: "location",
     },
     {
-      title: 'Loại sự kiện',
-      dataIndex: 'category',
+      title: "Loại sự kiện",
+      dataIndex: "category",
       render: (category) => categoryMapping[category] || category,
     },
     {
-      title: 'Thao tác',
-      align: 'center',
+      title: "Thao tác",
+      align: "center",
       render: (_, event) => (
         <div className="flex flex-col gap-2 items-center">
           <div
@@ -193,8 +234,8 @@ export default function PendingAdminEvents() {
             onClick={() => handleApproveEvent(event._id, event.name)}
             style={{ fontWeight: 500 }}
           >
-            <CheckOutlined style={{ color: 'green', fontSize: 18 }} />
-            <span style={{ color: 'green' }}>DUYỆT</span>
+            <CheckOutlined style={{ color: "green", fontSize: 18 }} />
+            <span style={{ color: "green" }}>DUYỆT</span>
           </div>
 
           <div
@@ -202,30 +243,42 @@ export default function PendingAdminEvents() {
             onClick={() => handleRejectEvent(event._id, event.name)}
             style={{ fontWeight: 500 }}
           >
-            <CloseOutlined style={{ color: 'red', fontSize: 18 }} />
-            <span style={{ color: 'red' }}>TỪ CHỐI</span>
+            <CloseOutlined style={{ color: "red", fontSize: 18 }} />
+            <span style={{ color: "red" }}>TỪ CHỐI</span>
           </div>
         </div>
       ),
-    }
-
+    },
   ];
 
   return (
     <div className="pendingEvents">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-2xl uppercase font-bold">Duyệt sự kiện</h2>
-        <Button icon={<ReloadOutlined />} onClick={fetchPendingEvents} type="default">
+        <Button
+          icon={<ReloadOutlined />}
+          onClick={fetchPendingEvents}
+          type="default"
+        >
           Tải lại
         </Button>
       </div>
 
       <div className="flex items-center gap-4 mb-4">
-        <Search
+        <AutoComplete
           className="flex-1"
+          value={searchValue}
+          options={searchOptions}
+          onChange={handleSearchChange}
+          onSelect={handleSearchChange}
           placeholder="Tìm kiếm theo tên sự kiện"
           size="large"
-          onChange={e => searchKeyword(e.target.value)}
+          allowClear
+          onClear={() => {
+            setSearchValue("");
+            setSearchOptions([]);
+            searchKeyword("");
+          }}
         />
 
         <Select
@@ -234,17 +287,17 @@ export default function PendingAdminEvents() {
           style={{ width: 180 }}
           allowClear
           value={filters.category || undefined}
-          onChange={(value) => handleFilterChange('category', value)}
+          onChange={(value) => handleFilterChange("category", value)}
           options={[
-            { value: 'Community', label: 'Cộng đồng' },
-            { value: 'Education', label: 'Giáo dục' },
-            { value: 'Healthcare', label: 'Sức khỏe' },
-            { value: 'Environment', label: 'Môi trường' },
-            { value: 'EventSupport', label: 'Sự kiện' },
-            { value: 'Technical', label: 'Kỹ thuật' },
-            { value: 'Emergency', label: 'Cứu trợ khẩn cấp' },
-            { value: 'Online', label: 'Trực tuyến' },
-            { value: 'Corporate', label: 'Doanh nghiệp' },
+            { value: "Community", label: "Cộng đồng" },
+            { value: "Education", label: "Giáo dục" },
+            { value: "Healthcare", label: "Sức khỏe" },
+            { value: "Environment", label: "Môi trường" },
+            { value: "EventSupport", label: "Sự kiện" },
+            { value: "Technical", label: "Kỹ thuật" },
+            { value: "Emergency", label: "Cứu trợ khẩn cấp" },
+            { value: "Online", label: "Trực tuyến" },
+            { value: "Corporate", label: "Doanh nghiệp" },
           ]}
         />
       </div>
@@ -255,7 +308,7 @@ export default function PendingAdminEvents() {
         rowKey="_id"
         loading={loading}
         pagination={{ pageSize: 8 }}
-        className='shadow shadow-md rounded-md'
+        className="shadow shadow-md rounded-md"
       />
     </div>
   );

@@ -12,11 +12,11 @@ const categoryMapping = {
   Technical: "Kỹ thuật",
   Emergency: "Cứu trợ khẩn cấp",
   Online: "Trực tuyến",
-  Corporate: "Doanh nghiệp"
+  Corporate: "Doanh nghiệp",
 };
 
 export default function AdminEventDetail() {
-  const { eventId } = useParams();
+  const { slug } = useParams();
   const navigate = useNavigate();
 
   const [event, setEvent] = useState(null);
@@ -25,7 +25,7 @@ export default function AdminEventDetail() {
   useEffect(() => {
     async function load() {
       try {
-        const res = await GetEventDetail(eventId);
+        const res = await GetEventDetail(slug);
         if (res.status === 200) setEvent(res.data);
       } catch (err) {
         console.error(err);
@@ -33,10 +33,15 @@ export default function AdminEventDetail() {
       setLoading(false);
     }
     load();
-  }, [eventId]);
+  }, [slug]);
 
   if (loading) return <p className="text-center mt-10 text-lg">Đang tải...</p>;
-  if (!event) return <p className="text-center mt-10 text-lg text-red-500">Không tìm thấy sự kiện!</p>;
+  if (!event)
+    return (
+      <p className="text-center mt-10 text-lg text-red-500">
+        Không tìm thấy sự kiện!
+      </p>
+    );
 
   const formatDate = (dateStr) => {
     if (!dateStr) return "-";
@@ -82,7 +87,11 @@ export default function AdminEventDetail() {
 
       {/* Ảnh */}
       <img
-        src={event.coverImage ? `http://localhost:5000${event.coverImage}` : "/default-event.png"}
+        src={
+          event.coverImage
+            ? `http://localhost:5000${event.coverImage}`
+            : "/default-event.png"
+        }
         alt={event.name}
         className="w-full h-full object-cover px-6 py-8"
       />
@@ -110,7 +119,8 @@ export default function AdminEventDetail() {
           <div className="flex items-center gap-3">
             <Tag size={20} />
             <span>
-              <strong>Loại sự kiện:</strong> {categoryMapping[event.category] || event.category || "Khác"}
+              <strong>Loại sự kiện:</strong>{" "}
+              {categoryMapping[event.category] || event.category || "Khác"}
             </span>
           </div>
 
@@ -133,7 +143,8 @@ export default function AdminEventDetail() {
           <div className="flex items-center gap-3">
             <Users size={20} />
             <span>
-              <strong>Số người tham gia:</strong> {event.currentParticipants || 0}/{event.maxParticipants || 50}
+              <strong>Số người tham gia:</strong>{" "}
+              {event.currentParticipants || 0}/{event.maxParticipants || 50}
             </span>
           </div>
 
@@ -142,7 +153,9 @@ export default function AdminEventDetail() {
               <Phone size={20} />
             </div>
             <span className="break-words">
-              <strong>Thắc mắc liên hệ:</strong> {event.createdBy?.phone || "0123456789"} ({event.createdBy?.name || "Nguyễn Trường Nam"})
+              <strong>Thắc mắc liên hệ:</strong>{" "}
+              {event.createdBy?.phone || "0123456789"} (
+              {event.createdBy?.name || "Nguyễn Trường Nam"})
             </span>
           </div>
         </div>
@@ -154,7 +167,7 @@ export default function AdminEventDetail() {
         <div
           className="prose prose-lg max-w-none prose-img:m-auto"
           dangerouslySetInnerHTML={{
-            __html: renderDescription(event.description, event.galleryImages)
+            __html: renderDescription(event.description, event.galleryImages),
           }}
         />
       </div>

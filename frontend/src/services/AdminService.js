@@ -21,3 +21,13 @@ export const GetDashboardStats = () => http.get(`/admin/dashboard`);
 export const GetTrendingEvents = (days = 7) =>
   http.get(`/admin/trending?days=${days}`);
 export const GetRecentActivity = () => http.get(`/admin/recent-activity`);
+
+//Export Data
+export const ExportUsers = (format = "csv") =>
+  http.get(`/admin/export/users?format=${format}`, { responseType: "blob" });
+export const ExportEvents = (format = "csv") =>
+  http.get(`/admin/export/events?format=${format}`, { responseType: "blob" });
+export const ExportVolunteers = (format = "csv") =>
+  http.get(`/admin/export/volunteers?format=${format}`, {
+    responseType: "blob",
+  });

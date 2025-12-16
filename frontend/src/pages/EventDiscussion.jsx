@@ -47,6 +47,7 @@ function CommentSection({
   commentsMap,
   setCommentsMap,
   fetchPosts,
+  eventCreatedBy,
 }) {
   const [newComment, setNewComment] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -243,8 +244,12 @@ function CommentSection({
         <div className="comment-list">
           {comments.map((comment) => {
             const isLiked = comment.likes?.includes(currentUser?._id);
+            const isEventManager =
+              currentUser?.role === "EVENTMANAGER" &&
+              eventCreatedBy === currentUser?._id;
             const canDelete =
               currentUser?.role === "ADMIN" ||
+              isEventManager ||
               comment.author._id === currentUser?._id;
 
             return (
@@ -339,6 +344,12 @@ export default function EventDiscussion() {
         if (res.status === 200) {
           setEvent(res.data);
 
+          // Admin có thể truy cập tất cả discussion
+          if (currentUser?.role === "ADMIN") {
+            setCanAccess(true);
+            return;
+          }
+
           if (res.data.status !== "approved") {
             Swal.fire({
               icon: "warning",
@@ -353,7 +364,8 @@ export default function EventDiscussion() {
         }
       } catch (err) {
         console.error("Lỗi lấy thông tin sự kiện:", err);
-        if (err.response?.status === 403) {
+        // Admin không bị chặn bởi lỗi 403
+        if (err.response?.status === 403 && currentUser?.role !== "ADMIN") {
           Swal.fire({
             icon: "error",
             title: "Không có quyền",
@@ -361,12 +373,15 @@ export default function EventDiscussion() {
             confirmButtonColor: "#DDB958",
           });
           navigate(-1);
+        } else if (currentUser?.role === "ADMIN") {
+          // Admin vẫn có thể tiếp tục dù có lỗi
+          setCanAccess(true);
         }
       }
       setLoading(false);
     }
     fetchEvent();
-  }, [eventId, navigate]);
+  }, [eventId, navigate, currentUser]);
 
   // Giữ fetchPosts là useCallback để ổn định khi truyền xuống component con
   const fetchPosts = useCallback(async () => {
@@ -772,8 +787,12 @@ export default function EventDiscussion() {
         ) : (
           posts.map((post) => {
             const isLiked = post.likes?.includes(currentUser?._id);
+            const isEventManager =
+              currentUser?.role === "EVENTMANAGER" &&
+              event?.createdBy?._id === currentUser?._id;
             const canDelete =
               currentUser?.role === "ADMIN" ||
+              isEventManager ||
               post.author._id === currentUser?._id;
 
             return (
@@ -903,6 +922,7 @@ export default function EventDiscussion() {
                     commentsMap={commentsMap}
                     setCommentsMap={setCommentsMap}
                     fetchPosts={fetchPosts}
+                    eventCreatedBy={event?.createdBy?._id}
                   />
                 )}
               </div>

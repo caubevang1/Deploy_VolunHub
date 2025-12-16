@@ -23,7 +23,7 @@ import dayjs from "dayjs";
 const { Option } = Select;
 
 export default function EditEvent() {
-  const { eventId } = useParams();
+  const { slug } = useParams();
   const [form] = Form.useForm();
   const navigate = useNavigate();
 
@@ -31,6 +31,7 @@ export default function EditEvent() {
   const [description, setDescription] = useState("");
   const [galleryImages, setGalleryImages] = useState([]);
   const [editorInstance, setEditorInstance] = useState(null);
+  const [event, setEvent] = useState(null);
   const galleryCounterRef = useRef(0);
 
   const volunteerCategories = [
@@ -121,20 +122,21 @@ export default function EditEvent() {
   useEffect(() => {
     const fetchEvent = async () => {
       try {
-        const res = await GetEventDetail(eventId);
+        const res = await GetEventDetail(slug);
         if (res.status === 200) {
-          const event = res.data;
+          const eventData = res.data;
+          setEvent(eventData);
 
           form.setFieldsValue({
-            name: event.name,
-            location: event.location,
-            category: event.category,
-            maxParticipants: event.maxParticipants,
-            date: dayjs(event.date),
-            endDate: event.endDate ? dayjs(event.endDate) : null,
+            name: eventData.name,
+            location: eventData.location,
+            category: eventData.category,
+            maxParticipants: eventData.maxParticipants,
+            date: dayjs(eventData.date),
+            endDate: eventData.endDate ? dayjs(eventData.endDate) : null,
           });
 
-          const galleryFiles = event.galleryImages.map((img, i) => ({
+          const galleryFiles = eventData.galleryImages.map((img, i) => ({
             uid: `${i}`,
             name: `gallery_${i}.jpg`,
             status: "done",
@@ -143,18 +145,18 @@ export default function EditEvent() {
           setGalleryImages(galleryFiles);
 
           const updatedDescription = renderDescription(
-            event.description,
-            event.galleryImages
+            eventData.description,
+            eventData.galleryImages
           );
           setDescription(updatedDescription);
 
-          if (event.coverImage) {
+          if (eventData.coverImage) {
             form.setFieldValue("coverImage", [
               {
                 uid: "-1",
                 name: "cover.jpg",
                 status: "done",
-                url: `http://localhost:5000${event.coverImage}`,
+                url: `http://localhost:5000${eventData.coverImage}`,
               },
             ]);
           }
@@ -166,7 +168,7 @@ export default function EditEvent() {
     };
 
     fetchEvent();
-  }, [eventId]);
+  }, [slug]);
 
   const handleUpdateEvent = async (values) => {
     try {
@@ -204,7 +206,7 @@ export default function EditEvent() {
         }
       }
 
-      const res = await UpdateEvents(eventId, formData);
+      const res = await UpdateEvents(event._id, formData);
 
       if (res.status === 200) {
         Swal.fire("Thành công", "Cập nhật sự kiện thành công", "success");
