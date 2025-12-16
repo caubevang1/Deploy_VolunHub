@@ -491,8 +491,8 @@ export default function EventList() {
               key={key}
               onClick={() => setTab(key)}
               className={`relative pb-2 whitespace-nowrap text-sm md:text-base ${isActive
-                  ? "text-[#DDB958] font-semibold"
-                  : "hover:text-gray-900"
+                ? "text-[#DDB958] font-semibold"
+                : "hover:text-gray-900"
                 }`}
             >
               {label} ({count})
@@ -521,7 +521,7 @@ export default function EventList() {
             return (
               <div
                 key={event._id}
-                className="bg-white rounded-2xl shadow-md overflow-hidden w-full md:w-auto hover:shadow-xl transition mt-2 md:mt-4 h-auto md:h-[750px] flex flex-col cursor-pointer relative"
+                className="bg-white rounded-2xl shadow-md overflow-hidden w-full md:w-auto hover:shadow-xl transition mt-2 md:mt-4 h-auto md:h-[750px] flex flex-col cursor-pointer relative border-[2px] border-gray-300"
                 onClick={() => handleViewDetail(event._id)}
               >
                 {/* Badge trạng thái user */}
@@ -607,8 +607,8 @@ export default function EventList() {
                           size={20}
                           strokeWidth={1.5}
                           className={`md:w-6 md:h-6 ${isLiked
-                              ? "text-red-600 fill-red-600"
-                              : "text-gray-600"
+                            ? "text-red-600 fill-red-600"
+                            : "text-gray-600"
                             }`}
                         />
                         <span className="font-medium text-gray-700">

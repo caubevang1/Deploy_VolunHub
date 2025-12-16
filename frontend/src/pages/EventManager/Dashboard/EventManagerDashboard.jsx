@@ -17,6 +17,7 @@ import {
   Tooltip,
   Popconfirm,
   DatePicker,
+  Tabs,
 } from "antd";
 import {
   CalendarOutlined,
@@ -45,6 +46,7 @@ import dayjs from "dayjs";
 const { RangePicker } = DatePicker;
 
 export default function EventManagerDashboard() {
+  const [activeTab, setActiveTab] = useState("events");
   const [stats, setStats] = useState({
     totalEvents: 0,
     pendingEvents: 0,
@@ -128,11 +130,11 @@ export default function EventManagerDashboard() {
                 detailRes.status === 200
                   ? detailRes.data.stats
                   : {
-                      totalRegistrations: 0,
-                      approvedCount: 0,
-                      pendingCount: 0,
-                      rejectedCount: 0,
-                    };
+                    totalRegistrations: 0,
+                    approvedCount: 0,
+                    pendingCount: 0,
+                    rejectedCount: 0,
+                  };
 
               return {
                 ...event,
@@ -263,13 +265,13 @@ export default function EventManagerDashboard() {
         );
         setPendingRegistrations(allPendingRegistrations.slice(0, 10));
 
-        // Upcoming/recent events (approved events within 7 days)
+        // Upcoming events (approved events within 7 days ahead only)
         const upcoming = detailedEventsData
           .filter((e) => {
             if (e.status !== "approved") return false;
             const eventDate = dayjs(e.date);
             const daysDiff = eventDate.diff(now, "day");
-            return daysDiff >= -3 && daysDiff <= 7; // 3 days ago to 7 days ahead
+            return daysDiff >= 0 && daysDiff <= 7; // Only future events within 7 days
           })
           .sort((a, b) => new Date(a.date) - new Date(b.date))
           .slice(0, 5);
@@ -344,64 +346,79 @@ export default function EventManagerDashboard() {
       ),
     },
     {
-      title: "Danh mục",
-      dataIndex: "category",
-      key: "category",
-      width: 120,
-      render: (category) => (
-        <Tag color="blue">{categoryMapping[category] || category}</Tag>
-      ),
-    },
-    {
-      title: "Ngày",
-      dataIndex: "date",
-      key: "date",
-      render: (date) => dayjs(date).format("DD/MM/YYYY"),
+      title: "Ngày tạo",
+      dataIndex: "createdAt",
+      key: "createdAt",
+      render: (createdAt) => dayjs(createdAt).format("DD/MM/YYYY"),
       width: 110,
     },
     {
-      title: "Đăng ký",
+      title: "Đã đăng ký",
       key: "registrations",
       width: 90,
       align: "center",
       render: (_, record) => (
-        <Badge
-          count={record.stats?.totalRegistrations || 0}
-          showZero
-          color="blue"
-        />
+        <span className="font-medium text-gray-700">
+          {record.stats?.totalRegistrations || 0}
+        </span>
+      ),
+    },
+    {
+      title: "SL tối đa",
+      dataIndex: "maxParticipants",
+      key: "maxParticipants",
+      width: 110,
+      align: "center",
+      render: (maxParticipants) => (
+        <span className="font-medium text-gray-700">
+          {maxParticipants || "Không giới hạn"}
+        </span>
       ),
     },
     {
       title: "Trạng thái",
       dataIndex: "status",
       key: "status",
-      width: 110,
+      width: 120,
+      align: "center",
       render: (status) => {
-        const statusInfo = statusMapping[status] || {
-          text: status,
-          color: "default",
-        };
-        return <Tag color={statusInfo.color}>{statusInfo.text}</Tag>;
+        const color = {
+          pending: '!text-[#DDB958]',
+          completed: '!text-blue-500',
+          approved: '!text-green-500',
+          rejected: '!text-red-500'
+        }[status] || '!text-gray-500';
+
+        return (
+          <Tag className={`!ml-0 !pl-0 !border-none !bg-transparent !font-semibold !text-[14px] ${color}`}>
+            {statusMapping[status]?.text || status}
+          </Tag>
+        );
       },
     },
   ];
 
   const topEventColumns = [
     {
+      title: "STT",
+      key: "index",
+      width: 60,
+      align: "center",
+      render: (_, __, index) => (
+        <span className="font-medium text-gray-700">{index + 1}</span>
+      ),
+    },
+    {
       title: "Tên sự kiện",
       dataIndex: "name",
       key: "name",
       render: (text, record) => (
-        <Space>
-          <TrophyOutlined style={{ color: "#faad14" }} />
-          <a
-            onClick={() => navigate(`/quanlisukien/su-kien/${record._id}`)}
-            className="text-blue-600 hover:text-blue-800 cursor-pointer"
-          >
-            {text}
-          </a>
-        </Space>
+        <a
+          onClick={() => navigate(`/quanlisukien/su-kien/${record._id}`)}
+          className="text-blue-600 hover:text-blue-800 font-medium cursor-pointer"
+        >
+          {text}
+        </a>
       ),
     },
     {
@@ -439,9 +456,9 @@ export default function EventManagerDashboard() {
       key: "volunteer",
       render: (_, record) => (
         <Space direction="vertical" size={0}>
-          <span className="font-medium">{record.user?.name || "N/A"}</span>
+          <span className="font-medium">{record.volunteer?.name || record.user?.name || "N/A"}</span>
           <span className="text-gray-500 text-xs">
-            {record.user?.email || ""}
+            {record.volunteer?.email || record.user?.email || ""}
           </span>
         </Space>
       ),
@@ -453,7 +470,7 @@ export default function EventManagerDashboard() {
       render: (text, record) => (
         <a
           onClick={() => navigate(`/quanlisukien/su-kien/${record.eventId}`)}
-          className="text-blue-600 hover:text-blue-800 cursor-pointer"
+          className="text-blue-600 hover:text-blue-800 font-medium cursor-pointer"
         >
           {text}
         </a>
@@ -467,40 +484,33 @@ export default function EventManagerDashboard() {
       render: (date) => dayjs(date).format("DD/MM/YYYY"),
     },
     {
-      title: "Hành động",
-      key: "action",
-      width: 180,
+      title: "Thao tác",
+      align: "center",
+      width: 200,
       render: (_, record) => (
-        <Space>
-          <Tooltip title="Duyệt">
+        <div className="flex flex-col justify-center items-center gap-2">
+          <Tooltip title="Duyệt tham gia">
             <Button
               type="primary"
+              className="!bg-green-500 !hover:bg-green-600 !border-none !font-semibold w-18"
               size="small"
-              icon={<CheckCircleOutlined />}
               loading={actionLoading[record._id]}
               onClick={() => handleApproveRegistration(record._id)}
             >
               Duyệt
             </Button>
           </Tooltip>
-          <Tooltip title="Từ chối">
-            <Popconfirm
-              title="Bạn chắc chắn muốn từ chối?"
-              onConfirm={() => handleRejectRegistration(record._id)}
-              okText="Đồng ý"
-              cancelText="Hủy"
+          <Tooltip title="Từ chối tham gia">
+            <Button
+              size="small"
+              className="!bg-red-500 !hover:bg-red-600 !border-none !text-white !font-semibold w-18"
+              loading={actionLoading[record._id]}
+              onClick={() => handleRejectRegistration(record._id)}
             >
-              <Button
-                danger
-                size="small"
-                icon={<CloseCircleOutlined />}
-                loading={actionLoading[record._id]}
-              >
-                Từ chối
-              </Button>
-            </Popconfirm>
+              Từ chối
+            </Button>
           </Tooltip>
-        </Space>
+        </div>
       ),
     },
   ];
@@ -529,11 +539,21 @@ export default function EventManagerDashboard() {
         const eventDate = dayjs(date);
         const today = dayjs();
         const diff = eventDate.diff(today, "day");
-        let color = "blue";
-        if (diff < 0) color = "orange"; // Past
-        else if (diff <= 2) color = "red"; // Very soon
-        else if (diff <= 7) color = "green"; // Soon
-        return <Tag color={color}>{eventDate.format("DD/MM/YYYY")}</Tag>;
+        let color = "#1890ff";
+        if (diff <= 2) color = "#ff4d4f"; // Very soon (within 2 days)
+        else if (diff <= 7) color = "#52c41a"; // Soon (3-7 days)
+        return (
+          <Tag
+            style={{
+              backgroundColor: color,
+              color: 'white',
+              border: 'none',
+              fontWeight: 500
+            }}
+          >
+            {eventDate.format("DD/MM/YYYY")}
+          </Tag>
+        );
       },
     },
     {
@@ -549,7 +569,7 @@ export default function EventManagerDashboard() {
               navigate(`/quanlisukien/su-kien/${record._id}/participants`)
             }
           >
-            Điểm danh
+            Danh sách
           </Button>
           <Button
             size="small"
@@ -582,8 +602,8 @@ export default function EventManagerDashboard() {
   const participantApprovalRate =
     stats.totalRegistrations > 0
       ? Math.round(
-          (stats.approvedRegistrations / stats.totalRegistrations) * 100
-        )
+        (stats.approvedRegistrations / stats.totalRegistrations) * 100
+      )
       : 0;
 
   if (loading) {
@@ -597,7 +617,7 @@ export default function EventManagerDashboard() {
   }
 
   return (
-    <div className="dashboard-container p-6 bg-gray-50 min-h-screen">
+    <>
       {/* Header */}
       <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
         <h2 className="text-3xl font-bold text-gray-800">
@@ -635,6 +655,78 @@ export default function EventManagerDashboard() {
         </Space>
       </div>
 
+      {/* Tabs */}
+      <Tabs
+        activeKey={activeTab}
+        onChange={setActiveTab}
+        size="large"
+        items={[
+          {
+            key: "events",
+            label: (
+              <span className="text-base font-medium">
+                <CalendarOutlined className="mr-2" />
+                Sự kiện
+              </span>
+            ),
+            children: <EventsTab
+              stats={stats}
+              recentEvents={recentEvents}
+              topEvents={topEvents}
+              upcomingEvents={upcomingEvents}
+              navigate={navigate}
+              approvalRate={approvalRate}
+              completionRate={completionRate}
+              submittedEvents={submittedEvents}
+              statusMapping={statusMapping}
+              categoryMapping={categoryMapping}
+              eventColumns={eventColumns}
+              topEventColumns={topEventColumns}
+              upcomingEventColumns={upcomingEventColumns}
+            />
+          },
+          {
+            key: "volunteers",
+            label: (
+              <span className="text-base font-medium">
+                <TeamOutlined className="mr-2" />
+                Tình nguyện viên
+              </span>
+            ),
+            children: <VolunteersTab
+              stats={stats}
+              pendingRegistrations={pendingRegistrations}
+              participantApprovalRate={participantApprovalRate}
+              pendingRegistrationColumns={pendingRegistrationColumns}
+              navigate={navigate}
+            />
+          }
+        ]}
+      />
+    </>
+  );
+}
+
+// ========================================
+// EVENTS TAB COMPONENT
+// ========================================
+const EventsTab = ({
+  stats,
+  recentEvents,
+  topEvents,
+  upcomingEvents,
+  navigate,
+  approvalRate,
+  completionRate,
+  submittedEvents,
+  statusMapping,
+  categoryMapping,
+  eventColumns,
+  topEventColumns,
+  upcomingEventColumns
+}) => {
+  return (
+    <>
       {/* Statistics Cards */}
       <Row gutter={[16, 16]} className="mb-6">
         <Col xs={24} sm={12} lg={6}>
@@ -705,98 +797,27 @@ export default function EventManagerDashboard() {
         </Col>
       </Row>
 
-      {/* Registration Statistics */}
-      <Row gutter={[16, 16]} className="mb-6">
-        <Col xs={24} sm={12} lg={6}>
-          <Card
-            className="shadow-md hover:shadow-lg transition-shadow"
-            style={{ borderTop: "4px solid #1890ff", borderRadius: 8 }}
-          >
-            <Statistic
-              title={
-                <span className="text-gray-600 font-medium">Tổng Đăng Ký</span>
-              }
-              value={stats.totalRegistrations}
-              prefix={<UserOutlined style={{ color: "#1890ff" }} />}
-              valueStyle={{ color: "#1890ff", fontWeight: "bold" }}
-            />
-          </Card>
-        </Col>
-
-        <Col xs={24} sm={12} lg={6}>
-          <Card
-            className="shadow-md hover:shadow-lg transition-shadow"
-            style={{ borderTop: "4px solid #52c41a", borderRadius: 8 }}
-          >
-            <Statistic
-              title={
-                <span className="text-gray-600 font-medium">
-                  Đã Duyệt Tham Gia
-                </span>
-              }
-              value={stats.approvedRegistrations}
-              prefix={<CheckCircleOutlined style={{ color: "#52c41a" }} />}
-              valueStyle={{ color: "#52c41a", fontWeight: "bold" }}
-            />
-          </Card>
-        </Col>
-
-        <Col xs={24} sm={12} lg={6}>
-          <Card
-            className="shadow-md hover:shadow-lg transition-shadow"
-            style={{ borderTop: "4px solid #faad14", borderRadius: 8 }}
-          >
-            <Statistic
-              title={
-                <span className="text-gray-600 font-medium">
-                  Chờ Duyệt Tham Gia
-                </span>
-              }
-              value={stats.pendingRegistrations}
-              prefix={<ClockCircleOutlined style={{ color: "#faad14" }} />}
-              valueStyle={{ color: "#faad14", fontWeight: "bold" }}
-            />
-          </Card>
-        </Col>
-
-        <Col xs={24} sm={12} lg={6}>
-          <Card
-            className="shadow-md hover:shadow-lg transition-shadow"
-            style={{ borderTop: "4px solid #ff4d4f", borderRadius: 8 }}
-          >
-            <Statistic
-              title={
-                <span className="text-gray-600 font-medium">
-                  Từ Chối Tham Gia
-                </span>
-              }
-              value={stats.rejectedRegistrations}
-              prefix={<CloseCircleOutlined style={{ color: "#ff4d4f" }} />}
-              valueStyle={{ color: "#ff4d4f", fontWeight: "bold" }}
-            />
-          </Card>
-        </Col>
-      </Row>
-
       {/* Progress Bars */}
       <Row gutter={[16, 16]} className="mb-6">
-        <Col xs={24} md={8}>
+        <Col xs={24} md={12}>
           <Card
             title={
               <Space>
                 <CheckCircleOutlined style={{ color: "#52c41a" }} />
-                <span className="font-semibold">Tỷ Lệ Phê Duyệt Sự Kiện</span>
+                <span className="font-semibold">Tỷ Lệ Sự Kiện Được Phê Duyệt</span>
               </Space>
             }
             className="shadow-md hover:shadow-lg transition-shadow"
             style={{ borderRadius: 8, borderTop: "3px solid #52c41a" }}
           >
-            <Progress
-              percent={approvalRate}
-              strokeColor={{ "0%": "#52c41a", "100%": "#95de64" }}
-              format={(percent) => `${percent}%`}
-              size={10}
-            />
+            <div className="mb-2">
+              <Progress
+                percent={approvalRate}
+                strokeColor={{ "0%": "#52c41a", "100%": "#95de64" }}
+                strokeWidth={12}
+                format={(percent) => `${percent}%`}
+              />
+            </div>
             <p className="text-gray-600 mt-3 text-center">
               <span className="font-bold text-green-600">
                 {stats.approvedEvents}
@@ -806,7 +827,7 @@ export default function EventManagerDashboard() {
           </Card>
         </Col>
 
-        <Col xs={24} md={8}>
+        <Col xs={24} md={12}>
           <Card
             title={
               <Space>
@@ -817,12 +838,14 @@ export default function EventManagerDashboard() {
             className="shadow-md hover:shadow-lg transition-shadow"
             style={{ borderRadius: 8, borderTop: "3px solid #1890ff" }}
           >
-            <Progress
-              percent={completionRate}
-              strokeColor={{ "0%": "#1890ff", "100%": "#69c0ff" }}
-              format={(percent) => `${percent}%`}
-              size={10}
-            />
+            <div className="mb-2">
+              <Progress
+                percent={completionRate}
+                strokeColor={{ "0%": "#1890ff", "100%": "#69c0ff" }}
+                strokeWidth={12}
+                format={(percent) => `${percent}%`}
+              />
+            </div>
             <p className="text-gray-600 mt-3 text-center">
               <span className="font-bold text-blue-600">
                 {stats.completedEvents}
@@ -831,75 +854,16 @@ export default function EventManagerDashboard() {
             </p>
           </Card>
         </Col>
-
-        <Col xs={24} md={8}>
-          <Card
-            title={
-              <Space>
-                <UserOutlined style={{ color: "#722ed1" }} />
-                <span className="font-semibold">
-                  Tỷ Lệ Duyệt Người Tham Gia
-                </span>
-              </Space>
-            }
-            className="shadow-md hover:shadow-lg transition-shadow"
-            style={{ borderRadius: 8, borderTop: "3px solid #722ed1" }}
-          >
-            <Progress
-              percent={participantApprovalRate}
-              strokeColor={{ "0%": "#722ed1", "100%": "#b37feb" }}
-              format={(percent) => `${percent}%`}
-              size={10}
-            />
-            <p className="text-gray-600 mt-3 text-center">
-              <span className="font-bold text-purple-600">
-                {stats.approvedRegistrations}
-              </span>{" "}
-              / {stats.totalRegistrations} đăng ký
-            </p>
-          </Card>
-        </Col>
       </Row>
 
-      {/* Pending Registrations - BẮT BUỘC */}
-      <div className="mb-6">
-        <Card
-          title={
-            <Space>
-              <ClockCircleOutlined style={{ color: "#faad14" }} />
-              <span className="font-semibold text-lg">
-                Đăng Ký Chờ Duyệt ({pendingRegistrations.length})
-              </span>
-            </Space>
-          }
-          className="shadow-md hover:shadow-lg transition-shadow"
-          style={{ borderRadius: 8 }}
-        >
-          {pendingRegistrations.length === 0 ? (
-            <Empty
-              description="Không có đăng ký chờ duyệt"
-              image={Empty.PRESENTED_IMAGE_SIMPLE}
-            />
-          ) : (
-            <Table
-              dataSource={pendingRegistrations}
-              columns={pendingRegistrationColumns}
-              rowKey="_id"
-              pagination={{ pageSize: 5, showSizeChanger: false }}
-              size="small"
-            />
-          )}
-        </Card>
-      </div>
-
-      {/* Upcoming/Recent Events - BẮT BUỘC */}
+      {/* Upcoming/Recent Events */}
       <div className="mb-6">
         <Card
           title={
             <Space>
               <CalendarOutlined style={{ color: "#1890ff" }} />
               <span className="font-semibold text-lg">
-                Sự Kiện Sắp Diễn Ra / Vừa Kết Thúc
+                Sự Kiện Sắp Diễn Ra
               </span>
             </Space>
           }
@@ -930,7 +894,7 @@ export default function EventManagerDashboard() {
             title={
               <Space>
                 <FolderOpenOutlined style={{ color: "#1890ff" }} />
-                <span className="font-semibold text-lg">Toàn bộ sự kiện</span>
+                <span className="font-semibold text-lg">Sự kiện gần đây</span>
               </Space>
             }
             className="shadow-md hover:shadow-lg transition-shadow"
@@ -1003,6 +967,149 @@ export default function EventManagerDashboard() {
           </Card>
         </Col>
       </Row>
-    </div>
+    </>
   );
-}
+};
+
+// ========================================
+// VOLUNTEERS TAB COMPONENT
+// ========================================
+const VolunteersTab = ({
+  stats,
+  pendingRegistrations,
+  participantApprovalRate,
+  pendingRegistrationColumns,
+  navigate
+}) => {
+  return (
+    <>
+      {/* Registration Statistics */}
+      <Row gutter={[16, 16]} className="mb-6">
+        <Col xs={24} sm={12} lg={8}>
+          <Card
+            className="shadow-md hover:shadow-lg transition-shadow"
+            style={{ borderTop: "4px solid #1890ff", borderRadius: 8 }}
+          >
+            <Statistic
+              title={
+                <span className="text-gray-600 font-medium">Tổng Đăng Ký</span>
+              }
+              value={stats.totalRegistrations}
+              prefix={<UserOutlined style={{ color: "#1890ff" }} />}
+              valueStyle={{ color: "#1890ff", fontWeight: "bold" }}
+            />
+          </Card>
+        </Col>
+
+        <Col xs={24} sm={12} lg={8}>
+          <Card
+            className="shadow-md hover:shadow-lg transition-shadow"
+            style={{ borderTop: "4px solid #52c41a", borderRadius: 8 }}
+          >
+            <Statistic
+              title={
+                <span className="text-gray-600 font-medium">
+                  Đã Duyệt Tham Gia
+                </span>
+              }
+              value={stats.approvedRegistrations}
+              prefix={<CheckCircleOutlined style={{ color: "#52c41a" }} />}
+              valueStyle={{ color: "#52c41a", fontWeight: "bold" }}
+            />
+          </Card>
+        </Col>
+
+        <Col xs={24} sm={12} lg={8}>
+          <Card
+            className="shadow-md hover:shadow-lg transition-shadow"
+            style={{ borderTop: "4px solid #faad14", borderRadius: 8 }}
+          >
+            <Statistic
+              title={
+                <span className="text-gray-600 font-medium">
+                  Chờ Duyệt Tham Gia
+                </span>
+              }
+              value={stats.pendingRegistrations}
+              prefix={<ClockCircleOutlined style={{ color: "#faad14" }} />}
+              valueStyle={{ color: "#faad14", fontWeight: "bold" }}
+            />
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Approval Rate Progress */}
+      <Row gutter={[16, 16]} className="mb-6">
+        <Col xs={24}>
+          <Card
+            title={
+              <Space>
+                <UserOutlined style={{ color: "#722ed1" }} />
+                <span className="font-semibold">
+                  Tỷ Lệ Duyệt Người Tham Gia
+                </span>
+              </Space>
+            }
+            className="shadow-md hover:shadow-lg transition-shadow"
+            style={{ borderRadius: 8, borderTop: "3px solid #722ed1" }}
+          >
+            <div className="mb-2">
+              <Progress
+                percent={participantApprovalRate}
+                strokeColor={{ "0%": "#722ed1", "100%": "#b37feb" }}
+                strokeWidth={12}
+                format={(percent) => `${percent}%`}
+              />
+            </div>
+            <p className="text-gray-600 mt-3 text-center">
+              <span className="font-bold text-purple-600">
+                {stats.approvedRegistrations}
+              </span>{" "}
+              / {stats.totalRegistrations} đăng ký
+            </p>
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Pending Registrations */}
+      <div className="mb-6">
+        <Card
+          title={
+            <Space>
+              <ClockCircleOutlined style={{ color: "#faad14" }} />
+              <span className="font-semibold text-lg">
+                Đăng Ký Chờ Duyệt ({pendingRegistrations.length})
+              </span>
+            </Space>
+          }
+          className="shadow-md hover:shadow-lg transition-shadow"
+          style={{ borderRadius: 8 }}
+          extra={
+            <Button
+              type="link"
+              onClick={() => navigate("/quanlisukien/tham-gia")}
+              className="text-blue-600 hover:text-blue-800"
+            >
+              Xem tất cả →
+            </Button>
+          }
+        >
+          {pendingRegistrations.length === 0 ? (
+            <Empty
+              description="Không có đăng ký chờ duyệt"
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+            />
+          ) : (
+            <Table
+              dataSource={pendingRegistrations}
+              columns={pendingRegistrationColumns}
+              rowKey="_id"
+              pagination={{ pageSize: 10, showSizeChanger: false }}
+              size="small"
+            />
+          )}
+        </Card>
+      </div>
+    </>
+  );
+};
