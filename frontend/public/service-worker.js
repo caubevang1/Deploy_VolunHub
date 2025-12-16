@@ -1,22 +1,19 @@
 // public/service-worker.js
 
-// Lắng nghe sự kiện Push từ server
 self.addEventListener('push', function(event) {
-  console.log('🔔 [Service Worker] Push message received:', event);
-
-  // Lấy dữ liệu từ payload
-  let data = {};
+  let data = { title: 'VolunteerHub', body: 'Bạn có thông báo mới' };
+  
   if (event.data) {
     try {
       data = event.data.json();
-    } catch (e) {
-      data = { title: 'Thông báo', body: event.data.text() };
+    } catch {
+      // Nếu không parse được JSON, lấy text thuần làm nội dung
+      data.body = event.data.text();
     }
   }
 
-  // Hiển thị notification
   const options = {
-    body: data.body || 'Bạn có thông báo mới',
+    body: data.body,
     icon: data.icon || '/logo192.png',
     badge: '/logo192.png',
     vibrate: [200, 100, 200],
@@ -26,18 +23,28 @@ self.addEventListener('push', function(event) {
   };
 
   event.waitUntil(
-    self.registration.showNotification(data.title || 'VolunteerHub', options)
+    self.registration.showNotification(data.title, options)
   );
 });
 
-// Xử lý khi user click vào notification
 self.addEventListener('notificationclick', function(event) {
-  console.log('🖱️ [Service Worker] Notification clicked');
-  
   event.notification.close();
 
-  // Mở URL được chỉ định
   event.waitUntil(
-    clients.openWindow(event.notification.data.url || '/')
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
+      const targetUrl = event.notification.data.url || '/';
+      
+      // Tìm xem có tab nào đang mở đúng URL đó không để focus
+      for (const client of clientList) {
+        if (client.url.includes(targetUrl) && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      
+      // Nếu không có tab nào đang mở thì mở tab mới
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(targetUrl);
+      }
+    })
   );
 });
