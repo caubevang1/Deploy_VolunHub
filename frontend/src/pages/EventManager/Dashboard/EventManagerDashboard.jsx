@@ -381,9 +381,9 @@ export default function EventManagerDashboard() {
       title: "Trạng thái",
       dataIndex: "status",
       key: "status",
-      width: 120,
+      width: 150,
       align: "center",
-      render: (status) => {
+      render: (status, record) => {
         const color =
           {
             pending: "!text-[#DDB958]",
@@ -393,11 +393,47 @@ export default function EventManagerDashboard() {
           }[status] || "!text-gray-500";
 
         return (
-          <Tag
-            className={`!ml-0 !pl-0 !border-none !bg-transparent !font-semibold !text-[14px] ${color}`}
-          >
-            {statusMapping[status]?.text || status}
-          </Tag>
+          <div className="flex flex-col items-center gap-2">
+            <Tag
+              className={`!ml-0 !pl-0 !border-none !bg-transparent !font-semibold !text-[14px] ${color}`}
+            >
+              {statusMapping[status]?.text || status}
+            </Tag>
+            {status === "rejected" && record.rejectionReason && (
+              <Button
+                type="default"
+                size="small"
+                icon={<CloseCircleOutlined />}
+                className="!text-red-600 !border-red-300 hover:!bg-red-50 hover:!border-red-400 !rounded-md !px-3 !py-1 !h-7 !text-xs !font-medium shadow-sm transition-all duration-200"
+                onClick={() => {
+                  import("sweetalert2").then((Swal) => {
+                    Swal.default.fire({
+                      title:
+                        "<span class='text-red-600'>⚠️ Lý do từ chối</span>",
+                      html: `
+                        <div class="text-left bg-gray-50 p-4 rounded-lg">
+                          <p class="font-semibold text-gray-800 mb-3 text-base">📌 Sự kiện: <span class="text-blue-600">${record.name}</span></p>
+                          <div class="border-l-4 border-red-500 pl-3 py-2 bg-white rounded">
+                            <p class="text-gray-700 text-sm leading-relaxed">${record.rejectionReason}</p>
+                          </div>
+                        </div>
+                      `,
+                      icon: "warning",
+                      iconColor: "#dc2626",
+                      confirmButtonText: "Đóng",
+                      confirmButtonColor: "#DDB958",
+                      customClass: {
+                        popup: "rounded-lg",
+                        title: "text-lg",
+                      },
+                    });
+                  });
+                }}
+              >
+                Xem lý do
+              </Button>
+            )}
+          </div>
         );
       },
     },

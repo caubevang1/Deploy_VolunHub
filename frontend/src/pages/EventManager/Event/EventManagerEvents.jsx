@@ -6,7 +6,7 @@ import {
   DeleteEvents,
   GetEventDetail,
 } from "../../../services/EventManagerService";
-import { ReloadOutlined, EditOutlined } from "@ant-design/icons";
+import { ReloadOutlined, EditOutlined, CloseOutlined } from "@ant-design/icons";
 import Swal from "sweetalert2";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTrash } from "@fortawesome/free-solid-svg-icons";
@@ -181,6 +181,16 @@ export default function EventManagerEvents() {
       key: "name",
       sorter: (a, b) =>
         a.name?.toLowerCase().localeCompare(b.name?.toLowerCase()),
+      render: (text, event) => (
+        <Button
+          type="link"
+          className="!font-semibold !text-blue-600 hover:scale-105 transition-transform duration-150 !p-0 !h-auto text-left"
+          onClick={() => navigate(`/quanlisukien/su-kien/${event._id}`)}
+          style={{ whiteSpace: "normal", textAlign: "left" }}
+        >
+          {text}
+        </Button>
+      ),
     },
     {
       title: "Ngày",
@@ -249,9 +259,9 @@ export default function EventManagerEvents() {
       title: "Trạng thái",
       dataIndex: "status",
       key: "status",
-      width: 120,
+      width: 150,
       align: "center",
-      render: (status) => {
+      render: (status, event) => {
         const color =
           {
             pending: "!text-[#DDB958]",
@@ -261,11 +271,44 @@ export default function EventManagerEvents() {
           }[status] || "!text-gray-500";
 
         return (
-          <Tag
-            className={`!ml-0 !pl-0 !border-none !bg-transparent !font-semibold !text-[14px] ${color}`}
-          >
-            {statusMapping[status] || status}
-          </Tag>
+          <div className="flex flex-col items-center gap-2">
+            <Tag
+              className={`!ml-0 !pl-0 !border-none !bg-transparent !font-semibold !text-[14px] ${color}`}
+            >
+              {statusMapping[status] || status}
+            </Tag>
+            {status === "rejected" && event.rejectionReason && (
+              <Button
+                type="default"
+                size="small"
+                icon={<CloseOutlined />}
+                className="!text-red-600 !border-red-300 hover:!bg-red-50 hover:!border-red-400 !rounded-md !px-3 !py-1 !h-7 !text-xs !font-medium shadow-sm transition-all duration-200"
+                onClick={() => {
+                  Swal.fire({
+                    title: "<span class='text-red-600'>⚠️ Lý do từ chối</span>",
+                    html: `
+                      <div class="text-left bg-gray-50 p-4 rounded-lg">
+                        <p class="font-semibold text-gray-800 mb-3 text-base">📌 Sự kiện: <span class="text-blue-600">${event.name}</span></p>
+                        <div class="border-l-4 border-red-500 pl-3 py-2 bg-white rounded">
+                          <p class="text-gray-700 text-sm leading-relaxed">${event.rejectionReason}</p>
+                        </div>
+                      </div>
+                    `,
+                    icon: "warning",
+                    iconColor: "#dc2626",
+                    confirmButtonText: "Đóng",
+                    confirmButtonColor: "#DDB958",
+                    customClass: {
+                      popup: "rounded-lg",
+                      title: "text-lg",
+                    },
+                  });
+                }}
+              >
+                Xem lý do
+              </Button>
+            )}
+          </div>
         );
       },
     },

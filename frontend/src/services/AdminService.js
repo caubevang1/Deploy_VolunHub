@@ -12,6 +12,8 @@ export const GetEvents = () => http.get(`/admin/events/all`);
 export const GetPendingEvents = () => http.get(`/admin/events/pending`);
 export const ApproveEvent = (eventId) =>
   http.put(`/admin/events/${eventId}/approve`);
+export const RejectEvent = (eventId, reason) =>
+  http.put(`/admin/events/${eventId}/reject`, { reason });
 export const DeleteEvent = (eventId) => http.delete(`/admin/events/${eventId}`);
 export const GetEventDetail = (eventId) =>
   http.get(`/events/management/${eventId}`);

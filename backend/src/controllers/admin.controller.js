@@ -5,6 +5,7 @@ import Registration from "../models/registration.js";
 import Post from "../models/post.js";
 import Comment from "../models/comment.js";
 import EventAction from "../models/eventAction.js";
+import { sendPushNotification } from "../utils/sendPush.js";
 import fs from "fs";
 import path from "path";
 import { Parser } from "json2csv";
@@ -103,6 +104,48 @@ export const approveEvent = async (req, res) => {
     if (!event)
       return res.status(404).json({ message: "Không tìm thấy sự kiện" });
     res.status(200).json({ message: "Duyệt sự kiện thành công", event });
+  } catch (error) {
+    res.status(500).json({ message: "Lỗi server", error: error.message });
+  }
+};
+
+// [PUT] /api/admin/events/:id/reject
+export const rejectEvent = async (req, res) => {
+  try {
+    const { reason } = req.body; // Lý do từ chối (tùy chọn)
+
+    const updateData = {
+      status: "rejected",
+      rejectionReason: reason || "Không có lý do cụ thể",
+    };
+
+    const event = await Event.findByIdAndUpdate(req.params.id, updateData, {
+      new: true,
+    }).populate("createdBy", "name email");
+
+    if (!event)
+      return res.status(404).json({ message: "Không tìm thấy sự kiện" });
+
+    // Gửi thông báo cho Event Manager
+    if (event.createdBy && event.createdBy._id) {
+      const notificationTitle = `Sự kiện bị từ chối`;
+      const notificationMessage = `Sự kiện "${event.name}" đã bị từ chối. Lý do: ${updateData.rejectionReason}`;
+      const notificationUrl = `/quanlisukien/su-kien`;
+
+      await sendPushNotification(
+        event.createdBy._id,
+        notificationTitle,
+        notificationMessage,
+        notificationUrl
+      ).catch((err) =>
+        console.error("❌ Lỗi gửi thông báo từ chối sự kiện:", err)
+      );
+    }
+
+    res.status(200).json({
+      message: "Từ chối sự kiện thành công",
+      event,
+    });
   } catch (error) {
     res.status(500).json({ message: "Lỗi server", error: error.message });
   }

@@ -62,7 +62,7 @@ export const getManagerEvents = async (req, res) => {
 
     // Tìm tất cả sự kiện do manager này tạo, sắp xếp theo ngày
     const events = await Event.find({ createdBy: managerId })
-      .select("_id name date location status category")
+      .select("_id name date location status category rejectionReason")
       .sort({ date: 1 });
 
     // Lấy danh sách ID của các sự kiện
@@ -96,6 +96,7 @@ export const getManagerEvents = async (req, res) => {
         location: e.location,
         status: e.status,
         category: e.category,
+        rejectionReason: e.rejectionReason,
         totalRegistrations: stats.totalRegistrations,
         cancelRequests: stats.cancelRequests,
       };
