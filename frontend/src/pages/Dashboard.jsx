@@ -93,9 +93,8 @@ export default function Dashboard() {
             return (
               <strong
                 key={i}
-                className={`${
-                  isNegative ? "text-red-500" : "text-green-500"
-                } font-bold mx-0.5`}
+                className={`${isNegative ? "text-red-500" : "text-green-500"
+                  } font-bold mx-0.5`}
               >
                 {scoreText}
               </strong>
@@ -162,7 +161,7 @@ export default function Dashboard() {
             const recent = posts.filter(
               (p) =>
                 (now - new Date(p.createdAt || p.created_at).getTime()) /
-                  86400000 <=
+                86400000 <=
                 7
             );
             if (recent.length > 0) {
@@ -258,18 +257,22 @@ export default function Dashboard() {
 
   const trendingColumns = [
     {
+      title: "STT",
+      key: "index",
+      align: "center",
+      width: 60,
+      render: (_, __, index) => index + 1,
+    },
+    {
       title: "Tên sự kiện",
       dataIndex: "name",
       render: (text, record) => (
-        <Space>
-          <TrophyOutlined style={{ color: "#faad14" }} />
-          <a
-            onClick={() => navigate(`/su-kien/${record._id}`)}
-            className="text-blue-600"
-          >
-            {text || record.title}
-          </a>
-        </Space>
+        <a
+          onClick={() => navigate(`/su-kien/${record._id}`)}
+          className="text-blue-600 font-semibold"
+        >
+          {text || record.title}
+        </a>
       ),
     },
     {
@@ -462,7 +465,11 @@ export default function Dashboard() {
                         style={{ backgroundColor: "#52c41a" }}
                       />
                     }
-                    title={e.name}
+                    title={
+                      <span className="text-blue-600 font-semibold">
+                        {e.name}
+                      </span>
+                    }
                     description={
                       <Space>
                         <Tag color="green">+{e.recentPosts} bài</Tag>

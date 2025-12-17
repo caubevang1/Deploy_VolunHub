@@ -179,7 +179,7 @@ export default function EnhancedDashboard() {
     try {
       const res = await GetPendingEvents();
       if (res.status === 200) {
-        setPendingEvents(res.data);
+        setPendingEvents(res.data.slice(0, 5));
       }
     } catch (error) {
       console.error("Error fetching pending events:", error);
@@ -385,19 +385,9 @@ export default function EnhancedDashboard() {
   // Table Columns
   const pendingColumns = [
     {
-      title: "STT",
-      key: "index",
-      align: "center",
-      width: 60,
-      render: (_, __, index) => index + 1,
-    },
-    {
       title: "Tên sự kiện",
       dataIndex: "name",
       key: "name",
-      filteredValue: [searchText],
-      onFilter: (value, record) =>
-        record.name.toLowerCase().includes(value.toLowerCase()),
       render: (text, record) => (
         <a
           onClick={() => navigate(`/admin/su-kien/${record._id}`)}
@@ -459,38 +449,51 @@ export default function EnhancedDashboard() {
 
   const trendingColumns = [
     {
+      title: "STT",
+      key: "index",
+      align: "center",
+      width: 60,
+      render: (_, __, index) => index + 1,
+    },
+    {
       title: "Tên sự kiện",
       dataIndex: "name",
       key: "name",
       render: (text, record) => (
-        <Space>
-          <TrophyOutlined style={{ color: "#faad14" }} />
-          <a onClick={() => navigate(`/admin/su-kien/${record._id}`)}>{text}</a>
-        </Space>
+        <a
+          onClick={() => navigate(`/admin/su-kien/${record._id}`)}
+          className="font-semibold"
+        >
+          {text}
+        </a>
       ),
     },
     {
       title: "Đăng ký",
       dataIndex: "recentRegistrations",
       key: "recentRegistrations",
+      align: "center",
       render: (count) => <Badge count={count} showZero color="blue" />,
     },
     {
       title: "Lượt thích",
       dataIndex: "recentLikes",
       key: "recentLikes",
+      align: "center",
       render: (count) => <Badge count={count} showZero color="magenta" />,
     },
     {
       title: "Lượt chia sẻ",
       dataIndex: "recentShares",
       key: "recentShares",
+      align: "center",
       render: (count) => <Badge count={count} showZero color="cyan" />,
     },
     {
       title: "Điểm xu hướng",
       dataIndex: "trendingScore",
       key: "trendingScore",
+      align: "center",
       render: (score) => <Tag color="volcano">{score}</Tag>,
       sorter: (a, b) => a.trendingScore - b.trendingScore,
     },
@@ -783,13 +786,13 @@ export default function EnhancedDashboard() {
           className="shadow-md hover:shadow-lg transition-shadow"
           style={{ borderRadius: 8 }}
           extra={
-            <Input
-              placeholder="Tìm kiếm sự kiện..."
-              prefix={<SearchOutlined />}
-              onChange={(e) => setSearchText(e.target.value)}
-              style={{ width: 250 }}
-              allowClear
-            />
+            <Button
+              type="link"
+              onClick={() => navigate("/admin/su-kien/cho-duyet")}
+              className="text-blue-600 hover:text-blue-800 font-medium"
+            >
+              Xem tất cả →
+            </Button>
           }
         >
           {loadingPending ? (
@@ -801,7 +804,7 @@ export default function EnhancedDashboard() {
               dataSource={pendingEvents}
               columns={pendingColumns}
               rowKey="_id"
-              pagination={{ pageSize: 5 }}
+              pagination={false}
               size="small"
             />
           )}

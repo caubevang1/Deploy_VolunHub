@@ -287,24 +287,21 @@ export default function AdminEvents() {
             rejected: "!text-red-500",
           }[status] || "!text-gray-500";
         return (
-          <div className="flex flex-col items-center gap-2">
+          <div className="flex flex-col items-center justify-center gap-1">
             <Tag
               className={`ml-0 pl-0 !border-none !bg-transparent !font-semibold !text-[15px] ${color}`}
             >
               {statusMapping[status] || status}
             </Tag>
             {status === "rejected" && event.rejectionReason && (
-              <Button
-                type="default"
-                size="small"
-                icon={<CloseOutlined />}
-                className="!text-red-600 !border-red-300 hover:!bg-red-50 hover:!border-red-400 !rounded-md !px-3 !py-1 !h-7 !text-xs !font-medium shadow-sm transition-all duration-200"
+              <span
+                className="text-sm text-red-600 cursor-pointer hover:underline"
                 onClick={() => {
                   Swal.fire({
-                    title: "<span class='text-red-600'>⚠️ Lý do từ chối</span>",
+                    title: "<span class='text-red-600'>Lý do từ chối</span>",
                     html: `
                       <div class="text-left bg-gray-50 p-4 rounded-lg">
-                        <p class="font-semibold text-gray-800 mb-3 text-base">📌 Sự kiện: <span class="text-blue-600">${event.name}</span></p>
+                        <p class="font-semibold text-gray-800 mb-3 text-base">Sự kiện: <span class="text-blue-600">${event.name}</span></p>
                         <div class="border-l-4 border-red-500 pl-3 py-2 bg-white rounded">
                           <p class="text-gray-700 text-sm leading-relaxed">${event.rejectionReason}</p>
                         </div>
@@ -321,8 +318,8 @@ export default function AdminEvents() {
                   });
                 }}
               >
-                Xem lý do
-              </Button>
+                (Lý do)
+              </span>
             )}
           </div>
         );
