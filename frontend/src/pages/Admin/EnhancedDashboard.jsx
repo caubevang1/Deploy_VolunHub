@@ -336,6 +336,13 @@ export default function EnhancedDashboard() {
   // Table Columns
   const pendingColumns = [
     {
+      title: "STT",
+      key: "index",
+      align: "center",
+      width: 60,
+      render: (_, __, index) => index + 1,
+    },
+    {
       title: "Tên sự kiện",
       dataIndex: "name",
       key: "name",
@@ -377,37 +384,26 @@ export default function EnhancedDashboard() {
     {
       title: "Hành động",
       key: "actions",
+      align: "center",
       render: (_, record) => (
-        <Space>
-          <Tooltip title="Phê duyệt">
-            <Button
-              type="primary"
-              icon={<CheckCircleOutlined />}
-              size="small"
-              onClick={() => handleApproveEvent(record._id)}
-            />
-          </Tooltip>
-          <Tooltip title="Từ chối">
-            <Button danger icon={<CloseCircleOutlined />} size="small" />
-          </Tooltip>
-          <Tooltip title="Xem chi tiết">
-            <Button
-              icon={<EyeOutlined />}
-              size="small"
-              onClick={() => navigate(`/admin/su-kien/${record._id}`)}
-            />
-          </Tooltip>
-          <Tooltip title="Xóa">
-            <Popconfirm
-              title="Xóa sự kiện này?"
-              onConfirm={() => handleDeleteEvent(record._id)}
-              okText="Xóa"
-              cancelText="Hủy"
-            >
-              <Button danger icon={<DeleteOutlined />} size="small" />
-            </Popconfirm>
-          </Tooltip>
-        </Space>
+        <div className="flex flex-col gap-2 items-center">
+          <Button
+            type="primary"
+            className="!bg-green-500 !hover:bg-green-600 !border-none !font-semibold w-24"
+            size="small"
+            onClick={() => handleApproveEvent(record._id)}
+          >
+            Duyệt
+          </Button>
+
+          <Button
+            size="small"
+            className="!bg-red-500 !hover:bg-red-600 !border-none !text-white !font-semibold w-24"
+            onClick={() => { }}
+          >
+            Từ chối
+          </Button>
+        </div>
       ),
     },
   ];
@@ -479,8 +475,8 @@ export default function EnhancedDashboard() {
             role === "ADMIN"
               ? "red"
               : role === "EVENTMANAGER"
-              ? "blue"
-              : "default"
+                ? "blue"
+                : "default"
           }
         >
           {roleMapping[role] || role}

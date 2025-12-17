@@ -229,23 +229,22 @@ export default function PendingAdminEvents() {
       align: "center",
       render: (_, event) => (
         <div className="flex flex-col gap-2 items-center">
-          <div
-            className="flex items-center justify-center gap-2 cursor-pointer select-none transition-transform duration-300 hover:scale-110 hover:text-green-700"
+          <Button
+            type="primary"
+            className="!bg-green-500 !hover:bg-green-600 !border-none !font-semibold w-24"
+            size="small"
             onClick={() => handleApproveEvent(event._id, event.name)}
-            style={{ fontWeight: 500 }}
           >
-            <CheckOutlined style={{ color: "green", fontSize: 18 }} />
-            <span style={{ color: "green" }}>DUYỆT</span>
-          </div>
+            Duyệt
+          </Button>
 
-          <div
-            className="flex items-center justify-center gap-2 cursor-pointer select-none transition-transform duration-300 hover:scale-110 hover:text-red-700"
+          <Button
+            size="small"
+            className="!bg-red-500 !hover:bg-red-600 !border-none !text-white !font-semibold w-24"
             onClick={() => handleRejectEvent(event._id, event.name)}
-            style={{ fontWeight: 500 }}
           >
-            <CloseOutlined style={{ color: "red", fontSize: 18 }} />
-            <span style={{ color: "red" }}>TỪ CHỐI</span>
-          </div>
+            Từ chối
+          </Button>
         </div>
       ),
     },

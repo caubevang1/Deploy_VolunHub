@@ -148,7 +148,7 @@ export default function CreateEvent() {
         form={form}
         layout="vertical"
         onFinish={handleCreateEvent}
-        initialValues={{ category: "Tình nguyện", maxParticipants: 50 }}
+        initialValues={{ category: "Community", maxParticipants: 50 }}
       >
         <Form.Item label="Tên sự kiện" name="name" rules={[{ required: true }]}>
           <Input size="large" />
