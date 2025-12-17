@@ -1,6 +1,6 @@
 // src/utils/cronJob.js
 import cron from "node-cron";
-import Event from "../models/event.js";
+import EventRepository from "../repositories/EventRepository.js";
 import { processEventCompletion } from "../controllers/event.controller.js";
 
 export const startCronJobs = () => {
@@ -12,8 +12,8 @@ export const startCronJobs = () => {
       const now = new Date();
       console.log("⏳ [CRON JOB] Đang quét các sự kiện hết hạn...");
 
-      // Tìm các sự kiện đã approved và đã quá endDate
-      const expiredEvents = await Event.find({
+      // Tìm các sự kiện đã approved và đã quá endDate qua repository
+      const expiredEvents = await EventRepository.find({
         status: "approved",
         endDate: { $lte: now },
       });

@@ -4,6 +4,7 @@ import {
   handleEventAction,
   getUserActionStatus,
   getEventStats,
+  getEventsStatsBatch,
 } from "../controllers/eventAction.controller.js";
 
 const router = express.Router();
@@ -11,6 +12,14 @@ const router = express.Router();
 // =============================================================================
 // ROUTES TƯƠNG TÁC SỰ KIỆN (EVENT ACTIONS)
 // =============================================================================
+
+// [POST] /api/actions/stats
+// 📊 Lấy dữ liệu thống kê tương tác cho nhiều sự kiện (Batch)
+// - Chức năng: Lấy tổng số lượt Tim, Chia sẻ và Xem hiện tại cho nhiều sự kiện.
+// - Body yêu cầu: { "eventIds": ["id1", "id2", ...] }
+// - Trả về: [{ "eventId": "id1", "likesCount": 10, "sharesCount": 5, "viewsCount": 100 }, ...]
+// - Mục đích Frontend: Dùng để lấy dữ liệu thống kê cho nhiều sự kiện cùng lúc.
+router.post("/stats", getEventsStatsBatch);
 
 // [POST] /api/actions/:eventId
 // 🖱️ Thực hiện hành động tương tác với sự kiện

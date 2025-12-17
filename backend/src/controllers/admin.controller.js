@@ -1,10 +1,10 @@
 // src/controllers/admin.controller.js
-import User from "../models/user.js";
-import Event from "../models/event.js";
-import Registration from "../models/registration.js";
-import Post from "../models/post.js";
-import Comment from "../models/comment.js";
-import EventAction from "../models/eventAction.js";
+import UserRepository from "../repositories/UserRepository.js";
+import EventRepository from "../repositories/EventRepository.js";
+import RegistrationRepository from "../repositories/RegistrationRepository.js";
+import PostRepository from "../repositories/PostRepository.js";
+import CommentRepository from "../repositories/CommentRepository.js";
+import EventActionRepository from "../repositories/EventActionRepository.js";
 import { sendPushNotification } from "../utils/sendPush.js";
 import fs from "fs";
 import path from "path";
@@ -84,10 +84,7 @@ const deleteEventFiles = (event) => {
 
 export const getPendingEvents = async (req, res) => {
   try {
-    const events = await Event.find({ status: "pending" }).populate(
-      "createdBy",
-      "name email phone"
-    );
+    const events = await EventRepository.find({ status: "pending" }, null, { sort: { createdAt: -1 } }, "createdBy");
     res.status(200).json(events);
   } catch (error) {
     res.status(500).json({ message: "Lỗi server", error: error.message });
@@ -96,7 +93,7 @@ export const getPendingEvents = async (req, res) => {
 
 export const approveEvent = async (req, res) => {
   try {
-    const event = await Event.findByIdAndUpdate(
+    const event = await EventRepository.findByIdAndUpdate(
       req.params.id,
       { status: "approved" },
       { new: true }
@@ -119,9 +116,7 @@ export const rejectEvent = async (req, res) => {
       rejectionReason: reason || "Không có lý do cụ thể",
     };
 
-    const event = await Event.findByIdAndUpdate(req.params.id, updateData, {
-      new: true,
-    }).populate("createdBy", "name email");
+    const event = await EventRepository.findByIdAndUpdate(req.params.id, updateData, { new: true });
 
     if (!event)
       return res.status(404).json({ message: "Không tìm thấy sự kiện" });
@@ -155,7 +150,7 @@ export const rejectEvent = async (req, res) => {
 export const deleteEventByAdmin = async (req, res) => {
   try {
     const eventId = req.params.id;
-    const event = await Event.findById(eventId);
+    const event = await EventRepository.findById(eventId);
 
     if (!event)
       return res.status(404).json({ message: "Không tìm thấy sự kiện" });
@@ -164,13 +159,13 @@ export const deleteEventByAdmin = async (req, res) => {
     deleteEventFiles(event);
 
     // 2. Xóa Event
-    await Event.findByIdAndDelete(eventId);
+    await EventRepository.findByIdAndDelete(eventId);
 
     // 3. 🧹 Xóa dữ liệu mồ côi (Registrations, Posts, Comments)
     await Promise.all([
-      Registration.deleteMany({ event: eventId }),
-      Post.deleteMany({ event: eventId }),
-      Comment.deleteMany({ event: eventId }),
+      RegistrationRepository.deleteMany({ event: eventId }),
+      PostRepository.deleteMany({ event: eventId }),
+      CommentRepository.deleteMany({ event: eventId }),
     ]);
 
     res
@@ -186,7 +181,7 @@ export const deleteEventByAdmin = async (req, res) => {
 
 export const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find({}).select("-password");
+    const users = await UserRepository.find({}, "-password");
     res.status(200).json(users);
   } catch (error) {
     res.status(500).json({ message: "Lỗi server", error: error.message });
@@ -196,13 +191,15 @@ export const getAllUsers = async (req, res) => {
 export const updateUserStatus = async (req, res) => {
   try {
     const { status } = req.body;
-    const user = await User.findByIdAndUpdate(
-      req.params.id,
-      { status },
-      { new: true }
-    ).select("-password");
+    const user = await UserRepository.findByIdAndUpdate(req.params.id, { status }, { new: true });
     if (!user)
       return res.status(404).json({ message: "Không tìm thấy người dùng" });
+    // remove password if present
+    if (user.password) {
+      const u = user.toObject ? user.toObject() : user;
+      delete u.password;
+      return res.status(200).json({ message: "Cập nhật trạng thái thành công", user: u });
+    }
     res.status(200).json({ message: "Cập nhật trạng thái thành công", user });
   } catch (error) {
     res.status(500).json({ message: "Lỗi server", error: error.message });
@@ -233,19 +230,22 @@ export const updateUserRole = async (req, res) => {
       });
     }
 
-    const updatedUser = await User.findByIdAndUpdate(
+    const updatedUser = await UserRepository.findByIdAndUpdate(
       userIdToUpdate,
       { role: role.toUpperCase() },
       { new: true, runValidators: true }
-    ).select("-password");
+    );
 
     if (!updatedUser) {
       return res.status(404).json({ message: "Không tìm thấy người dùng." });
     }
 
+    const u = updatedUser.toObject ? updatedUser.toObject() : updatedUser;
+    delete u.password;
+
     res.status(200).json({
       message: "Cập nhật vai trò người dùng thành công.",
-      user: updatedUser,
+      user: u,
     });
   } catch (error) {
     res.status(500).json({ message: "Lỗi server", error: error.message });
@@ -258,7 +258,6 @@ export const exportUsers = async (req, res) => {
     const format = (req.query.format || "csv").toLowerCase();
     const { startDate, endDate } = req.query;
 
-    // Build query filter
     const filter = {};
     if (startDate && endDate) {
       filter.createdAt = {
@@ -267,7 +266,7 @@ export const exportUsers = async (req, res) => {
       };
     }
 
-    const users = await User.find(filter).select("-password -__v").lean();
+    const users = await UserRepository.find(filter, "-password -__v");
 
     const normalizedUsers = users.map((user) => ({
       id: user._id.toString(),
@@ -308,7 +307,6 @@ export const exportEvents = async (req, res) => {
     const format = (req.query.format || "csv").toLowerCase();
     const { startDate, endDate } = req.query;
 
-    // Build query filter
     const filter = {};
     if (startDate && endDate) {
       filter.date = {
@@ -317,10 +315,7 @@ export const exportEvents = async (req, res) => {
       };
     }
 
-    const events = await Event.find(filter)
-      .populate("createdBy", "name email")
-      .sort({ createdAt: -1 })
-      .lean();
+    const events = await EventRepository.find(filter, null, { sort: { createdAt: -1 } }, "createdBy");
 
     const normalizedEvents = events.map((event) => ({
       id: event._id.toString(),
@@ -364,7 +359,6 @@ export const exportVolunteers = async (req, res) => {
     const format = (req.query.format || "csv").toLowerCase();
     const { startDate, endDate } = req.query;
 
-    // Build query filter
     const filter = { role: "VOLUNTEER" };
     if (startDate && endDate) {
       filter.createdAt = {
@@ -373,11 +367,9 @@ export const exportVolunteers = async (req, res) => {
       };
     }
 
-    const volunteers = await User.find(filter)
-      .select("name email phone points status createdAt updatedAt")
-      .lean();
+    const volunteers = await UserRepository.find(filter, "name email phone points status createdAt updatedAt");
 
-    const completedCounts = await Registration.aggregate([
+    const completedCounts = await RegistrationRepository.aggregate([
       { $match: { status: "completed" } },
       { $group: { _id: "$volunteer", completedEvents: { $sum: 1 } } },
     ]);
@@ -418,20 +410,12 @@ export const exportVolunteers = async (req, res) => {
 // --- DASHBOARD ---
 export const getDashboardStats = async (req, res) => {
   try {
-    const totalUsers = await User.countDocuments();
-    const totalEvents = await Event.countDocuments();
-    const pendingEventsCount = await Event.countDocuments({
-      status: "pending",
-    });
-    const approvedEventsCount = await Event.countDocuments({
-      status: "approved",
-    });
-    const rejectedEventsCount = await Event.countDocuments({
-      status: "rejected",
-    });
-    const completedEventsCount = await Event.countDocuments({
-      status: "completed",
-    });
+    const totalUsers = await UserRepository.countDocuments();
+    const totalEvents = await EventRepository.countDocuments();
+    const pendingEventsCount = await EventRepository.countDocuments({ status: "pending" });
+    const approvedEventsCount = await EventRepository.countDocuments({ status: "approved" });
+    const rejectedEventsCount = await EventRepository.countDocuments({ status: "rejected" });
+    const completedEventsCount = await EventRepository.countDocuments({ status: "completed" });
 
     res.status(200).json({
       totalUsers,
@@ -448,10 +432,7 @@ export const getDashboardStats = async (req, res) => {
 
 export const getAllSystemEvents = async (req, res) => {
   try {
-    const events = await Event.find({})
-      .populate("createdBy", "name email phone")
-      .sort({ createdAt: -1 });
-
+    const events = await EventRepository.find({}, null, { sort: { createdAt: -1 } }, "createdBy");
     res.status(200).json(events);
   } catch (error) {
     res.status(500).json({ message: "Lỗi server", error: error.message });
@@ -465,32 +446,27 @@ export const getTrendingEvents = async (req, res) => {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - parseInt(days));
 
-    // Get events with registration counts since cutoff date
-    const events = await Event.find({ status: "approved" })
-      .populate("createdBy", "name email")
-      .lean();
+    const events = await EventRepository.find({ status: "approved" }, null, {}, "createdBy");
 
-    // Calculate trending metrics for each event
     const eventsWithMetrics = await Promise.all(
       events.map(async (event) => {
-        const recentRegistrations = await Registration.countDocuments({
+        const recentRegistrations = await RegistrationRepository.countDocuments({
           event: event._id,
           createdAt: { $gte: cutoffDate },
         });
 
-        const recentLikes = await EventAction.countDocuments({
+        const recentLikes = await EventActionRepository.countDocuments({
           event: event._id,
           type: "LIKE",
           createdAt: { $gte: cutoffDate },
         });
 
-        const recentShares = await EventAction.countDocuments({
+        const recentShares = await EventActionRepository.countDocuments({
           event: event._id,
           type: "SHARE",
           createdAt: { $gte: cutoffDate },
         });
 
-        // Công thức: Đăng ký × 3 + Like × 2 + Share × 5
         const trendingScore =
           recentRegistrations * 3 + recentLikes * 2 + recentShares * 5;
 
@@ -504,7 +480,6 @@ export const getTrendingEvents = async (req, res) => {
       })
     );
 
-    // Sort by trending score and return top 10
     const trendingEvents = eventsWithMetrics
       .sort((a, b) => b.trendingScore - a.trendingScore)
       .slice(0, 10);
@@ -518,31 +493,18 @@ export const getTrendingEvents = async (req, res) => {
 // --- RECENT ACTIVITY ---
 export const getRecentActivity = async (req, res) => {
   try {
-    // Recently published events (approved in last 7 days)
-    const recentlyPublished = await Event.find({
+    const recentlyPublished = await EventRepository.find({
       status: "approved",
       updatedAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
-    })
-      .populate("createdBy", "name email")
-      .sort({ updatedAt: -1 })
-      .limit(5);
+    }, null, { sort: { updatedAt: -1 }, limit: 5 }, "createdBy");
 
-    // Events with recent posts/comments (last 24 hours)
-    const recentPosts = await Post.find({
+    const recentPosts = await PostRepository.find({
       createdAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
-    })
-      .populate("event", "name")
-      .populate("author", "name")
-      .sort({ createdAt: -1 })
-      .limit(10);
+    }, null, { sort: { createdAt: -1 }, limit: 10 }, "event author");
 
-    const recentComments = await Comment.find({
+    const recentComments = await CommentRepository.find({
       createdAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
-    })
-      .populate("event", "name")
-      .populate("user", "name")
-      .sort({ createdAt: -1 })
-      .limit(10);
+    }, null, { sort: { createdAt: -1 }, limit: 10 }, "event user");
 
     res.status(200).json({
       recentlyPublished,
@@ -554,22 +516,18 @@ export const getRecentActivity = async (req, res) => {
   }
 };
 
-// --- VOLUNTEER RANKING ---
+// --- RANKINGS ---
+// replace direct model calls with repositories where appropriate
 export const getVolunteerRanking = async (req, res) => {
   try {
-    // Lấy tất cả volunteers với points và completed events
-    const volunteers = await User.find({ role: "VOLUNTEER" })
-      .select("name email avatar points")
-      .lean();
+    const volunteers = await UserRepository.find({ role: "VOLUNTEER" }, "name email avatar points");
 
-    // Đếm số sự kiện hoàn thành cho mỗi volunteer
     const volunteersWithStats = await Promise.all(
       volunteers.map(async (volunteer) => {
-        const completedEvents = await Registration.countDocuments({
-          user: volunteer._id,
+        const completedEvents = await RegistrationRepository.countDocuments({
+          volunteer: volunteer._id,
           status: "completed",
         });
-
         return {
           ...volunteer,
           completedEvents,
@@ -577,13 +535,11 @@ export const getVolunteerRanking = async (req, res) => {
       })
     );
 
-    // Sắp xếp theo points giảm dần
     const sortedVolunteers = volunteersWithStats
       .sort((a, b) => b.points - a.points)
       .map((volunteer, index) => ({
         ...volunteer,
         rank: index + 1,
-        // Thêm đầy đủ URL cho avatar
         avatar:
           volunteer.avatar && !volunteer.avatar.startsWith("http")
             ? `http://localhost:5000${volunteer.avatar}`
@@ -597,46 +553,24 @@ export const getVolunteerRanking = async (req, res) => {
   }
 };
 
-// --- EVENT MANAGER RANKING ---
 export const getEventManagerRanking = async (req, res) => {
   try {
-    // Lấy tất cả event managers
-    const managers = await User.find({ role: "EVENTMANAGER" })
-      .select("name email avatar")
-      .lean();
+    const managers = await UserRepository.find({ role: "EVENTMANAGER" }, "name email avatar");
 
-    // Đếm số liệu cho từng manager
     const managersWithStats = await Promise.all(
       managers.map(async (manager) => {
-        // Tổng số sự kiện đã tạo
-        const totalEvents = await Event.countDocuments({
-          createdBy: manager._id,
-        });
+        const totalEvents = await EventRepository.countDocuments({ createdBy: manager._id });
+        const approvedEvents = await EventRepository.countDocuments({ createdBy: manager._id, status: "approved" });
+        const completedEvents = await EventRepository.countDocuments({ createdBy: manager._id, status: "completed" });
 
-        // Số sự kiện đã được approved
-        const approvedEvents = await Event.countDocuments({
-          createdBy: manager._id,
-          status: "approved",
-        });
-
-        // Số sự kiện đã completed
-        const completedEvents = await Event.countDocuments({
-          createdBy: manager._id,
-          status: "completed",
-        });
-
-        // Tổng số tình nguyện viên đã tham gia (approved + completed)
-        const events = await Event.find({ createdBy: manager._id }).select(
-          "_id"
-        );
+        const events = await EventRepository.find({ createdBy: manager._id }, "_id");
         const eventIds = events.map((e) => e._id);
 
-        const totalVolunteers = await Registration.countDocuments({
+        const totalVolunteers = await RegistrationRepository.countDocuments({
           event: { $in: eventIds },
           status: { $in: ["approved", "completed"] },
         });
 
-        // Tính điểm: 10 điểm/sự kiện hoàn thành + 1 điểm/tình nguyện viên
         const score = completedEvents * 10 + totalVolunteers;
 
         return {
@@ -650,13 +584,11 @@ export const getEventManagerRanking = async (req, res) => {
       })
     );
 
-    // Sắp xếp theo score giảm dần
     const sortedManagers = managersWithStats
       .sort((a, b) => b.score - a.score)
       .map((manager, index) => ({
         ...manager,
         rank: index + 1,
-        // Thêm đầy đủ URL cho avatar
         avatar:
           manager.avatar && !manager.avatar.startsWith("http")
             ? `http://localhost:5000${manager.avatar}`

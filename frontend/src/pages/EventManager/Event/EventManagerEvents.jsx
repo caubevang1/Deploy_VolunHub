@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Table, Input, Button, message, Tag, AutoComplete } from "antd";
 import { debounce } from "lodash";
 import {
@@ -30,6 +30,16 @@ export default function EventManagerEvents() {
   const navigate = useNavigate();
   const [searchOptions, setSearchOptions] = useState([]);
   const [searchValue, setSearchValue] = useState("");
+  const searchKeywordRef = useRef(null);
+
+  const removeVietnameseTones = (str = "") => {
+    return String(str)
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/đ/g, "d")
+      .replace(/Đ/g, "D")
+      .toLowerCase();
+  };
 
   const fetchEvents = async () => {
     setLoading(true);
@@ -64,25 +74,43 @@ export default function EventManagerEvents() {
         setData(detailedEvents);
         setOriginalData(detailedEvents);
       }
-    } catch (error) {
-      console.error("Lỗi khi lấy danh sách sự kiện:", error);
+    } catch (err) {
+      console.error("Lỗi khi lấy danh sách sự kiện:", err);
       message.error("Không thể tải danh sách sự kiện");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
+  // create debounced fn and keep in ref; recreate when originalData changes
+  useEffect(() => {
+    const fn = debounce((value) => {
+      try {
+        const keyword = removeVietnameseTones(value.trim().toLowerCase());
+        if (!keyword) {
+          setData(originalData);
+          return;
+        }
+        const filtered = originalData.filter((event) => {
+          const name = removeVietnameseTones(event.name || "");
+          return name.includes(keyword);
+        });
+        setData(filtered);
+      } catch (err) {
+        console.warn("Debounced search error:", err);
+      }
+    }, 300);
+
+    searchKeywordRef.current = fn;
+    return () => {
+      if (fn && typeof fn.cancel === "function") fn.cancel();
+    };
+  }, [originalData]);
+
+  // call fetchEvents on mount (fetchEvents is defined above)
   useEffect(() => {
     fetchEvents();
   }, []);
-
-  const removeVietnameseTones = (str) => {
-    return str
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/đ/g, "d")
-      .replace(/Đ/g, "D")
-      .toLowerCase();
-  };
 
   const handleSearchChange = (value) => {
     setSearchValue(value);
@@ -121,27 +149,8 @@ export default function EventManagerEvents() {
       }));
 
     setSearchOptions(suggestions);
-    searchKeyword(value);
+    if (searchKeywordRef.current) searchKeywordRef.current(value);
   };
-
-  const searchKeyword = useCallback(
-    debounce((value) => {
-      const keyword = removeVietnameseTones(value.trim().toLowerCase());
-
-      if (!keyword) {
-        setData(originalData);
-        return;
-      }
-
-      const filtered = originalData.filter((event) => {
-        const name = removeVietnameseTones(event.name || "");
-        return name.includes(keyword);
-      });
-
-      setData(filtered);
-    }, 300),
-    [originalData]
-  );
 
   const handleDeleteEvent = async (eventId, name) => {
     const result = await Swal.fire({
@@ -165,7 +174,8 @@ export default function EventManagerEvents() {
       } else {
         Swal.fire("Lỗi", "Không thể xóa sự kiện", "error");
       }
-    } catch (error) {
+    } catch (err) {
+      console.error("Lỗi khi xóa sự kiện:", err);
       Swal.fire("Lỗi", "Đã xảy ra lỗi khi xóa sự kiện", "error");
     }
   };

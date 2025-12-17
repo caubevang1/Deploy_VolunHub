@@ -72,13 +72,6 @@ app.use("/api/notifications", notificationRoutes); // Routes cho thông báo
 
 // Tạo route ảo /uploads để trỏ vào thư mục /uploads thật
 app.use("/uploads", express.static("uploads"));
-// =================================================================================================
-// Xử lý lỗi 404 - Route không tồn tại
-// =================================================================================================
-// Middleware này sẽ được gọi khi không có route nào khớp với request
-app.use((req, res) => {
-  res.status(404).json({ message: "❌ API route not found" });
-});
 
 // ✅ Catch-all 404 phải đặt CUỐI CÙNG (sau tất cả routes)
 app.use((req, res) => {

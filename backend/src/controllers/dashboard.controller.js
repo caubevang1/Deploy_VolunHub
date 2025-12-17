@@ -1,6 +1,6 @@
 // src/controllers/dashboard.controller.js
-import Registration from "../models/registration.js";
-import Event from "../models/event.js";
+import RegistrationRepository from "../repositories/RegistrationRepository.js";
+import EventRepository from "../repositories/EventRepository.js";
 
 /**
  * 📊 Dashboard cho Volunteer
@@ -13,9 +13,12 @@ export const getVolunteerDashboard = async (req, res) => {
     const now = new Date(); // Lấy thời gian hiện tại
 
     // Tìm tất cả các đơn đăng ký của tình nguyện viên và populate thông tin sự kiện
-    const registrations = await Registration.find({
-      volunteer: volunteerId,
-    }).populate("event", "name date location status category");
+    const registrations = await RegistrationRepository.find(
+      { volunteer: volunteerId },
+      null,
+      { sort: { createdAt: -1 } },
+      "event"
+    );
 
     // Lọc các sự kiện đã hoàn thành
     const completedEvents = registrations.filter(
@@ -24,12 +27,12 @@ export const getVolunteerDashboard = async (req, res) => {
 
     // Lọc các sự kiện đang diễn ra (đã được duyệt và ngày diễn ra <= hiện tại)
     const currentEvents = registrations.filter(
-      (r) => r.status === "approved" && new Date(r.event.date) <= now
+      (r) => r.status === "approved" && new Date(r.event?.date) <= now
     );
 
     // Lọc các sự kiện sắp diễn ra (đã được duyệt và ngày diễn ra > hiện tại)
     const upcomingEvents = registrations.filter(
-      (r) => r.status === "approved" && new Date(r.event.date) > now
+      (r) => r.status === "approved" && new Date(r.event?.date) > now
     );
 
     // Lọc các sự kiện đang chờ duyệt
@@ -53,23 +56,23 @@ export const getVolunteerDashboard = async (req, res) => {
 
 /**
  * 📅 Danh sách sự kiện do Manager tạo
- * - Kèm số lượt đăng ký và số yêu cầu hủy
  */
 export const getManagerEvents = async (req, res) => {
   try {
-    // Lấy ID của manager từ thông tin user đã được xác thực
     const managerId = req.user._id;
 
     // Tìm tất cả sự kiện do manager này tạo, sắp xếp theo ngày
-    const events = await Event.find({ createdBy: managerId })
-      .select("_id name date location status category rejectionReason")
-      .sort({ date: 1 });
+    const events = await EventRepository.find(
+      { createdBy: managerId },
+      "_id name date location status category rejectionReason",
+      { sort: { date: 1 } }
+    );
 
     // Lấy danh sách ID của các sự kiện
     const eventIds = events.map((e) => e._id);
 
     // Sử dụng aggregation để đếm số lượt đăng ký và yêu cầu hủy cho mỗi sự kiện
-    const regStats = await Registration.aggregate([
+    const regStats = await RegistrationRepository.aggregate([
       { $match: { event: { $in: eventIds } } }, // Chỉ lấy các đăng ký thuộc sự kiện của manager
       {
         $group: {
@@ -113,31 +116,20 @@ export const getManagerEvents = async (req, res) => {
   }
 };
 
-/**
- * 👥 Danh sách đăng ký theo sự kiện
- */
+// getManagerEventRegistrations / approveCancelRequest / rejectCancelRequest use RegistrationRepository.rawModel() where populate needed
 export const getManagerEventRegistrations = async (req, res) => {
   try {
     const managerId = req.user._id;
-    const { eventId } = req.params; // Lấy eventId từ URL parameters
+    const { eventId } = req.params;
 
-    // Tìm sự kiện để kiểm tra quyền sở hữu
-    const event = await Event.findById(eventId).select("createdBy");
-    if (!event)
-      return res.status(404).json({ message: "Không tìm thấy sự kiện" });
+    const eventDoc = await EventRepository.rawModel().findById(eventId).select("createdBy");
+    if (!eventDoc) return res.status(404).json({ message: "Không tìm thấy sự kiện" });
 
-    // Kiểm tra xem manager có phải là người tạo sự kiện không
-    if (String(event.createdBy) !== String(managerId)) {
-      return res
-        .status(403)
-        .json({ message: "Bạn không có quyền xem đăng ký cho sự kiện này" });
+    if (String(eventDoc.createdBy) !== String(managerId)) {
+      return res.status(403).json({ message: "Bạn không có quyền xem đăng ký cho sự kiện này" });
     }
 
-    // Lấy danh sách đăng ký cho sự kiện này, populate thông tin của tình nguyện viên
-    const regs = await Registration.find({ event: eventId })
-      .populate("volunteer", "name email")
-      .select("status cancelRequest createdAt");
-
+    const regs = await RegistrationRepository.find({ event: eventId }, null, { sort: { createdAt: -1 } }, "volunteer");
     res.json(regs);
   } catch (error) {
     res.status(500).json({
@@ -147,36 +139,23 @@ export const getManagerEventRegistrations = async (req, res) => {
   }
 };
 
-/**
- * ✅ Phê duyệt yêu cầu hủy đăng ký
- */
 export const approveCancelRequest = async (req, res) => {
   try {
     const managerId = req.user._id;
-    const { id } = req.params; // Lấy ID của đơn đăng ký từ URL
+    const { id } = req.params;
 
-    // Tìm đơn đăng ký và thông tin sự kiện liên quan
-    const reg = await Registration.findById(id).populate("event");
-    if (!reg)
-      return res.status(404).json({ message: "Không tìm thấy đăng ký" });
+    const regDoc = await RegistrationRepository.rawModel().findById(id).populate("event");
+    if (!regDoc) return res.status(404).json({ message: "Không tìm thấy đăng ký" });
 
-    // Kiểm tra quyền của manager
-    if (String(reg.event.createdBy) !== String(managerId)) {
-      return res
-        .status(403)
-        .json({ message: "Bạn không có quyền phê duyệt yêu cầu này" });
+    if (String(regDoc.event.createdBy) !== String(managerId)) {
+      return res.status(403).json({ message: "Bạn không có quyền phê duyệt yêu cầu này" });
     }
 
-    // Kiểm tra xem yêu cầu hủy có hợp lệ không
-    if (!reg.cancelRequest || reg.status !== "approved") {
+    if (!regDoc.cancelRequest || regDoc.status !== "approved") {
       return res.status(400).json({ message: "Yêu cầu hủy không hợp lệ" });
     }
 
-    // Cập nhật trạng thái đơn đăng ký
-    reg.status = "cancelled"; // Chuyển trạng thái thành "đã hủy"
-    reg.cancelRequest = false; // Reset cờ yêu cầu hủy
-    await reg.save(); // Lưu thay đổi
-
+    await RegistrationRepository.findByIdAndUpdate(id, { status: "cancelled", cancelRequest: false });
     res.json({ message: "✅ Đã chấp thuận yêu cầu hủy" });
   } catch (error) {
     res.status(500).json({
@@ -186,37 +165,23 @@ export const approveCancelRequest = async (req, res) => {
   }
 };
 
-/**
- * ❌ Từ chối yêu cầu hủy đăng ký
- */
 export const rejectCancelRequest = async (req, res) => {
   try {
     const managerId = req.user._id;
-    const { id } = req.params; // Lấy ID của đơn đăng ký
+    const { id } = req.params;
 
-    // Tìm đơn đăng ký và thông tin sự kiện
-    const reg = await Registration.findById(id).populate("event");
-    if (!reg)
-      return res.status(404).json({ message: "Không tìm thấy đăng ký" });
+    const regDoc = await RegistrationRepository.rawModel().findById(id).populate("event");
+    if (!regDoc) return res.status(404).json({ message: "Không tìm thấy đăng ký" });
 
-    // Kiểm tra quyền của manager
-    if (String(reg.event.createdBy) !== String(managerId)) {
-      return res
-        .status(403)
-        .json({ message: "Bạn không có quyền từ chối yêu cầu này" });
+    if (String(regDoc.event.createdBy) !== String(managerId)) {
+      return res.status(403).json({ message: "Bạn không có quyền từ chối yêu cầu này" });
     }
 
-    // Kiểm tra xem có yêu cầu hủy không
-    if (!reg.cancelRequest) {
-      return res
-        .status(400)
-        .json({ message: "Không có yêu cầu hủy để từ chối" });
+    if (!regDoc.cancelRequest) {
+      return res.status(400).json({ message: "Không có yêu cầu hủy để từ chối" });
     }
 
-    // Chỉ cần reset cờ yêu cầu hủy, giữ nguyên trạng thái "approved"
-    reg.cancelRequest = false;
-    await reg.save(); // Lưu thay đổi
-
+    await RegistrationRepository.findByIdAndUpdate(id, { cancelRequest: false });
     res.json({ message: "❌ Đã từ chối yêu cầu hủy" });
   } catch (error) {
     res.status(500).json({

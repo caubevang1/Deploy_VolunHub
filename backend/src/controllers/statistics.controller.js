@@ -1,7 +1,8 @@
 // src/controllers/statistics.controller.js
-import Event from "../models/event.js";
-import Registration from "../models/registration.js";
-import User from "../models/user.js";
+import EventRepository from "../repositories/EventRepository.js";
+import RegistrationRepository from "../repositories/RegistrationRepository.js";
+import UserRepository from "../repositories/UserRepository.js";
+
 /**
  * @desc Lấy thống kê tổng quan cho một volunteer
  * @route GET /api/statistics/volunteer/overview
@@ -11,41 +12,37 @@ export const getVolunteerStatistics = async (req, res) => {
   try {
     const volunteerId = req.user._id;
 
-    // Đếm tổng số lần đăng ký
-    const totalRegistrations = await Registration.countDocuments({
+    const totalRegistrations = await RegistrationRepository.countDocuments({
       volunteer: volunteerId,
     });
-    // Đếm số sự kiện đã hoàn thành
-    const totalCompleted = await Registration.countDocuments({
+
+    const totalCompleted = await RegistrationRepository.countDocuments({
       volunteer: volunteerId,
       status: "completed",
     });
-    // Đếm số sự kiện đã được duyệt
-    const totalApproved = await Registration.countDocuments({
+
+    const totalApproved = await RegistrationRepository.countDocuments({
       volunteer: volunteerId,
       status: "approved",
     });
-    // Đếm số sự kiện đang chờ duyệt
-    const totalPending = await Registration.countDocuments({
+
+    const totalPending = await RegistrationRepository.countDocuments({
       volunteer: volunteerId,
       status: "pending",
     });
-    // Đếm số yêu cầu hủy đang chờ xử lý
-    const totalCancelRequests = await Registration.countDocuments({
+
+    const totalCancelRequests = await RegistrationRepository.countDocuments({
       volunteer: volunteerId,
       cancelRequest: true,
     });
 
-    // Tính tỷ lệ hoàn thành
     const completionRate = totalRegistrations
       ? ((totalCompleted / totalRegistrations) * 100).toFixed(2)
       : 0;
-    // Tính tỷ lệ được duyệt
     const approvalRate = totalRegistrations
       ? ((totalApproved / totalRegistrations) * 100).toFixed(2)
       : 0;
 
-    // Trả về dữ liệu thống kê
     res.json({
       totalRegistrations,
       totalCompleted,
@@ -72,8 +69,7 @@ export const getVolunteerStatisticsByMonth = async (req, res) => {
     const volunteerId = req.user._id;
     const year = parseInt(req.query.year) || new Date().getFullYear();
 
-    // Lấy toàn bộ đăng ký của volunteer trong năm được chọn
-    const regs = await Registration.find({
+    const regs = await RegistrationRepository.find({
       volunteer: volunteerId,
       createdAt: {
         $gte: new Date(`${year}-01-01`),
@@ -81,7 +77,6 @@ export const getVolunteerStatisticsByMonth = async (req, res) => {
       },
     });
 
-    // Khởi tạo mảng dữ liệu cho 12 tháng
     const stats = Array.from({ length: 12 }, (_, i) => ({
       month: i + 1,
       total: 0,
@@ -90,9 +85,8 @@ export const getVolunteerStatisticsByMonth = async (req, res) => {
       pending: 0,
     }));
 
-    // Lặp qua các đơn đăng ký và cập nhật thống kê cho tháng tương ứng
     regs.forEach((r) => {
-      const month = new Date(r.createdAt).getMonth(); // getMonth() trả về 0-11
+      const month = new Date(r.createdAt).getMonth();
       stats[month].total++;
       if (r.status === "completed") stats[month].completed++;
       if (r.status === "approved") stats[month].approved++;
@@ -117,29 +111,17 @@ export const getManagerStatistics = async (req, res) => {
   try {
     const managerId = req.user._id;
 
-    // Lấy tất cả sự kiện do manager tạo
-    const myEvents = await Event.find({ createdBy: managerId }).select(
-      "_id status"
-    );
+    const myEvents = await EventRepository.find({ createdBy: managerId }, "_id status");
     const eventIds = myEvents.map((e) => e._id);
 
-    // Đếm số lượng sự kiện theo từng trạng thái
     const totalEvents = myEvents.length;
     const pendingEvents = myEvents.filter((e) => e.status === "pending").length;
-    const approvedEvents = myEvents.filter(
-      (e) => e.status === "approved"
-    ).length;
-    const completedEvents = myEvents.filter(
-      (e) => e.status === "completed"
-    ).length;
+    const approvedEvents = myEvents.filter((e) => e.status === "approved").length;
+    const completedEvents = myEvents.filter((e) => e.status === "completed").length;
 
-    // Đếm tổng số lượt đăng ký và yêu cầu hủy trên tất cả sự kiện
     const [totalRegistrations, totalCancelRequests] = await Promise.all([
-      Registration.countDocuments({ event: { $in: eventIds } }),
-      Registration.countDocuments({
-        event: { $in: eventIds },
-        cancelRequest: true,
-      }),
+      RegistrationRepository.countDocuments({ event: { $in: eventIds } }),
+      RegistrationRepository.countDocuments({ event: { $in: eventIds }, cancelRequest: true }),
     ]);
 
     res.json({
@@ -151,9 +133,7 @@ export const getManagerStatistics = async (req, res) => {
       totalCancelRequests,
     });
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Lỗi khi lấy thống kê manager", error: error.message });
+    res.status(500).json({ message: "Lỗi khi lấy thống kê manager", error: error.message });
   }
 };
 
@@ -167,12 +147,10 @@ export const getManagerMonthlyStats = async (req, res) => {
     const managerId = req.user._id;
     const year = parseInt(req.query.year) || new Date().getFullYear();
 
-    // Lấy ID của các sự kiện do manager tạo
-    const myEvents = await Event.find({ createdBy: managerId }).select("_id");
+    const myEvents = await EventRepository.find({ createdBy: managerId }).select("_id");
     const eventIds = myEvents.map((e) => e._id);
 
-    // Lấy tất cả các đơn đăng ký trong năm cho các sự kiện này
-    const regs = await Registration.find({
+    const regs = await RegistrationRepository.find({
       event: { $in: eventIds },
       createdAt: {
         $gte: new Date(`${year}-01-01T00:00:00.000Z`),
@@ -180,13 +158,11 @@ export const getManagerMonthlyStats = async (req, res) => {
       },
     }).select("createdAt");
 
-    // Khởi tạo mảng thống kê cho 12 tháng
     const monthly = Array.from({ length: 12 }, (_, i) => ({
       month: i + 1,
       registrations: 0,
     }));
 
-    // Lặp qua các đơn đăng ký và đếm số lượng cho mỗi tháng
     regs.forEach((r) => {
       const m = new Date(r.createdAt).getMonth(); // 0..11
       monthly[m].registrations++;
@@ -208,11 +184,8 @@ export const getManagerMonthlyStats = async (req, res) => {
  */
 export const getAllEventsForAllUsers = async (req, res) => {
   try {
-    // 📌 Lấy toàn bộ sự kiện từ database, sắp xếp theo thời gian
-    const events = await Event.find({})
-      .sort({ date: -1 }) // Sự kiện gần nhất lên đầu
-      .populate("createdBy", "name email phone role ") // Gắn thông tin người tạo
-      .lean();
+    // Dùng repository
+    const events = await EventRepository.find({}, null, { sort: { date: -1 } }, "createdBy");
 
     if (!events.length) {
       return res.status(200).json({
@@ -221,9 +194,8 @@ export const getAllEventsForAllUsers = async (req, res) => {
       });
     }
 
-    // 📊 Lấy thống kê số lượt đăng ký & yêu cầu hủy cho từng sự kiện
     const eventIds = events.map((e) => e._id);
-    const registrationStats = await Registration.aggregate([
+    const registrationStats = await RegistrationRepository.aggregate([
       { $match: { event: { $in: eventIds } } },
       {
         $group: {
@@ -236,13 +208,11 @@ export const getAllEventsForAllUsers = async (req, res) => {
       },
     ]);
 
-    // Chuyển kết quả thành Map để tra cứu nhanh
     const statsMap = registrationStats.reduce((acc, s) => {
       acc[s._id.toString()] = s;
       return acc;
     }, {});
 
-    // Gộp thống kê vào từng sự kiện
     const result = events.map((e) => ({
       ...e,
       totalRegistrations: statsMap[e._id]?.totalRegistrations || 0,
@@ -265,10 +235,11 @@ export const getAllEventsForAllUsers = async (req, res) => {
 // [GET] /api/statistics/ranking -> Lấy Top 10 thành viên điểm cao nhất
 export const getRanking = async (req, res) => {
   try {
-    const leaderboard = await User.find({ role: "VOLUNTEER" })
-      .sort({ points: -1 })
-      .limit(10)
-      .select("name avatar points email");
+    const leaderboard = await UserRepository.find(
+      { role: "VOLUNTEER" },
+      "name avatar points email",
+      { sort: { points: -1 }, limit: 10 }
+    );
 
     res.status(200).json(leaderboard);
   } catch (error) {

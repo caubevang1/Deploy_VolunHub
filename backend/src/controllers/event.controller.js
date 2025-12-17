@@ -1,13 +1,13 @@
 // src/controllers/event.controller.js
 import mongoose from "mongoose";
-import Event from "../models/event.js";
-import Registration from "../models/registration.js";
-import Post from "../models/post.js";
-import Comment from "../models/comment.js";
 import Joi from "joi";
 import fs from "fs";
 import path from "path";
-import User from "../models/user.js";
+import EventRepository from "../repositories/EventRepository.js";
+import RegistrationRepository from "../repositories/RegistrationRepository.js";
+import UserRepository from "../repositories/UserRepository.js";
+import PostRepository from "../repositories/PostRepository.js";
+import CommentRepository from "../repositories/CommentRepository.js";
 
 // --- HÀM HỖ TRỢ ---
 const rollbackEventUploads = (req) => {
@@ -33,18 +33,16 @@ const rollbackEventUploads = (req) => {
 };
 
 export const processEventCompletion = async (event) => {
-  if (event.status === "completed") return;
+  // event may be plain object (lean). Use repositories to update.
+  if (!event || event.status === "completed") return;
 
-  await User.findByIdAndUpdate(event.createdBy, {
-    $inc: { points: event.points },
-  });
+  // tăng điểm cho manager
+  await UserRepository.findByIdAndUpdate(event.createdBy, { $inc: { points: event.points } });
 
-  event.status = "completed";
-  event.endDate = new Date();
+  // cập nhật trạng thái event
+  const updated = await EventRepository.findByIdAndUpdate(event._id || event.id, { status: "completed", endDate: new Date() }, { new: true });
 
-  await event.save();
-
-  return event;
+  return updated;
 };
 const deleteEventFiles = (event) => {
   const defaultCover = "default-event-image.jpg";
@@ -149,16 +147,17 @@ export const createEvent = async (req, res) => {
       }
     }
 
-    const newEvent = new Event({
+    const newEventDoc = {
       ...value,
       points: eventPoints, // 👈 Lưu điểm đã tính toán vào DB
       coverImage: coverImagePath,
       galleryImages: galleryPaths,
       createdBy: req.user._id,
       status: "pending",
-    });
+    };
 
-    await newEvent.save();
+    const newEvent = await EventRepository.create(newEventDoc);
+
     res.status(201).json({
       message: "Tạo sự kiện thành công. Điểm thưởng dự kiến: " + eventPoints,
       event: newEvent,
@@ -172,10 +171,10 @@ export const createEvent = async (req, res) => {
 export const updateEvent = async (req, res) => {
   try {
     const eventId = req.params.id;
-    const event = await Event.findById(eventId);
+    const event = await EventRepository.findById(eventId);
 
     if (!event) throw { status: 404, message: "Không tìm thấy sự kiện" };
-    if (event.createdBy.toString() !== req.user._id.toString()) {
+    if (String(event.createdBy) !== String(req.user._id)) {
       throw { status: 403, message: "Bạn không có quyền sửa sự kiện này" };
     }
     if (event.status !== "pending") {
@@ -199,7 +198,6 @@ export const updateEvent = async (req, res) => {
     if (req.files) {
       if (req.files.coverImage && req.files.coverImage.length > 0) {
         updateData.coverImage = `/uploads/events/${req.files.coverImage[0].filename}`;
-        // Xóa ảnh cũ
         if (
           event.coverImage &&
           event.coverImage !== defaultCover &&
@@ -215,7 +213,6 @@ export const updateEvent = async (req, res) => {
         updateData.galleryImages = req.files.galleryImages.map(
           (file) => `/uploads/events/${file.filename}`
         );
-        // Xóa gallery cũ
         if (event.galleryImages && event.galleryImages.length > 0) {
           event.galleryImages.forEach((imagePath) => {
             if (imagePath && !imagePath.startsWith("http")) {
@@ -229,7 +226,7 @@ export const updateEvent = async (req, res) => {
       }
     }
 
-    const updatedEvent = await Event.findByIdAndUpdate(
+    const updatedEvent = await EventRepository.findByIdAndUpdate(
       eventId,
       { $set: updateData },
       { new: true, runValidators: true }
@@ -253,7 +250,7 @@ export const updateEvent = async (req, res) => {
 export const deleteEvent = async (req, res) => {
   try {
     const eventId = req.params.id;
-    const event = await Event.findById(eventId);
+    const event = await EventRepository.findById(eventId);
 
     if (!event)
       return res.status(404).json({ message: "Không tìm thấy sự kiện" });
@@ -273,15 +270,15 @@ export const deleteEvent = async (req, res) => {
     deleteEventFiles(event);
 
     // 2. Xóa Sự kiện trong DB
-    await Event.findByIdAndDelete(eventId);
+    await EventRepository.findByIdAndDelete(eventId);
 
     // 3. 🧹 DỌN DẸP DỮ LIỆU LIÊN QUAN (Dữ liệu mồ côi)
     // Xóa các đăng ký
-    await Registration.deleteMany({ event: eventId });
-    // Xóa các bài post
-    await Post.deleteMany({ event: eventId });
-    // Xóa các comment liên quan đến sự kiện này
-    await Comment.deleteMany({ event: eventId });
+    await RegistrationRepository.deleteMany({ event: eventId });
+    // Xóa các bài post (via repository)
+    await PostRepository.deleteMany({ event: eventId });
+    // Xóa các comment liên quan đến sự kiện này (via repository)
+    await CommentRepository.deleteMany({ event: eventId });
 
     res.status(200).json({
       message: "Xóa sự kiện và toàn bộ dữ liệu liên quan thành công.",
@@ -296,19 +293,17 @@ export const deleteEvent = async (req, res) => {
 export const completeEvent = async (req, res) => {
   try {
     const eventId = req.params.id;
-    const event = await Event.findById(eventId);
+    const event = await EventRepository.findById(eventId);
 
     if (!event)
       return res.status(404).json({ message: "Không tìm thấy sự kiện" });
 
-    // Kiểm tra quyền Manager
-    if (event.createdBy.toString() !== req.user._id.toString()) {
+    if (String(event.createdBy) !== String(req.user._id)) {
       return res
         .status(403)
         .json({ message: "Bạn không có quyền cập nhật sự kiện này" });
     }
 
-    // Kiểm tra trạng thái
     if (event.status !== "approved") {
       return res
         .status(400)
@@ -320,12 +315,11 @@ export const completeEvent = async (req, res) => {
         .json({ message: "Sự kiện đã hoàn thành trước đó rồi." });
     }
 
-    // 👇 GỌI HÀM XỬ LÝ CHUNG
-    await processEventCompletion(event);
+    const updatedEvent = await processEventCompletion(event);
 
     res.status(200).json({
-      message: "Sự kiện hoàn thành. Manager đã được cộng 20 điểm.",
-      event: event,
+      message: "Sự kiện hoàn thành. Manager đã được cộng điểm.",
+      event: updatedEvent,
     });
   } catch (err) {
     console.error("❌ Lỗi completeEvent:", err);
@@ -349,12 +343,9 @@ export const getApprovedEvents = async (req, res) => {
       filter.date = { $gte: startDate, $lt: endDate };
     }
 
-    // Dùng Aggregate để join và đếm
-    const events = await Event.aggregate([
-      // 1. Lọc các sự kiện (approved, theo category, date...)
+    // Dùng repository.aggregate thay vì Event.aggregate trực tiếp
+    const pipeline = [
       { $match: filter },
-
-      // 2. Join với collection 'registrations' để lấy danh sách đăng ký
       {
         $lookup: {
           from: "registrations",
@@ -363,8 +354,6 @@ export const getApprovedEvents = async (req, res) => {
           as: "registrations",
         },
       },
-
-      // 3. Join với 'users' để lấy thông tin người tạo
       {
         $lookup: {
           from: "users",
@@ -373,12 +362,10 @@ export const getApprovedEvents = async (req, res) => {
           as: "creatorInfo",
         },
       },
-
-      // 4. Định dạng lại dữ liệu
       {
         $project: {
           name: 1,
-          description: 1, // 👈 Đã thêm trường này theo yêu cầu của bạn
+          description: 1,
           date: 1,
           endDate: 1,
           location: 1,
@@ -386,8 +373,6 @@ export const getApprovedEvents = async (req, res) => {
           coverImage: 1,
           status: 1,
           maxParticipants: 1,
-
-          // Tính toán số lượng hiện tại
           currentParticipants: {
             $size: {
               $filter: {
@@ -397,8 +382,6 @@ export const getApprovedEvents = async (req, res) => {
               },
             },
           },
-
-          // Lấy thông tin người tạo
           createdBy: {
             $arrayElemAt: [
               {
@@ -413,8 +396,10 @@ export const getApprovedEvents = async (req, res) => {
           },
         },
       },
-      { $sort: { date: 1 } }, // Sắp xếp
-    ]);
+      { $sort: { date: 1 } },
+    ];
+
+    const events = await EventRepository.aggregate(pipeline);
 
     res.status(200).json(events);
   } catch (error) {
@@ -425,9 +410,24 @@ export const getApprovedEvents = async (req, res) => {
 // [GET] /api/events/public/:id
 export const getEventDetails = async (req, res) => {
   try {
-    const eventId = new mongoose.Types.ObjectId(req.params.id);
-    const eventArr = await Event.aggregate([
-      { $match: { _id: eventId, status: "approved" } },
+    // --- CHANGED: support ObjectId, slug, or exact name (case-insensitive) ---
+    const param = req.params.id;
+
+    // escape regex for name match
+    const escapeRegex = (s = "") => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+    // Build match stage depending on param
+    let match;
+    if (mongoose.isValidObjectId(param)) {
+      match = { _id: new mongoose.Types.ObjectId(param), status: "approved" };
+    } else {
+      // try slug first, and also allow exact name (case-insensitive)
+      const nameRegex = new RegExp(`^${escapeRegex(param)}$`, "i");
+      match = { status: "approved", $or: [{ slug: param }, { name: nameRegex }] };
+    }
+
+    const pipeline = [
+      { $match: match },
       {
         $lookup: {
           from: "registrations",
@@ -480,15 +480,32 @@ export const getEventDetails = async (req, res) => {
         },
       },
       { $limit: 1 },
-    ]);
+    ];
 
-    if (!eventArr || eventArr.length === 0) {
+    const arr = await EventRepository.aggregate(pipeline);
+
+    // If not found via slug/name and original param looked like a slug/name,
+    // try fallback: if param contained spaces/punctuation maybe DB stores normalized slug.
+    if ((!arr || arr.length === 0) && !mongoose.isValidObjectId(param)) {
+      // Try a looser name match (contains)
+      const looseNameRegex = new RegExp(escapeRegex(param), "i");
+      const fallbackPipeline = [...pipeline];
+      fallbackPipeline[0] = { $match: { status: "approved", name: { $regex: looseNameRegex } } };
+      const fallbackArr = await EventRepository.aggregate(fallbackPipeline);
+      if (fallbackArr && fallbackArr.length > 0) {
+        return res.status(200).json(fallbackArr[0]);
+      }
+      return res.status(404).json({ message: "Không tìm thấy sự kiện hoặc sự kiện chưa được duyệt." });
+    }
+
+    if (!arr || arr.length === 0) {
       return res.status(404).json({
         message: "Không tìm thấy sự kiện hoặc sự kiện chưa được duyệt.",
       });
     }
-    res.status(200).json(eventArr[0]);
+    res.status(200).json(arr[0]);
   } catch (error) {
+    console.error("❌ Lỗi getEventDetails:", error);
     res.status(500).json({ message: "Lỗi server", error: error.message });
   }
 };
@@ -496,7 +513,8 @@ export const getEventDetails = async (req, res) => {
 // [GET] /api/events/my-events
 export const getMyEvents = async (req, res) => {
   try {
-    const events = await Event.aggregate([
+    // Dùng repository.aggregate để giữ pattern tách DB
+    const pipeline = [
       { $match: { createdBy: req.user._id } },
       {
         $lookup: {
@@ -527,153 +545,63 @@ export const getMyEvents = async (req, res) => {
         },
       },
       { $sort: { createdAt: -1 } },
-    ]);
+    ];
 
+    const events = await EventRepository.aggregate(pipeline);
     res.status(200).json(events);
   } catch (error) {
+    console.error("❌ Lỗi getMyEvents:", error);
     res.status(500).json({ message: "Lỗi server", error: error.message });
   }
 };
 
-// [GET] /api/events/public/:id/participants
-export const getEventParticipants = async (req, res) => {
-  try {
-    const eventId = req.params.id;
-    const event = await Event.findOne({
-      _id: eventId,
-      status: "approved",
-    }).select("_id");
-
-    if (!event)
-      return res.status(404).json({ message: "Không tìm thấy sự kiện." });
-
-    const registrations = await Registration.find({
-      event: eventId,
-      status: "approved",
-    })
-      .select("volunteer")
-      .populate("volunteer", "name email phone");
-
-    const participants = registrations.map((reg) => reg.volunteer);
-    res
-      .status(200)
-      .json({ total: participants.length, participants: participants });
-  } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
-  }
-};
-
-// [GET] /api/events/management/:id -> Xem chi tiết sự kiện (Dành cho Admin & Manager)
+// [GET] /api/events/management/:id
+// Trả về chi tiết dành cho Manager (kèm đăng ký, bài viết, bình luận và stats)
 export const getEventDetailsForManagement = async (req, res) => {
   try {
-    const paramId = req.params.id;
+    const eventId = req.params.id;
+    const event = await EventRepository.findById(eventId);
+    if (!event) return res.status(404).json({ message: "Không tìm thấy sự kiện." });
 
-    // Validate ObjectId
-    if (!mongoose.Types.ObjectId.isValid(paramId)) {
-      return res.status(400).json({ message: "ID sự kiện không hợp lệ" });
-    }
+    // Lấy registrations (populate volunteer)
+    const registrations = await RegistrationRepository.find(
+      { event: eventId },
+      null,
+      { sort: { createdAt: -1 } },
+      { path: "volunteer", select: "name email avatar phone" }
+    );
 
-    const eventId = new mongoose.Types.ObjectId(paramId);
-    const userId = req.user._id;
-    const userRole = req.user.role;
+    // Lấy posts + comments liên quan (populate author)
+    const posts = await PostRepository.find(
+      { event: eventId },
+      null,
+      { sort: { createdAt: -1 } },
+      { path: "author", select: "name avatar email" }
+    );
 
-    // 1. Tạo điều kiện tìm kiếm cơ bản
-    let matchCondition = { _id: eventId };
+    const comments = await CommentRepository.find(
+      { event: eventId },
+      null,
+      { sort: { createdAt: -1 } },
+      { path: "author", select: "name avatar email" }
+    );
 
-    // 2. Phân quyền:
-    // - Nếu KHÔNG phải ADMIN, buộc phải thêm điều kiện "người tạo là chính mình"
-    // - Nếu là ADMIN, bỏ qua dòng này (xem được tất cả)
-    if (userRole !== "ADMIN") {
-      matchCondition.createdBy = userId;
-    }
+    // Thống kê: approvedCount bao gồm 'approved' và 'completed'
+    const totalRegistrations = registrations.length;
+    const approvedCount = registrations.filter((r) =>
+      ["approved", "completed"].includes((r.status || "").toLowerCase())
+    ).length;
+    const pendingCount = registrations.filter((r) => (r.status || "").toLowerCase() === "pending").length;
+    const rejectedCount = registrations.filter((r) => (r.status || "").toLowerCase() === "rejected").length;
 
-    const eventArr = await Event.aggregate([
-      { $match: matchCondition }, // Áp dụng điều kiện lọc
+    const stats = {
+      totalRegistrations,
+      approvedCount,
+      pendingCount,
+      rejectedCount,
+    };
 
-      // Join với registrations để đếm số liệu
-      {
-        $lookup: {
-          from: "registrations",
-          localField: "_id",
-          foreignField: "event",
-          as: "registrations",
-        },
-      },
-      // Join với users để lấy thông tin người tạo
-      {
-        $lookup: {
-          from: "users",
-          localField: "createdBy",
-          foreignField: "_id",
-          as: "creatorInfo",
-        },
-      },
-      {
-        $project: {
-          name: 1,
-          description: 1,
-          date: 1,
-          endDate: 1,
-          location: 1,
-          category: 1,
-          coverImage: 1,
-          galleryImages: 1,
-          status: 1,
-          maxParticipants: 1,
-
-          // Thống kê chi tiết hơn cho quản lý
-          stats: {
-            totalRegistrations: { $size: "$registrations" }, // Tổng số người đăng ký (cả pending/approved)
-            approvedCount: {
-              $size: {
-                $filter: {
-                  input: "$registrations",
-                  as: "reg",
-                  cond: { $eq: ["$$reg.status", "approved"] },
-                },
-              },
-            },
-            pendingCount: {
-              $size: {
-                $filter: {
-                  input: "$registrations",
-                  as: "reg",
-                  cond: { $eq: ["$$reg.status", "pending"] },
-                },
-              },
-            },
-          },
-
-          // Thông tin người tạo
-          createdBy: {
-            $arrayElemAt: [
-              {
-                $map: {
-                  input: "$creatorInfo",
-                  as: "c",
-                  in: {
-                    _id: "$$c._id",
-                    name: "$$c.name",
-                    email: "$$c.email",
-                    phone: "$$c.phone",
-                  },
-                },
-              },
-              0,
-            ],
-          },
-        },
-      },
-    ]);
-
-    if (!eventArr || eventArr.length === 0) {
-      return res.status(404).json({
-        message:
-          "Không tìm thấy sự kiện hoặc bạn không có quyền truy cập sự kiện này.",
-      });
-    }
-
-    res.status(200).json(eventArr[0]);
+    res.status(200).json({ event, registrations, posts, comments, stats });
   } catch (error) {
     console.error("❌ Lỗi getEventDetailsForManagement:", error);
     res.status(500).json({ message: "Lỗi server", error: error.message });
