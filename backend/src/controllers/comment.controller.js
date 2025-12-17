@@ -10,7 +10,7 @@ import RegistrationRepository from "../repositories/RegistrationRepository.js";
 export const createComment = async (req, res) => {
   try {
     const { content } = req.body;
-    const postId = req.params.postId;
+    const { postId } = req.params;
     const userId = req.user._id;
 
     if (!content) {
@@ -23,6 +23,7 @@ export const createComment = async (req, res) => {
     }
     const eventId = post.event;
 
+    // Phân quyền: Admin, Manager hoặc Volunteer đã duyệt tham gia mới được comment
     const isManager = req.user.role === 'EVENTMANAGER' || req.user.role === 'ADMIN';
     const registration = await RegistrationRepository.findOne({
       event: eventId,
@@ -41,10 +42,11 @@ export const createComment = async (req, res) => {
       event: eventId,
     });
 
-    // update commentCount using rawModel update (atomic)
-    await PostRepository.rawModel().updateOne({ _id: postId }, { $inc: { commentCount: 1 } });
+    // SỬA: Đóng gói việc cập nhật commentCount vào Repository
+    await PostRepository.incrementCommentCount(postId);
 
-    const populatedComment = await CommentRepository.findOne({ _id: newComment._id }, null, "author");
+    // Lấy lại comment kèm thông tin tác giả để trả về giao diện
+    const populatedComment = await CommentRepository.findById(newComment._id, null, "author");
     res.status(201).json(populatedComment);
 
   } catch (error) {
@@ -58,7 +60,12 @@ export const createComment = async (req, res) => {
  */
 export const getPostComments = async (req, res) => {
   try {
-    const comments = await CommentRepository.find({ post: req.params.postId }, null, { sort: { createdAt: 1 } }, "author");
+    const comments = await CommentRepository.find(
+      { post: req.params.postId }, 
+      null, 
+      { sort: { createdAt: 1 } }, 
+      "author"
+    );
     res.status(200).json(comments);
   } catch (error) {
     res.status(500).json({ message: 'Lỗi server', error: error.message });
@@ -71,7 +78,7 @@ export const getPostComments = async (req, res) => {
  */
 export const toggleLikeComment = async (req, res) => {
   try {
-    const commentId = req.params.commentId;
+    const { commentId } = req.params;
     const userId = req.user._id;
 
     const comment = await CommentRepository.findById(commentId);
@@ -79,11 +86,16 @@ export const toggleLikeComment = async (req, res) => {
       return res.status(404).json({ message: "Không tìm thấy bình luận." });
     }
 
-    const hasLiked = (comment.likes || []).some(id => String(id) === String(userId));
+    // Kiểm tra đã like chưa bằng hàm Array.some() thuần JS (Độc lập CSDL)
+    const likes = comment.likes || [];
+    const hasLiked = likes.some(id => String(id) === String(userId));
+
     if (hasLiked) {
-      await CommentRepository.rawModel().updateOne({ _id: commentId }, { $pull: { likes: userId } });
+      // SỬA: Gọi hàm nghiệp vụ pullLike của Repository
+      await CommentRepository.pullLike(commentId, userId);
     } else {
-      await CommentRepository.rawModel().updateOne({ _id: commentId }, { $push: { likes: userId } });
+      // SỬA: Gọi hàm nghiệp vụ pushLike của Repository
+      await CommentRepository.pushLike(commentId, userId);
     }
 
     res.status(200).json({ message: "Cập nhật like bình luận thành công." });
@@ -98,7 +110,7 @@ export const toggleLikeComment = async (req, res) => {
  */
 export const deleteComment = async (req, res) => {
   try {
-    const commentId = req.params.commentId;
+    const { commentId } = req.params;
     const userId = req.user._id;
     const userRole = req.user.role;
 
@@ -107,16 +119,19 @@ export const deleteComment = async (req, res) => {
       return res.status(404).json({ message: "Không tìm thấy bình luận." });
     }
 
-    // Chỉ Admin hoặc chính tác giả mới được xóa
-    if (userRole !== 'ADMIN' && comment.author.toString() !== userId.toString()) {
+    // Chỉ Admin hoặc chính tác giả mới được xóa (Logic nghiệp vụ giữ nguyên)
+    if (userRole !== 'ADMIN' && String(comment.author) !== String(userId)) {
       return res.status(403).json({ message: 'Bạn không có quyền xóa bình luận này.' });
     }
 
-    // Lấy postId trước khi xóa
     const postId = comment.post; 
     
     await CommentRepository.findByIdAndDelete(commentId);
-    await PostRepository.rawModel().updateOne({ _id: postId }, { $inc: { commentCount: -1 } });
+    
+    // SỬA: Gọi hàm nghiệp vụ decrementCommentCount của Repository
+    if (postId) {
+      await PostRepository.decrementCommentCount(postId);
+    }
 
     res.status(200).json({ message: "Xóa bình luận thành công." });
 

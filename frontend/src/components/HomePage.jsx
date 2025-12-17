@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+//import { motion } from "framer-motion";
 import aoDoan from "../assets/img/Anh_Ao_Doan.jpg";
 import tapThe from "../assets/img/Tap_The.jpeg";
 import introVideo from "../assets/video/test4K - Trim.mp4";

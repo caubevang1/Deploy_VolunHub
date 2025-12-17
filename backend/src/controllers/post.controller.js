@@ -2,10 +2,15 @@
 import PostRepository from "../repositories/PostRepository.js";
 import EventRepository from "../repositories/EventRepository.js";
 
-// [GET] /api/posts/event/:eventId -> Lấy tất cả bài post của 1 sự kiện
+/**
+ * [GET] /api/posts/event/:eventId
+ * Lấy tất cả bài post của 1 sự kiện
+ */
 export const getEventPosts = async (req, res) => {
   try {
-    const event = await EventRepository.findById(req.params.eventId);
+    const { eventId } = req.params;
+    const event = await EventRepository.findById(eventId);
+    
     if (!event) {
       return res.status(404).json({ message: 'Không tìm thấy sự kiện.' });
     }
@@ -14,7 +19,7 @@ export const getEventPosts = async (req, res) => {
     }
 
     const posts = await PostRepository.find(
-      { event: req.params.eventId },
+      { event: eventId },
       null,
       { sort: { createdAt: -1 } },
       "author"
@@ -25,15 +30,20 @@ export const getEventPosts = async (req, res) => {
   }
 };
 
-// [POST] /api/posts/event/:eventId -> Tạo bài post mới
+/**
+ * [POST] /api/posts/event/:eventId
+ * Tạo bài post mới
+ */
 export const createPost = async (req, res) => {
   try {
     const { content } = req.body;
+    const { eventId } = req.params;
+
     if (!content || !content.trim()) {
       return res.status(400).json({ message: "Nội dung không được để trống." });
     }
 
-    const event = await EventRepository.findById(req.params.eventId);
+    const event = await EventRepository.findById(eventId);
     if (!event) {
       return res.status(404).json({ message: 'Không tìm thấy sự kiện.' });
     }
@@ -44,19 +54,24 @@ export const createPost = async (req, res) => {
     const newPost = await PostRepository.create({
       content: content.trim(),
       author: req.user._id,
-      event: req.params.eventId,
+      event: eventId,
     });
-    const populatedPost = await PostRepository.findOne({ _id: newPost._id }, null, "author");
+
+    // Lấy lại bài viết kèm thông tin author để trả về frontend
+    const populatedPost = await PostRepository.findById(newPost._id, null, "author");
     res.status(201).json(populatedPost);
   } catch (error) {
     res.status(500).json({ message: 'Lỗi server', error: error.message });
   }
 };
 
-// [POST] /api/posts/:postId/like -> Like hoặc Unlike một bài post
+/**
+ * [POST] /api/posts/:postId/like
+ * Like hoặc Unlike một bài post
+ */
 export const toggleLikePost = async (req, res) => {
   try {
-    const postId = req.params.postId;
+    const { postId } = req.params;
     const userId = req.user._id;
 
     const post = await PostRepository.findById(postId);
@@ -64,16 +79,23 @@ export const toggleLikePost = async (req, res) => {
       return res.status(404).json({ message: "Không tìm thấy bài đăng." });
     }
 
-    const hasLiked = (post.likes || []).some(id => String(id) === String(userId));
+    // Kiểm tra trạng thái like bằng logic JS thuần (Độc lập CSDL)
+    const likes = post.likes || [];
+    const hasLiked = likes.some(id => String(id) === String(userId));
+
     if (hasLiked) {
-      await PostRepository.rawModel().updateOne({ _id: postId }, { $pull: { likes: userId } });
+      // SỬA: Sử dụng hàm nghiệp vụ đã đóng gói trong Repository
+      await PostRepository.pullLike(postId, userId);
     } else {
-      await PostRepository.rawModel().updateOne({ _id: postId }, { $push: { likes: userId } });
+      await PostRepository.pushLike(postId, userId);
     }
+
+    // Lấy lại thông tin mới nhất để trả về cho Frontend cập nhật UI
     const updatedPost = await PostRepository.findById(postId);
+    
     res.status(200).json({ 
       message: "Cập nhật like thành công.",
-      likesCount: updatedPost.likes.length,
+      likesCount: updatedPost.likes?.length || 0,
       hasLiked: !hasLiked
     });
   } catch (error) {
@@ -81,10 +103,13 @@ export const toggleLikePost = async (req, res) => {
   }
 };
 
-// ✅ [DELETE] /api/posts/:postId -> Xóa bài post
+/**
+ * [DELETE] /api/posts/:postId
+ * Xóa bài post
+ */
 export const deletePost = async (req, res) => {
   try {
-    const postId = req.params.postId;
+    const { postId } = req.params;
     const userId = req.user._id;
     const userRole = req.user.role;
 
@@ -93,8 +118,8 @@ export const deletePost = async (req, res) => {
       return res.status(404).json({ message: "Không tìm thấy bài đăng." });
     }
 
-    // Chỉ Admin hoặc chính tác giả mới được xóa
-    if (userRole !== 'ADMIN' && post.author.toString() !== userId.toString()) {
+    // Phân quyền: Chỉ Admin hoặc chính tác giả mới được xóa
+    if (userRole !== 'ADMIN' && String(post.author) !== String(userId)) {
       return res.status(403).json({ message: 'Bạn không có quyền xóa bài đăng này.' });
     }
 
@@ -105,8 +130,3 @@ export const deletePost = async (req, res) => {
     res.status(500).json({ message: 'Lỗi server', error: error.message });
   }
 };
-
-// getEventPosts: EventRepository.findById + PostRepository.find(..., populate: "author")
-// createPost: PostRepository.create + PostRepository.findOne for populated response
-// toggleLikePost: use PostRepository.rawModel().updateOne for $push/$pull then PostRepository.findById
-// deletePost: PostRepository.findById + PostRepository.findByIdAndDelete

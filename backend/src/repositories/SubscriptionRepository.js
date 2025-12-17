@@ -1,6 +1,10 @@
 import BaseRepository from "./BaseRepository.js";
 import Subscription from "../models/subscription.js";
 
-const SubscriptionRepository = new BaseRepository(Subscription);
+class SubscriptionRepository extends BaseRepository {
+  constructor() {
+    super(Subscription);
+  }
+}
 
-export default SubscriptionRepository;
+export default new SubscriptionRepository();

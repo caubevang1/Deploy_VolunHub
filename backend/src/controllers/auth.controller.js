@@ -37,7 +37,6 @@ const validateUserEntry = (name, birthday, phone) => {
   )
     age--;
   
-  // Nới lỏng kiểm tra tuổi một chút để tránh lỗi 400 nếu nhập ngày sinh gần đây
   if (age < 10 || age > 80)
     return { error: `Tuổi (${age}) không phù hợp để tham gia hệ thống.` };
 
@@ -83,12 +82,12 @@ export const verifyAndRegister = async (req, res) => {
     const validation = validateUserEntry(name, birthday, phone);
     if (validation.error) return res.status(400).json({ message: validation.error });
 
-    const record = await OtpRepository.rawModel().findOneAndDelete({
-      email,
-      otp,
-      purpose: "REGISTER",
-    });
-    if (!record || record.expiresAt < new Date()) return res.status(400).json({ message: "OTP hết hạn hoặc không tồn tại." });
+    // SỬA: Dùng hàm verify đã đóng gói, không dùng rawModel()
+    const record = await OtpRepository.findAndVerify(email, otp, "REGISTER");
+    
+    if (!record || record.expiresAt < new Date()) {
+      return res.status(400).json({ message: "OTP hết hạn hoặc không tồn tại." });
+    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -114,29 +113,23 @@ export const login = async (req, res) => {
   try {
     const { identifier, password } = req.body;
 
-    let user = await UserRepository.findOne(
-      identifier.includes("@") ? { email: identifier } : { username: identifier }
-    );
+    // SỬA: Dùng hàm chuyên dụng để lấy kèm password mà vẫn giữ tính độc lập
+    const user = await UserRepository.findByIdentifierWithPassword(identifier);
 
-    // Nếu chưa có password field, fallback fetch raw model with +password
-    if (!user || !(await bcrypt.compare(password, user?.password || ""))) {
-      const raw = UserRepository.rawModel();
-      const userWithPassword = await raw.findOne(
-        identifier.includes("@") ? { email: identifier } : { username: identifier }
-      ).select("+password");
-      if (!userWithPassword || !(await bcrypt.compare(password, userWithPassword.password))) {
-        return res.status(400).json({ message: "Sai tài khoản hoặc mật khẩu." });
-      }
-      user = userWithPassword.toObject ? userWithPassword.toObject() : userWithPassword;
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+      return res.status(400).json({ message: "Sai tài khoản hoặc mật khẩu." });
     }
 
     if (user.status !== "ACTIVE") return res.status(403).json({ message: "Tài khoản bị khóa." });
 
-    const token = jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: "1d" });
+    const token = jwt.sign(
+      { userId: user._id, role: user.role }, 
+      process.env.JWT_SECRET, 
+      { expiresIn: "1d" }
+    );
 
-    // Remove password before returning
-    if (user.password) delete user.password;
-    res.json({ token, user });
+    const { password: _, ...userWithoutPassword } = user;
+    res.json({ token, user: userWithoutPassword });
   } catch (err) {
     res.status(500).json({ message: "Lỗi server", error: err.message });
   }
@@ -162,13 +155,11 @@ export const updateProfile = async (req, res) => {
       }
     }
 
-    const updated = await UserRepository.findByIdAndUpdate(req.user._id, { $set: updateData }, { new: true });
-    if (updated && updated.password) {
-      const u = updated.toObject ? updated.toObject() : updated;
-      delete u.password;
-      return res.json({ message: "Cập nhật thành công.", user: u });
-    }
-    res.json({ message: "Cập nhật thành công.", user: updated });
+    const updated = await UserRepository.findByIdAndUpdate(req.user._id, { $set: updateData });
+    
+    // Đảm bảo trả về dữ liệu không có mật khẩu
+    const { password, ...userWithoutPassword } = updated;
+    res.json({ message: "Cập nhật thành công.", user: userWithoutPassword });
   } catch (err) {
     rollbackUpload(req);
     res.status(err.status || 500).json({ message: err.message });
@@ -211,13 +202,18 @@ export const resetPassword = async (req, res) => {
 export const changePassword = async (req, res) => {
   try {
     const { oldPassword, newPassword } = req.body;
-    const raw = UserRepository.rawModel();
-    const userDoc = await raw.findById(req.user._id).select("+password");
-    if (!userDoc) return res.status(404).json({ message: "Người dùng không tồn tại." });
-    if (!(await bcrypt.compare(oldPassword, userDoc.password))) return res.status(400).json({ message: "Mật khẩu cũ sai." });
+    
+    // SỬA: Dùng findByIdAndUpdate để tránh dùng save() trực tiếp trên Document
+    const user = await UserRepository.findByIdWithPassword(req.user._id);
+    if (!user) return res.status(404).json({ message: "Người dùng không tồn tại." });
+    
+    if (!(await bcrypt.compare(oldPassword, user.password))) {
+      return res.status(400).json({ message: "Mật khẩu cũ sai." });
+    }
 
-    userDoc.password = await bcrypt.hash(newPassword, 10);
-    await userDoc.save();
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+    await UserRepository.findByIdAndUpdate(req.user._id, { password: hashedNewPassword });
+    
     res.json({ message: "Đổi mật khẩu thành công." });
   } catch (err) {
     res.status(500).json({ message: "Lỗi server", error: err.message });

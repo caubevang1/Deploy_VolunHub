@@ -1,6 +1,10 @@
 import BaseRepository from "./BaseRepository.js";
 import Notification from "../models/notification.js";
 
-const NotificationRepository = new BaseRepository(Notification);
+class NotificationRepository extends BaseRepository {
+  constructor() {
+    super(Notification);
+  }
+}
 
-export default NotificationRepository;
+export default new NotificationRepository();
