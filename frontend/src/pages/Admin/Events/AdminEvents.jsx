@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Table,
   Input,
@@ -27,7 +27,6 @@ import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTrash } from "@fortawesome/free-solid-svg-icons";
-import dayjs from "dayjs";
 
 const { RangePicker } = DatePicker;
 
@@ -79,11 +78,12 @@ export default function AdminEvents() {
         setData(res.data);
         setOriginalData(res.data);
       }
-    } catch (error) {
-      console.error("Lỗi khi lấy danh sách sự kiện:", error);
+    } catch (err) {
+      console.error("Lỗi khi lấy danh sách sự kiện:", err);
       message.error("Không thể tải danh sách sự kiện");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
@@ -139,10 +139,9 @@ export default function AdminEvents() {
 
   const handleSearchChange = (value) => {
     setSearchValue(value);
-
     if (!value || value.trim() === "") {
       setSearchOptions([]);
-      searchKeyword("");
+      setData(originalData);
       return;
     }
 
@@ -165,48 +164,51 @@ export default function AdminEvents() {
       }));
 
     setSearchOptions(suggestions);
-    searchKeyword(value);
+    if (searchKeywordRef.current) searchKeywordRef.current(value);
   };
 
-  const searchKeyword = useCallback(
-    debounce((value) => {
-      const keyword = removeVietnameseTones(value.trim().toLowerCase());
+  // khi chọn 1 suggestion: tìm bản ghi theo tên và điều hướng tới detail bằng _id
+  const handleSelectEvent = (value) => {
+    const found = originalData.find((e) => (e.name || "") === value);
+    if (found) {
+      navigate(`/admin/su-kien/${found._id}`);
+    }
+  };
 
-      let filtered = [...originalData];
-
-      // Lọc theo category
-      if (filters.category) {
-        filtered = filtered.filter(
-          (event) => event.category === filters.category
-        );
+  // use ref-based debounced fn to avoid stale deps and eslint warnings
+  const searchKeywordRef = useRef(null);
+  useEffect(() => {
+    const fn = debounce((value) => {
+      try {
+        const keyword = removeVietnameseTones(String(value || "").trim().toLowerCase());
+        let filtered = [...originalData];
+        if (filters.category) filtered = filtered.filter((e) => e.category === filters.category);
+        if (filters.status) filtered = filtered.filter((e) => (e.status || "").toLowerCase() === String(filters.status).toLowerCase());
+        if (keyword) {
+          filtered = filtered.filter((event) => {
+            const name = removeVietnameseTones(event.name || "");
+            return name.includes(keyword);
+          });
+        }
+        setData(filtered);
+      } catch (err) {
+        console.warn("Debounced search error:", err);
       }
-
-      // Lọc theo status
-      if (filters.status) {
-        filtered = filtered.filter((event) => event.status === filters.status);
-      }
-
-      // Lọc theo keyword
-      if (keyword) {
-        filtered = filtered.filter((event) => {
-          const name = removeVietnameseTones(event.name || "");
-          return name.includes(keyword);
-        });
-      }
-
-      setData(filtered);
-    }, 300),
-    [originalData, filters]
-  );
+    }, 300);
+    searchKeywordRef.current = fn;
+    return () => {
+      if (fn && typeof fn.cancel === "function") fn.cancel();
+    };
+  }, [originalData, filters]);
 
   const handleFilterChange = (key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
-  // Áp dụng filter khi filters thay đổi
+  // apply filter / search when filters or searchValue change
   useEffect(() => {
-    searchKeyword(searchValue);
-  }, [filters, searchKeyword]);
+    if (searchKeywordRef.current) searchKeywordRef.current(searchValue);
+  }, [filters, searchValue, originalData]);
 
   const handleDeleteEvent = async (eventId, name) => {
     const result = await Swal.fire({
@@ -230,8 +232,9 @@ export default function AdminEvents() {
       } else {
         Swal.fire("Lỗi", "Không thể xóa sự kiện", "error");
       }
-    } catch (error) {
-      Swal.fire("Lỗi", "Đã xảy ra lỗi khi xóa sự kiện", "error");
+    } catch (err) {
+      console.error("Lỗi khi xóa sự kiện:", err);
+      message.error("Không thể xóa sự kiện");
     }
   };
 
@@ -369,14 +372,14 @@ export default function AdminEvents() {
           value={searchValue}
           options={searchOptions}
           onChange={handleSearchChange}
-          onSelect={handleSearchChange}
+          onSelect={handleSelectEvent}
           placeholder="Tìm kiếm theo tên sự kiện hoặc địa điểm"
           size="large"
           allowClear
           onClear={() => {
             setSearchValue("");
             setSearchOptions([]);
-            searchKeyword("");
+            setData(originalData);
           }}
         />
 

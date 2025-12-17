@@ -1,3 +1,4 @@
+// frontend/src/services/AdminService.js
 import { http } from "../utils/BaseUrl";
 
 //User
@@ -15,8 +16,10 @@ export const ApproveEvent = (eventId) =>
 export const RejectEvent = (eventId, reason) =>
   http.put(`/admin/events/${eventId}/reject`, { reason });
 export const DeleteEvent = (eventId) => http.delete(`/admin/events/${eventId}`);
+
+// FIX: Sửa lại đường dẫn API chi tiết sự kiện cho chuẩn Admin
 export const GetEventDetail = (eventId) =>
-  http.get(`/events/management/${eventId}`);
+  http.get(`/admin/events/${eventId}`);
 
 //Dashboard
 export const GetDashboardStats = () => http.get(`/admin/dashboard`);

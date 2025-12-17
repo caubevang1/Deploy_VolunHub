@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Table,
   Input,
@@ -72,7 +72,8 @@ export default function PendingAdminEvents() {
         setData(res.data);
         setOriginalData(res.data);
       }
-    } catch (error) {
+    } catch (err) {
+      console.error("❌ Lỗi khi lấy danh sách sự kiện pending:", err);
       message.error("Không thể tải danh sách sự kiện pending");
     }
     setLoading(false);
@@ -96,7 +97,7 @@ export default function PendingAdminEvents() {
 
     if (!value || value.trim() === "") {
       setSearchOptions([]);
-      searchKeyword("");
+      setData(originalData);
       return;
     }
 
@@ -120,34 +121,39 @@ export default function PendingAdminEvents() {
       }));
 
     setSearchOptions(suggestions);
-    searchKeyword(value);
+    if (searchKeywordRef.current) searchKeywordRef.current(value);
   };
 
-  const searchKeyword = useCallback(
-    debounce((value) => {
-      const keyword = removeVietnameseTones(value.trim().toLowerCase());
+  // Điều hướng khi chọn suggestion từ autocomplete
+  const handleSelectEvent = (value) => {
+    const found = originalData.find((e) => (e.name || "") === value);
+    if (found) {
+      navigate(`/admin/su-kien/${found._id}`);
+    }
+  };
 
-      let filtered = [...originalData];
-
-      // Lọc theo category
-      if (filters.category) {
-        filtered = filtered.filter(
-          (event) => event.category === filters.category
-        );
+  // use ref-based debounce to avoid eslint warning about unknown deps
+  const searchKeywordRef = useRef(null);
+  useEffect(() => {
+    const fn = debounce((value) => {
+      try {
+        const keyword = removeVietnameseTones(String(value || "").trim().toLowerCase());
+        let filtered = [...originalData];
+        if (filters.category) filtered = filtered.filter((e) => e.category === filters.category);
+        if (keyword) {
+          filtered = filtered.filter((event) => {
+            const name = removeVietnameseTones(event.name || "");
+            return name.includes(keyword);
+          });
+        }
+        setData(filtered);
+      } catch (err) {
+        console.warn("Debounced search error:", err);
       }
-
-      // Lọc theo keyword
-      if (keyword) {
-        filtered = filtered.filter((event) => {
-          const name = removeVietnameseTones(event.name || "");
-          return name.includes(keyword);
-        });
-      }
-
-      setData(filtered);
-    }, 300),
-    [originalData, filters]
-  );
+    }, 300);
+    searchKeywordRef.current = fn;
+    return () => { if (fn && typeof fn.cancel === "function") fn.cancel(); };
+  }, [originalData, filters]);
 
   const handleFilterChange = (key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -155,8 +161,8 @@ export default function PendingAdminEvents() {
 
   // Áp dụng filter khi filters thay đổi
   useEffect(() => {
-    searchKeyword(searchValue);
-  }, [filters, searchKeyword]);
+    if (searchKeywordRef.current) searchKeywordRef.current(searchValue);
+  }, [filters, searchValue, originalData]);
 
   // Duyệt sự kiện
   const handleApproveEvent = async (eventId, name) => {
@@ -306,14 +312,14 @@ export default function PendingAdminEvents() {
           value={searchValue}
           options={searchOptions}
           onChange={handleSearchChange}
-          onSelect={handleSearchChange}
+          onSelect={handleSelectEvent}
           placeholder="Tìm kiếm theo tên sự kiện"
           size="large"
           allowClear
           onClear={() => {
             setSearchValue("");
             setSearchOptions([]);
-            searchKeyword("");
+            setData(originalData);
           }}
         />
 

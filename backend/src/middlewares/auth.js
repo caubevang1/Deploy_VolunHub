@@ -13,8 +13,6 @@ export const verifyToken = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    // Sử dụng repository để lấy user
     req.user = await UserRepository.findById(decoded.userId);
 
     if (!req.user) {
@@ -37,6 +35,7 @@ export const admin = (req, res, next) => {
   }
 };
 
+// Cho phép cả EVENTMANAGER và ADMIN truy cập
 export const eventManager = (req, res, next) => {
   const userRole = (req.user.role || "").toUpperCase();
   if (userRole === "EVENTMANAGER" || userRole === "ADMIN") {
@@ -48,10 +47,9 @@ export const eventManager = (req, res, next) => {
   }
 };
 
-// ✅ Cải thiện middleware isEventMember
 export const isEventMember = async (req, res, next) => {
   try {
-    const eventId = req.params.eventId || req.body.eventId;
+    const eventId = req.params.eventId || req.params.id || req.body.eventId;
     const userId = req.user._id;
     const userRole = (req.user.role || "").toUpperCase();
 

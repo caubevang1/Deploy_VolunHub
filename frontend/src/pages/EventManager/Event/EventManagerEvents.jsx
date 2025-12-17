@@ -152,6 +152,14 @@ export default function EventManagerEvents() {
     if (searchKeywordRef.current) searchKeywordRef.current(value);
   };
 
+  // onSelect từ autocomplete -> navigate tới trang detail manager
+  const handleSelectEvent = (value) => {
+    const found = originalData.find((e) => (e.name || "") === value);
+    if (found) {
+      navigate(`/quanlisukien/su-kien/${found._id}`);
+    }
+  };
+
   const handleDeleteEvent = async (eventId, name) => {
     const result = await Swal.fire({
       title: `Xác nhận xóa sự kiện?`,
@@ -396,7 +404,7 @@ export default function EventManagerEvents() {
         value={searchValue}
         options={searchOptions}
         onChange={handleSearchChange}
-        onSelect={handleSearchChange}
+        onSelect={handleSelectEvent}
         placeholder="Tìm kiếm theo tên sự kiện"
         size="large"
         className="mb-4"
