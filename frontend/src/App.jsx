@@ -54,7 +54,14 @@ class App extends Component {
             <Route path="nguoi-dung" element={<Users />} />
             <Route path="su-kien" element={<AdminEvents />} />
             <Route path="su-kien/cho-duyet" element={<PendingEvents />} />
-            <Route path="su-kien/:eventId" element={<AdminEventDetail />} />
+            <Route
+              path="su-kien/:eventId"
+              element={<AdminEventDetail />}
+            />{" "}
+            <Route
+              path="su-kien/:eventId/trao-doi"
+              element={<EventDiscussion />}
+            />{" "}
           </Route>
           {/* Manager routes */}
           <Route path="/quanlisukien" element={<EventManagerTemplate />}>

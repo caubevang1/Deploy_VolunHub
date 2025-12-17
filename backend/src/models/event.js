@@ -57,6 +57,11 @@ const eventSchema = new mongoose.Schema(
       enum: ["pending", "approved", "rejected", "completed"],
       default: "pending",
     },
+    rejectionReason: {
+      // Lý do từ chối sự kiện (nếu status = "rejected")
+      type: String,
+      default: null,
+    },
     createdBy: {
       // Dành cho Event Manager, để biết ai tạo sự kiện
       type: mongoose.Schema.Types.ObjectId,

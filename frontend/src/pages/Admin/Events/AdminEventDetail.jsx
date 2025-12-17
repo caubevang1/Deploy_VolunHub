@@ -1,7 +1,14 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { GetEventDetail } from "../../../services/AdminService";
-import { Calendar, Users, MapPin, Tag, Phone } from "lucide-react";
+import {
+  Calendar,
+  Users,
+  MapPin,
+  Tag,
+  Phone,
+  MessageSquare,
+} from "lucide-react";
 
 const categoryMapping = {
   Community: "Cộng đồng",
@@ -16,7 +23,7 @@ const categoryMapping = {
 };
 
 export default function AdminEventDetail() {
-  const { slug } = useParams();
+  const { eventId } = useParams();
   const navigate = useNavigate();
 
   const [event, setEvent] = useState(null);
@@ -25,7 +32,7 @@ export default function AdminEventDetail() {
   useEffect(() => {
     async function load() {
       try {
-        const res = await GetEventDetail(slug);
+        const res = await GetEventDetail(eventId);
         if (res.status === 200) setEvent(res.data);
       } catch (err) {
         console.error(err);
@@ -33,7 +40,7 @@ export default function AdminEventDetail() {
       setLoading(false);
     }
     load();
-  }, [slug]);
+  }, [eventId]);
 
   if (loading) return <p className="text-center mt-10 text-lg">Đang tải...</p>;
   if (!event)
@@ -96,14 +103,24 @@ export default function AdminEventDetail() {
         className="w-full h-full object-cover px-6 py-8"
       />
 
-      {/* Nút quay lại */}
-      <div className="px-6 py-4">
+      {/* Nút quay lại và Kênh trao đổi */}
+      <div className="px-6 py-4 flex gap-4 items-center">
         <button
           onClick={() => navigate(-1)}
           className="text-blue-600 hover:underline font-semibold"
         >
           ← Quay lại
         </button>
+
+        {event.status === "approved" && (
+          <button
+            onClick={() => navigate(`/admin/su-kien/${eventId}/trao-doi`)}
+            className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold transition-colors duration-200"
+          >
+            <MessageSquare size={20} />
+            Kênh Trao Đổi
+          </button>
+        )}
       </div>
 
       {/* Thông tin chi tiết */}

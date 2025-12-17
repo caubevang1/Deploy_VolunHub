@@ -514,6 +514,7 @@ export const getMyEvents = async (req, res) => {
           location: 1,
           status: 1,
           maxParticipants: 1,
+          rejectionReason: 1,
           currentParticipants: {
             $size: {
               $filter: {
@@ -565,7 +566,14 @@ export const getEventParticipants = async (req, res) => {
 // [GET] /api/events/management/:id -> Xem chi tiết sự kiện (Dành cho Admin & Manager)
 export const getEventDetailsForManagement = async (req, res) => {
   try {
-    const eventId = new mongoose.Types.ObjectId(req.params.id);
+    const paramId = req.params.id;
+
+    // Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(paramId)) {
+      return res.status(400).json({ message: "ID sự kiện không hợp lệ" });
+    }
+
+    const eventId = new mongoose.Types.ObjectId(paramId);
     const userId = req.user._id;
     const userRole = req.user.role;
 

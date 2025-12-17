@@ -21,6 +21,7 @@ import {
   Tooltip,
   Popconfirm,
   Modal,
+  Radio,
 } from "antd";
 import {
   UserOutlined,
@@ -45,6 +46,7 @@ import {
   GetUsers,
   GetPendingEvents,
   ApproveEvent,
+  RejectEvent,
   DeleteEvent,
   UpdateUserStatus,
   GetTrendingEvents,
@@ -94,6 +96,22 @@ export default function EnhancedDashboard() {
   const [exportFormat, setExportFormat] = useState("csv");
   const [exportLoading, setExportLoading] = useState(false);
   const [exportDateRange, setExportDateRange] = useState(null);
+
+  // Reject modal states
+  const [rejectModalVisible, setRejectModalVisible] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [customReason, setCustomReason] = useState("");
+
+  // Danh sách lý do từ chối thường gặp
+  const rejectReasons = [
+    "Nội dung sự kiện không phù hợp với chính sách cộng đồng",
+    "Thông tin sự kiện không đầy đủ hoặc không rõ ràng",
+    "Thời gian tổ chức không hợp lý hoặc trùng lặp",
+    "Địa điểm tổ chức không phù hợp hoặc không an toàn",
+    "Mục tiêu sự kiện không mang tính tình nguyện",
+    "Sự kiện có dấu hiệu lừa đảo hoặc vi phạm pháp luật",
+  ];
 
   const navigate = useNavigate();
 
@@ -207,6 +225,37 @@ export default function EnhancedDashboard() {
       fetchDashboardStats();
     } catch (error) {
       message.error("Không thể phê duyệt sự kiện");
+    }
+  };
+
+  const handleRejectEventClick = (record) => {
+    setSelectedEvent(record);
+    setRejectModalVisible(true);
+    setRejectReason("");
+    setCustomReason("");
+  };
+
+  const confirmRejectEvent = async () => {
+    if (!rejectReason && !customReason) {
+      message.warning("Vui lòng chọn hoặc nhập lý do từ chối");
+      return;
+    }
+
+    const finalReason = rejectReason === "custom" ? customReason : rejectReason;
+
+    if (!finalReason.trim()) {
+      message.warning("Vui lòng nhập lý do từ chối");
+      return;
+    }
+
+    try {
+      await RejectEvent(selectedEvent._id, finalReason);
+      message.success("Đã từ chối sự kiện");
+      setRejectModalVisible(false);
+      fetchPendingEvents();
+      fetchDashboardStats();
+    } catch (error) {
+      message.error("Không thể từ chối sự kiện");
     }
   };
 
@@ -388,7 +437,12 @@ export default function EnhancedDashboard() {
             />
           </Tooltip>
           <Tooltip title="Từ chối">
-            <Button danger icon={<CloseCircleOutlined />} size="small" />
+            <Button
+              danger
+              icon={<CloseCircleOutlined />}
+              size="small"
+              onClick={() => handleRejectEventClick(record)}
+            />
           </Tooltip>
           <Tooltip title="Xem chi tiết">
             <Button
@@ -997,6 +1051,60 @@ export default function EnhancedDashboard() {
             </p>
           </div>
         </div>
+      </Modal>
+
+      {/* Modal từ chối sự kiện */}
+      <Modal
+        title={<span className="text-lg font-semibold">Từ chối sự kiện</span>}
+        open={rejectModalVisible}
+        onOk={confirmRejectEvent}
+        onCancel={() => setRejectModalVisible(false)}
+        okText="Xác nhận từ chối"
+        cancelText="Hủy"
+        okButtonProps={{ danger: true }}
+        width={600}
+      >
+        {selectedEvent && (
+          <div className="mb-4">
+            <p className="font-medium text-gray-700">
+              Sự kiện: {selectedEvent.name}
+            </p>
+          </div>
+        )}
+
+        <p className="mb-3 font-medium">Vui lòng chọn lý do từ chối:</p>
+
+        <Radio.Group
+          onChange={(e) => {
+            setRejectReason(e.target.value);
+            if (e.target.value !== "custom") {
+              setCustomReason("");
+            }
+          }}
+          value={rejectReason}
+          className="w-full"
+        >
+          <Space direction="vertical" className="w-full">
+            {rejectReasons.map((reason, index) => (
+              <Radio key={index} value={reason} className="text-sm">
+                {reason}
+              </Radio>
+            ))}
+            <Radio value="custom">Lý do khác (nhập bên dưới)</Radio>
+          </Space>
+        </Radio.Group>
+
+        {rejectReason === "custom" && (
+          <Input.TextArea
+            className="mt-3"
+            rows={3}
+            placeholder="Nhập lý do từ chối..."
+            value={customReason}
+            onChange={(e) => setCustomReason(e.target.value)}
+            maxLength={200}
+            showCount
+          />
+        )}
       </Modal>
     </div>
   );

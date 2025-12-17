@@ -3,6 +3,7 @@ import { admin, verifyToken } from "../middlewares/auth.js";
 import {
   getPendingEvents,
   approveEvent,
+  rejectEvent,
   deleteEventByAdmin,
   getAllSystemEvents,
   getAllUsers,
@@ -47,6 +48,13 @@ router.get("/events/pending", getPendingEvents);
 // - Chức năng: Chuyển trạng thái sự kiện từ "PENDING" sang "APPROVED".
 // - Trả về: Object Event đã được cập nhật.
 router.put("/events/:id/approve", approveEvent);
+
+// [PUT] /api/admin/events/:id/reject
+// ❌ Từ chối một sự kiện
+// - Chức năng: Chuyển trạng thái sự kiện từ "PENDING" sang "REJECTED".
+// - Body yêu cầu (tùy chọn): { "reason": "Lý do từ chối" }
+// - Trả về: Object Event đã được cập nhật.
+router.put("/events/:id/reject", rejectEvent);
 
 // [DELETE] /api/admin/events/:id
 // 🗑️ Xóa sự kiện (Quyền Admin)
