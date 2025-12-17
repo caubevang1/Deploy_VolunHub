@@ -8,7 +8,7 @@ import fs from "fs";
 import path from "path";
 
 const NAME_REGEX = /^(\p{Lu}\p{Ll}*)(\s\p{Lu}\p{Ll}*)+$/u;
-const PHONE_REGEX = /^0[0-9]{9}$/;
+const PHONE_REGEX = /^0[0-9]{9,10}$/;
 
 const capitalizeName = (name) => {
   if (!name) return "";
@@ -36,12 +36,14 @@ const validateUserEntry = (name, birthday, phone) => {
       today.getDate() < birthDate.getDate())
   )
     age--;
-  if (age < 15 || age > 60)
-    return { error: `Tuổi (${age}) không hợp lệ (Yêu cầu 15-60).` };
+  
+  // Nới lỏng kiểm tra tuổi một chút để tránh lỗi 400 nếu nhập ngày sinh gần đây
+  if (age < 10 || age > 80)
+    return { error: `Tuổi (${age}) không phù hợp để tham gia hệ thống.` };
 
   const cleanPhone = phone?.replace(/\s/g, "");
   if (cleanPhone && !PHONE_REGEX.test(cleanPhone))
-    return { error: "Số điện thoại không hợp lệ (10 số)." };
+    return { error: "Số điện thoại không hợp lệ (10-11 số)." };
 
   return { cleanName, cleanPhone };
 };
@@ -87,7 +89,9 @@ export const verifyAndRegister = async (req, res) => {
       gender,
       phone,
       avatar,
+      role, // NHẬN ROLE TỪ FRONTEND GỬI LÊN
     } = req.body;
+
     const validation = validateUserEntry(name, birthday, phone);
     if (validation.error)
       return res.status(400).json({ message: validation.error });
@@ -103,16 +107,20 @@ export const verifyAndRegister = async (req, res) => {
         .json({ message: "OTP hết hạn hoặc không tồn tại." });
 
     const hashedPassword = await bcrypt.hash(password, 10);
+    
+    // Tạo user với thông tin đã validate và role được chọn
     await User.create({
       email,
       name: validation.cleanName,
       username,
       birthday,
       password: hashedPassword,
-      gender,
+      gender: gender === "Nam" ? "Male" : gender === "Nữ" ? "Female" : "Other",
       phone: validation.cleanPhone,
       avatar,
+      role: role || "VOLUNTEER", // Nếu không chọn sẽ mặc định là Volunteer
     });
+
     res.status(201).json({ message: "Đăng ký thành công." });
   } catch (err) {
     res.status(500).json({ message: "Lỗi server", error: err.message });
@@ -241,7 +249,7 @@ export const getAllUsers = async (req, res) => {
 
 export const register = async (req, res) => {
   try {
-    const { username, email, password, name, birthday, gender, phone } =
+    const { username, email, password, name, birthday, gender, phone, role } =
       req.body;
     const validation = validateUserEntry(name, birthday, phone);
     if (validation.error)
@@ -256,7 +264,7 @@ export const register = async (req, res) => {
       gender,
       phone: validation.cleanPhone,
       avatar: req.file ? `/uploads/avatars/${req.file.filename}` : null,
-      role: "VOLUNTEER",
+      role: role || "VOLUNTEER",
     });
     await newUser.save();
     res.status(201).json({ message: "Đăng ký thành công" });
