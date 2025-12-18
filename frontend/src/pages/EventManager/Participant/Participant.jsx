@@ -209,7 +209,7 @@ export default function Participants() {
 
     setSubmittingRating(true);
     try {
-      const res = await MarkCompletedParticipants(selectedParticipant._id, { performance });
+      const res = await MarkCompletedParticipants(selectedParticipant.id, { performance });
       if (res.status === 200) {
         setIsRatingModalOpen(false);
         Swal.fire({ icon: "success", title: "Đánh giá thành công!", timer: 1500, showConfirmButton: false });
@@ -283,10 +283,10 @@ export default function Participants() {
         <div className="flex flex-col justify-center items-center gap-2">
           {record.status === "pending" && (
             <>
-              <Button type="primary" className="!bg-green-500 w-18" size="small" onClick={() => handleUpdateStatus(record._id, "approved", record.volunteer?.name)}>
+              <Button type="primary" className="!bg-green-500 w-18" size="small" onClick={() => handleUpdateStatus(record.id, "approved", record.volunteer?.name)}>
                 Duyệt
               </Button>
-              <Button size="small" className="!bg-red-500 !text-white w-18" onClick={() => handleUpdateStatus(record._id, "rejected", record.volunteer?.name)}>
+              <Button size="small" className="!bg-red-500 !text-white w-18" onClick={() => handleUpdateStatus(record.id, "rejected", record.volunteer?.name)}>
                 Từ chối
               </Button>
             </>
@@ -323,7 +323,7 @@ export default function Participants() {
         }}
       />
 
-      <Table columns={columns} dataSource={data} rowKey="_id" loading={loading} pagination={{ pageSize: 8 }} />
+      <Table columns={columns} dataSource={data} rowKey="id" loading={loading} pagination={{ pageSize: 8 }} />
 
       <Modal footer={null} open={isRatingModalOpen} onCancel={() => setIsRatingModalOpen(false)} width={700} centered>
         <div className="text-center mb-8 mt-4">

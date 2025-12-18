@@ -1,7 +1,8 @@
 // src/routes/event.routes.js
 import express from "express";
 import * as EventController from "../controllers/event.controller.js";
-import { verifyToken } from "../middlewares/auth.js";
+import { verifyToken, eventManager } from "../middlewares/auth.js";
+import { uploadEventImages } from "../middlewares/upload.js";
 
 const router = express.Router();
 
@@ -42,6 +43,12 @@ router.get("/public/:id/participants", (req, res, next) => {
 });
 
 // --- MANAGER ROUTES (Yêu cầu quyền Event Manager) ---
+
+router.post("/", verifyToken, eventManager, uploadEventImages, (req, res, next) => {
+  if (typeof EventController.createEvent !== "function")
+    return res.status(500).json({ message: "Controller handler missing: createEvent" });
+  return EventController.createEvent(req, res, next);
+});
 
 // [GET] /api/events/my-events
 // 📂 Sự kiện của tôi

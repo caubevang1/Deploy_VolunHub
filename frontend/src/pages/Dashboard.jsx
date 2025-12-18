@@ -88,7 +88,7 @@ export default function Dashboard() {
 
       try {
         const myRes = await GetMyEvent();
-        const myRegs = myRes?.data || [];
+        const myRegs = Array.isArray(myRes?.data) ? myRes.data : [];
         setMyEvents(myRegs);
         
         tempStats = {
@@ -118,12 +118,18 @@ export default function Dashboard() {
           .slice(0, 6)
       );
 
-      // Cập nhật hoạt động mới (Sửa logic lấy id từ e.id thay vì e._id)
+      // Cập nhật hoạt động mới: Fix 403 bằng cách chỉ lấy post từ sự kiện của tôi
+      const myApprovedEvents = myEvents
+        .filter(reg => reg.status === 'approved' || reg.status === 'completed')
+        .map(reg => reg.event)
+        .filter(Boolean); // Lọc bỏ event null/undefined
+
       const eventsWithPosts = [];
       await Promise.all(
-        approvedEvents.slice(0, 10).map(async (e) => {
+        myApprovedEvents.slice(0, 10).map(async (e) => {
+          if (!e?.id) return; // Bỏ qua nếu không có event hoặc id
           try {
-            const r = await GetEventPosts(e.id); // Dùng e.id
+            const r = await GetEventPosts(e.id);
             const posts = r?.data || [];
             const recent = posts.filter(
               (p) => (now - new Date(p.createdAt).getTime()) / 86400000 <= 7
@@ -136,7 +142,8 @@ export default function Dashboard() {
               });
             }
           } catch (err) {
-            console.warn(`Posts error for ${e.id}:`, err.message);
+            // Lỗi 403 ở đây là bình thường nếu user không phải member, nên chỉ ghi console.warn
+            console.warn(`Could not fetch posts for event ${e.id}:`, err.message);
           }
         })
       );

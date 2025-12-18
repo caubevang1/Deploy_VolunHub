@@ -72,6 +72,17 @@ class CommentRepository extends BaseRepository {
   }
 
   /**
+   * Lấy danh sách bình luận theo sự kiện
+   */
+  async getCommentsByEvent(eventId) {
+    const res = await this.model.find({ event: eventId })
+      .populate("author", "name avatar")
+      .sort({ createdAt: -1 })
+      .lean();
+    return this.transform(res);
+  }
+
+  /**
    * Xóa tất cả bình luận thuộc một sự kiện
    */
   async deleteByEvent(eventId) {

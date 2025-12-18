@@ -25,7 +25,6 @@ export default function CreateEvent() {
   const navigate = useNavigate();
   const galleryCounterRef = useRef(0);
 
-  // Convert pasted image → File
   const convertImgURLToFile = async (url, filename = null) => {
     try {
       const res = await fetch(url);
@@ -42,19 +41,15 @@ export default function CreateEvent() {
 
   const onEditorReady = (editor) => {
     setEditorInstance(editor);
-
     editor.editing.view.document.on("clipboardInput", async (evt, data) => {
       const html = data.dataTransfer.getData("text/html");
-      if (!html || !html.includes("<img")) return; // normal paste
+      if (!html || !html.includes("<img")) return;
 
-      // Extract <img> without interfering CKEditor display
       const temp = document.createElement("div");
       temp.innerHTML = html;
-
       const imgTags = temp.querySelectorAll("img");
       if (imgTags.length === 0) return;
 
-      // Collect FILE versions of every pasted image
       const newFiles = [];
       for (const img of imgTags) {
         const src = img.src;
@@ -63,7 +58,6 @@ export default function CreateEvent() {
         if (file) newFiles.push(file);
       }
 
-      // Store new gallery files
       if (newFiles.length > 0) {
         galleryCounterRef.current += newFiles.length;
         setGalleryImages((prev) => [...prev, ...newFiles]);
@@ -71,24 +65,17 @@ export default function CreateEvent() {
     });
   };
 
-  // Build description WITH placeholders but keep editor display intact
   const buildDescriptionWithPlaceholder = () => {
     if (!editorInstance) return "";
-
     let html = editorInstance.getData();
-
-    // create a DOM clone to operate on
     const temp = document.createElement("div");
     temp.innerHTML = html;
-
     const imgTags = temp.querySelectorAll("img");
-
     imgTags.forEach((img, idx) => {
       const placeholder = `[IMAGE_PLACEHOLDER_${idx}]`;
       const span = document.createTextNode(placeholder);
       img.replaceWith(span);
     });
-
     return temp.innerHTML;
   };
 
@@ -96,36 +83,45 @@ export default function CreateEvent() {
     setLoading(true);
     try {
       const descriptionWithPlaceholder = buildDescriptionWithPlaceholder();
-
       const formData = new FormData();
+      
+      // Gán các trường cơ bản
       formData.append("name", values.name);
       formData.append("location", values.location);
       formData.append("category", values.category);
-      formData.append("maxParticipants", values.maxParticipants);
-      formData.append("date", values.date.format("YYYY-MM-DD"));
-      formData.append("endDate", values.endDate.format("YYYY-MM-DD"));
+      // Đảm bảo maxParticipants là Number để tránh lỗi 400
+      formData.append("maxParticipants", Number(values.maxParticipants));
+      // Format ngày gửi lên server
+      formData.append("date", values.date.toISOString());
+      formData.append("endDate", values.endDate.toISOString());
       formData.append("description", descriptionWithPlaceholder);
 
-      // Cover image: Nếu không chọn ảnh bìa, lấy ảnh đầu tiên trong gallery
-      const coverFile = values.coverImage?.[0]?.originFileObj || galleryImages[0];
-      if (coverFile) formData.append("coverImage", coverFile);
+      // Xử lý Ảnh bìa (Cover Image)
+      if (values.coverImage && values.coverImage.length > 0) {
+        formData.append("coverImage", values.coverImage[0].originFileObj);
+      } else if (galleryImages.length > 0) {
+        // Fallback: lấy ảnh đầu tiên dán trong editor làm cover
+        formData.append("coverImage", galleryImages[0]);
+      }
 
-      // Gallery images
-      galleryImages.forEach((file) => formData.append("galleryImages", file));
+      // Xử lý bộ sưu tập ảnh (Gallery)
+      galleryImages.forEach((file) => {
+        formData.append("galleryImages", file);
+      });
 
       const res = await CreatEvents(formData);
 
-      if (res.status === 201) {
-        Swal.fire("Thành công!", "Sự kiện đã được tạo", "success");
+      if (res.status === 201 || res.status === 200) {
+        Swal.fire("Thành công!", "Sự kiện đang chờ quản trị viên duyệt", "success");
         navigate("/quanlisukien/su-kien");
-      } else {
-        Swal.fire("Lỗi", "Không thể tạo sự kiện", "error");
       }
     } catch (err) {
-      console.error(err);
-      Swal.fire("Lỗi", "Có lỗi khi tạo sự kiện", "error");
+      console.error("Create event error:", err);
+      const errorMsg = err.response?.data?.message || "Dữ liệu không hợp lệ, vui lòng kiểm tra lại!";
+      Swal.fire("Lỗi tạo sự kiện", errorMsg, "error");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const volunteerCategories = [
@@ -141,8 +137,8 @@ export default function CreateEvent() {
   ];
 
   return (
-    <div>
-      <h2 className="text-2xl font-bold mb-4">TẠO SỰ KIỆN</h2>
+    <div className="max-w-4xl mx-auto p-6 bg-white shadow-sm rounded-xl">
+      <h2 className="text-2xl font-bold mb-6 text-gray-800 border-b pb-4">TẠO SỰ KIỆN TÌNH NGUYỆN</h2>
 
       <Form
         form={form}
@@ -150,80 +146,92 @@ export default function CreateEvent() {
         onFinish={handleCreateEvent}
         initialValues={{ category: "Community", maxParticipants: 50 }}
       >
-        <Form.Item label="Tên sự kiện" name="name" rules={[{ required: true }]}>
-          <Input size="large" />
+        <Form.Item 
+          label={<span className="font-semibold">Tên sự kiện</span>} 
+          name="name" 
+          rules={[{ required: true, message: 'Vui lòng nhập tên sự kiện!' }]}
+        >
+          <Input size="large" placeholder="Ví dụ: Chiến dịch mùa hè xanh 2024" />
         </Form.Item>
 
-        <Form.Item label="Mô tả chi tiết" required>
-          <CKEditor
-            editor={ClassicEditor}
-            onReady={onEditorReady}
-            onChange={(e, editor) => { }}
-            config={{
-              toolbar: [
-                "heading",
-                "|",
-                "bold",
-                "italic",
-                "link",
-                "bulletedList",
-                "numberedList",
-                "undo",
-                "redo",
-                "imageUpload",
-              ],
-              image: { toolbar: ["imageTextAlternative", "imageStyle:full", "imageStyle:side"] },
-            }}
-          />
+        <Form.Item label={<span className="font-semibold">Mô tả chi tiết</span>} required>
+          <div className="border rounded-lg overflow-hidden">
+            <CKEditor
+              editor={ClassicEditor}
+              onReady={onEditorReady}
+              // SỬA: Loại bỏ biến unused 'e' và 'editor' để fix lỗi ESLint
+              onChange={() => {}}
+              config={{
+                toolbar: ["heading", "|", "bold", "italic", "link", "bulletedList", "numberedList", "undo", "redo", "imageUpload"],
+                placeholder: "Nhập mô tả hoặc dán hình ảnh trực tiếp vào đây..."
+              }}
+            />
+          </div>
         </Form.Item>
 
-        <Form.Item label="Ngày bắt đầu" name="date" rules={[{ required: true }]}>
-          <DatePicker size="large" style={{ width: "100%" }} />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Form.Item 
+            label={<span className="font-semibold">Ngày bắt đầu</span>} 
+            name="date" 
+            rules={[{ required: true, message: 'Chọn ngày bắt đầu!' }]}
+          >
+            <DatePicker size="large" className="w-full" format="DD/MM/YYYY" />
+          </Form.Item>
+
+          <Form.Item 
+            label={<span className="font-semibold">Ngày kết thúc</span>} 
+            name="endDate" 
+            rules={[{ required: true, message: 'Chọn ngày kết thúc!' }]}
+          >
+            <DatePicker size="large" className="w-full" format="DD/MM/YYYY" />
+          </Form.Item>
+        </div>
+
+        <Form.Item 
+          label={<span className="font-semibold">Địa điểm</span>} 
+          name="location" 
+          rules={[{ required: true, message: 'Vui lòng nhập địa chỉ!' }]}
+        >
+          <Input size="large" placeholder="Địa chỉ chi tiết nơi diễn ra sự kiện" />
         </Form.Item>
 
-        <Form.Item label="Ngày kết thúc" name="endDate" rules={[{ required: true }]}>
-          <DatePicker size="large" style={{ width: "100%" }} />
-        </Form.Item>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Form.Item label={<span className="font-semibold">Loại sự kiện</span>} name="category" rules={[{ required: true }]}>
+            <Select size="large">
+              {volunteerCategories.map(option => (
+                <Option key={option.value} value={option.value}>{option.label}</Option>
+              ))}
+            </Select>
+          </Form.Item>
 
-        <Form.Item label="Địa điểm" name="location" rules={[{ required: true }]}>
-          <Input size="large" />
-        </Form.Item>
-
-        <Form.Item label="Loại sự kiện" name="category" rules={[{ required: true, message: 'Vui lòng chọn loại sự kiện' }]}>
-          <Select size="large">
-            {volunteerCategories.map(option => (
-              <Option key={option.value} value={option.value}>
-                {option.label}
-              </Option>
-            ))}
-          </Select>
-        </Form.Item>
-
-        <Form.Item label="Số lượng tham gia tối đa" name="maxParticipants" rules={[{ required: true }]}>
-          <InputNumber size="large" min={1} max={1000} style={{ width: "100%" }} />
-        </Form.Item>
+          <Form.Item label={<span className="font-semibold">Số lượng TNV tối đa</span>} name="maxParticipants" rules={[{ required: true }]}>
+            <InputNumber size="large" min={1} max={1000} className="w-full" />
+          </Form.Item>
+        </div>
 
         <Form.Item
-          label="Ảnh bìa"
+          label={<span className="font-semibold">Ảnh bìa (Không bắt buộc)</span>}
           name="coverImage"
           valuePropName="fileList"
-          getValueFromEvent={(e) => e?.fileList || []}
-          rules={[{ required: false }]}
+          getValueFromEvent={(e) => (Array.isArray(e) ? e : e?.fileList)}
         >
           <Upload beforeUpload={() => false} listType="picture" maxCount={1}>
-            <Button icon={<UploadOutlined />} size="large">Chọn ảnh bìa</Button>
+            <Button icon={<UploadOutlined />} size="large">Tải lên ảnh bìa</Button>
           </Upload>
         </Form.Item>
 
-        <Button
-          type="primary"
-          htmlType="submit"
-          loading={loading}
-          size="large"
-          style={{ width: "100%", background: "#DDB958" }}
-        >
-          Tạo sự kiện
-        </Button>
+        <div className="mt-8">
+          <Button
+            type="primary"
+            htmlType="submit"
+            loading={loading}
+            size="large"
+            className="w-full h-12 text-lg font-bold"
+            style={{ background: "#DDB958", borderColor: "#DDB958" }}
+          >
+            GỬI YÊU CẦU TẠO SỰ KIỆN
+          </Button>
+        </div>
       </Form>
     </div>
   );

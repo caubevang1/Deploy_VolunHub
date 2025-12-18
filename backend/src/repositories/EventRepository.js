@@ -168,6 +168,7 @@ class EventRepository extends BaseRepository {
           name: 1, description: 1, date: 1, endDate: 1, location: 1, category: 1,
           coverImage: 1, galleryImages: 1, status: 1, maxParticipants: 1,
           points: 1, likesCount: 1, sharesCount: 1, viewsCount: 1, rejectionReason: 1,
+          createdAt: 1, // <<< FIX: Thêm createdAt
           createdBy: { $arrayElemAt: ["$creator", 0] },
           currentParticipants: {
             $size: { $filter: { input: "$registrations", as: "reg", cond: { $eq: ["$$reg.status", "approved"] } } },
