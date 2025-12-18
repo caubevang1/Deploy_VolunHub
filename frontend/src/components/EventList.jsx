@@ -71,13 +71,13 @@ export default function EventList() {
   const fetchAllRealtimeStats = useCallback(async (eventList) => {
     if (!eventList || eventList.length === 0) return;
     try {
-      const ids = eventList.map((e) => e.id || e._id); 
+      const ids = eventList.map((e) => e.id); 
       const res = await GetEventsActionStatsBatch(ids);
       if (res.status === 200 && res.data && res.data.stats) {
         const statsMap = res.data.stats;
         setEvents((prev) =>
           prev.map((ev) => {
-            const currentId = ev.id || ev._id;
+            const currentId = ev.id;
             return {
               ...ev,
               ...(statsMap[currentId] || { 
@@ -96,19 +96,19 @@ export default function EventList() {
 
   const checkLikeStatuses = useCallback(async (eventList) => {
     if (!eventList || eventList.length === 0) return;
-    const eventsToCheck = eventList.filter((e) => likedEvents[e.id || e._id] === undefined);
+    const eventsToCheck = eventList.filter((e) => likedEvents[e.id] === undefined);
     if (eventsToCheck.length === 0) return;
 
     const statusMap = {};
     await Promise.all(
       eventsToCheck.map(async (event) => {
         try {
-          const currentId = event.id || event._id;
+          const currentId = event.id;
           const res = await CheckEventStatus(currentId);
           if (res.status === 200) statusMap[currentId] = res.data.hasLiked;
         } catch (err) {
           console.error("Check like error", err);
-          statusMap[event.id || event._id] = false;
+          statusMap[event.id] = false;
         }
       })
     );
@@ -124,7 +124,7 @@ export default function EventList() {
           const rawData = Array.isArray(res.data) ? res.data : (res.data?.events || []);
           const raw = rawData.map((event) => ({
             ...event,
-            id: event.id || event._id,
+            id: event.id,
             category: categoryMapping[event.category] || event.category,
           }));
 
@@ -186,7 +186,7 @@ export default function EventList() {
           const statusMap = {};
           const list = Array.isArray(res.data) ? res.data : (res.data?.items || []);
           list.forEach((item) => {
-            const eventId = item.event?.id || item.event?._id || item.event;
+            const eventId = item.event?.id;
             if (eventId) statusMap[eventId] = item.status;
           });
           setUserParticipationMap(statusMap);
@@ -207,12 +207,12 @@ export default function EventList() {
   const filteredEvents = useMemo(() => {
     let result = [...events];
 
-    if (tab === "joined") result = result.filter((e) => userParticipationMap[e.id || e._id]);
-    else if (tab === "notJoined") result = result.filter((e) => !userParticipationMap[e.id || e._id]);
-    else if (tab === "liked") result = result.filter((e) => likedEvents[e.id || e._id]);
+    if (tab === "joined") result = result.filter((e) => userParticipationMap[e.id]);
+    else if (tab === "notJoined") result = result.filter((e) => !userParticipationMap[e.id]);
+    else if (tab === "liked") result = result.filter((e) => likedEvents[e.id]);
 
     if (appliedFilters.category) result = result.filter((e) => e.category === appliedFilters.category);
-    if (appliedFilters.status) result = result.filter((e) => userParticipationMap[e.id || e._id] === appliedFilters.status);
+    if (appliedFilters.status) result = result.filter((e) => userParticipationMap[e.id] === appliedFilters.status);
 
     if (debouncedQuery.trim()) {
       result = result.filter((e) => 
@@ -249,7 +249,7 @@ export default function EventList() {
         setLikedEvents((prev) => ({ ...prev, [eventId]: !isLiked }));
         setEvents((prev) =>
           prev.map((ev) =>
-            (ev.id || ev._id) === eventId
+            ev.id === eventId
               ? {
                   ...ev,
                   likesCount: (ev.likesCount ?? 0) + (isLiked ? -1 : 1),
@@ -262,7 +262,7 @@ export default function EventList() {
       if (type === "SHARE") {
         setEvents((prev) =>
           prev.map((ev) =>
-            (ev.id || ev._id) === eventId ? { ...ev, sharesCount: (ev.sharesCount ?? 0) + 1 } : ev
+            ev.id === eventId ? { ...ev, sharesCount: (ev.sharesCount ?? 0) + 1 } : ev
           )
         );
         const res = await EventActions(eventId, { type: "SHARE" });
@@ -281,8 +281,8 @@ export default function EventList() {
 
   const tabCounts = useMemo(() => ({
     all: events.length,
-    joined: events.filter((e) => userParticipationMap[e.id || e._id]).length,
-    notJoined: events.filter((e) => !userParticipationMap[e.id || e._id]).length,
+    joined: events.filter((e) => userParticipationMap[e.id]).length,
+    notJoined: events.filter((e) => !userParticipationMap[e.id]).length,
     liked: Object.values(likedEvents).filter(Boolean).length,
     forYou: 0,
   }), [events, userParticipationMap, likedEvents]);
@@ -321,7 +321,7 @@ export default function EventList() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredEvents.map((event) => {
-          const eventId = event.id || event._id;
+          const eventId = event.id;
           return (
             <div key={eventId} className="bg-white rounded-2xl shadow-md overflow-hidden border hover:shadow-lg transition cursor-pointer" onClick={() => handleViewDetail(eventId)}>
               <div className="relative">

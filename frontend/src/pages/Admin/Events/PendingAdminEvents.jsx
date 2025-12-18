@@ -128,7 +128,7 @@ export default function PendingAdminEvents() {
   const handleSelectEvent = (value) => {
     const found = originalData.find((e) => (e.name || "") === value);
     if (found) {
-      navigate(`/admin/su-kien/${found._id}`);
+      navigate(`/admin/su-kien/${found.id}`);
     }
   };
 
@@ -243,7 +243,7 @@ export default function PendingAdminEvents() {
         <Button
           type="link"
           className="!font-semibold ml-0 pl-0 !text-blue-600 max-w-[380px] transform transition-transform duration-200 hover:scale-105"
-          onClick={() => handleEventDetail(event._id)}
+          onClick={() => handleEventDetail(event.id)}
           style={{ whiteSpace: "normal", padding: 0 }}
         >
           <span className="line-clamp-2 text-left block leading-tight py-10">
@@ -276,7 +276,7 @@ export default function PendingAdminEvents() {
             type="primary"
             className="!bg-green-500 !hover:bg-green-600 !border-none !font-semibold w-24"
             size="small"
-            onClick={() => handleApproveEvent(event._id, event.name)}
+            onClick={() => handleApproveEvent(event.id, event.name)}
           >
             Duyệt
           </Button>
@@ -284,7 +284,7 @@ export default function PendingAdminEvents() {
           <Button
             size="small"
             className="!bg-red-500 !hover:bg-red-600 !border-none !text-white !font-semibold w-24"
-            onClick={() => handleRejectEvent(event._id, event.name)}
+            onClick={() => handleRejectEvent(event.id, event.name)}
           >
             Từ chối
           </Button>
@@ -347,7 +347,7 @@ export default function PendingAdminEvents() {
       <Table
         columns={columns}
         dataSource={data}
-        rowKey="_id"
+        rowKey="id"
         loading={loading}
         pagination={{ pageSize: 8 }}
         className="shadow shadow-md rounded-md"

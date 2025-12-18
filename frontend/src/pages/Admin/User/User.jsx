@@ -209,7 +209,7 @@ export default function Users() {
     if (!result.isConfirmed) return;
 
     try {
-      const res = await UpdateUserStatus(user._id, newStatus);
+      const res = await UpdateUserStatus(user.id, newStatus);
 
       if (res.status === 200) {
         Swal.fire({
@@ -246,7 +246,7 @@ export default function Users() {
     if (!result.isConfirmed) return;
 
     try {
-      const res = await UpdateUserRole(user._id, newRole);
+      const res = await UpdateUserRole(user.id, newRole);
 
       if (res.status === 200) {
         Swal.fire({
@@ -406,7 +406,7 @@ export default function Users() {
       <Table
         columns={columns}
         dataSource={data}
-        rowKey="_id"
+        rowKey="id"
         loading={loading}
         pagination={{ pageSize: 8 }}
         className="shadow shadow-md rounded-md"

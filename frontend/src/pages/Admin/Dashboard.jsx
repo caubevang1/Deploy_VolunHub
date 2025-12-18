@@ -115,7 +115,7 @@ export default function Dashboard() {
       key: "name",
       render: (text, record) => (
         <a
-          onClick={() => navigate(`/admin/su-kien/${record._id}`)}
+          onClick={() => navigate(`/admin/su-kien/${record.id}`)}
           className="text-blue-600 hover:text-blue-800 font-medium"
         >
           {text}
@@ -370,7 +370,7 @@ export default function Dashboard() {
             <Table
               dataSource={recentEvents}
               columns={eventColumns}
-              rowKey="_id"
+              rowKey="id"
               pagination={false}
               size="small"
             />
@@ -396,7 +396,7 @@ export default function Dashboard() {
             <Table
               dataSource={recentUsers}
               columns={userColumns}
-              rowKey="_id"
+              rowKey="id"
               pagination={false}
               size="small"
             />

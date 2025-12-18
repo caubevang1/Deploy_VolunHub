@@ -119,8 +119,8 @@ export default function EventManagerDashboard() {
         const detailedEventsData = await Promise.all(
           events.map(async (event) => {
             try {
-              // FIX: Sử dụng event.id thay vì event._id để đồng bộ với transform của Backend
-              const eventId = event.id || event._id;
+              // FIX: Sử dụng event.id thay vì eventid để đồng bộ với transform của Backend
+              const eventId = event.id;
               const [detailRes, participantsRes] = await Promise.all([
                 GetEventDetail(eventId),
                 GetParticipants(eventId),
@@ -144,7 +144,7 @@ export default function EventManagerDashboard() {
                 participants,
               };
             } catch (err) {
-              console.error(`Error fetching event ${event.id || event._id}:`, err);
+              console.error(`Error fetching event ${event.id}:`, err);
               return {
                 ...event,
                 stats: {
@@ -205,7 +205,7 @@ export default function EventManagerDashboard() {
               .map((p) => ({
                 ...p,
                 eventName: event.name,
-                eventId: event.id || event._id,
+                eventId: event.id,
                 eventDate: event.date,
               }));
             allPendingRegistrations.push(...pending);
@@ -277,7 +277,7 @@ export default function EventManagerDashboard() {
       render: (text, record) => (
         <a
           onClick={() =>
-            navigate(`/quanlisukien/su-kien/${record.slug || record.id || record._id}`)
+            navigate(`/quanlisukien/su-kien/${record.slug || record.id || record.id}`)
           }
           className="text-blue-600 hover:text-blue-800 font-medium cursor-pointer"
         >
@@ -391,7 +391,7 @@ export default function EventManagerDashboard() {
       render: (text, record) => (
         <a
           onClick={() =>
-            navigate(`/quanlisukien/su-kien/${record.slug || record.id || record._id}`)
+            navigate(`/quanlisukien/su-kien/${record.slug || record.id || record.id}`)
           }
           className="text-blue-600 hover:text-blue-800 font-medium cursor-pointer"
         >
@@ -477,8 +477,8 @@ export default function EventManagerDashboard() {
               type="primary"
               className="!bg-green-500 !hover:bg-green-600 !border-none !font-semibold w-18"
               size="small"
-              loading={actionLoading[record.id || record._id]}
-              onClick={() => handleApproveRegistration(record.id || record._id)}
+              loading={actionLoading[record.id || record.id]}
+              onClick={() => handleApproveRegistration(record.id || record.id)}
             >
               Duyệt
             </Button>
@@ -487,8 +487,8 @@ export default function EventManagerDashboard() {
             <Button
               size="small"
               className="!bg-red-500 !hover:bg-red-600 !border-none !text-white !font-semibold w-18"
-              loading={actionLoading[record.id || record._id]}
-              onClick={() => handleRejectRegistration(record.id || record._id)}
+              loading={actionLoading[record.id || record.id]}
+              onClick={() => handleRejectRegistration(record.id || record.id)}
             >
               Từ chối
             </Button>
@@ -506,7 +506,7 @@ export default function EventManagerDashboard() {
       render: (text, record) => (
         <a
           onClick={() =>
-            navigate(`/quanlisukien/su-kien/${record.slug || record.id || record._id}`)
+            navigate(`/quanlisukien/su-kien/${record.slug || record.id || record.id}`)
           }
           className="text-blue-600 hover:text-blue-800 cursor-pointer font-medium"
         >
@@ -551,7 +551,7 @@ export default function EventManagerDashboard() {
             icon={<TeamOutlined />}
             onClick={() =>
               navigate(
-                `/quanlisukien/su-kien/${record.slug || record.id || record._id}/participants`
+                `/quanlisukien/su-kien/${record.slug || record.id || record.id}/participants`
               )
             }
           >
@@ -561,7 +561,7 @@ export default function EventManagerDashboard() {
             size="small"
             icon={<EyeOutlined />}
             onClick={() =>
-              navigate(`/quanlisukien/su-kien/${record.slug || record.id || record._id}`)
+              navigate(`/quanlisukien/su-kien/${record.slug || record.id || record.id}`)
             }
           >
             Chi tiết
@@ -733,7 +733,7 @@ const EventsTab = ({
           {upcomingEvents.length === 0 ? (
             <Empty description="Không có sự kiện sắp diễn ra" image={Empty.PRESENTED_IMAGE_SIMPLE} />
           ) : (
-            <Table dataSource={upcomingEvents} columns={upcomingEventColumns} rowKey={(r) => r.id || r._id} pagination={false} size="small" />
+            <Table dataSource={upcomingEvents} columns={upcomingEventColumns} rowKey={(r) => r.id || r.id} pagination={false} size="small" />
           )}
         </Card>
       </div>
@@ -744,7 +744,7 @@ const EventsTab = ({
             {recentEvents.length === 0 ? (
               <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />
             ) : (
-              <Table dataSource={recentEvents} columns={eventColumns} rowKey={(r) => r.id || r._id} pagination={false} size="small" />
+              <Table dataSource={recentEvents} columns={eventColumns} rowKey={(r) => r.id || r.id} pagination={false} size="small" />
             )}
           </Card>
         </Col>
@@ -754,7 +754,7 @@ const EventsTab = ({
             {topEvents.length === 0 ? (
               <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />
             ) : (
-              <Table dataSource={topEvents} columns={topEventColumns} rowKey={(r) => r.id || r._id} pagination={false} size="small" />
+              <Table dataSource={topEvents} columns={topEventColumns} rowKey={(r) => r.id || r.id} pagination={false} size="small" />
             )}
           </Card>
         </Col>
@@ -802,7 +802,7 @@ const VolunteersTab = ({
         {pendingRegistrations.length === 0 ? (
           <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />
         ) : (
-          <Table dataSource={pendingRegistrations} columns={pendingRegistrationColumns} rowKey={(r) => r.id || r._id} pagination={{ pageSize: 10 }} size="small" />
+          <Table dataSource={pendingRegistrations} columns={pendingRegistrationColumns} rowKey={(r) => r.id || r.id} pagination={{ pageSize: 10 }} size="small" />
         )}
       </Card>
     </>

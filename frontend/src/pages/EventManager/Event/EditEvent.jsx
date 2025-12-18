@@ -206,7 +206,7 @@ export default function EditEvent() {
         }
       }
 
-      const res = await UpdateEvents(event._id, formData);
+      const res = await UpdateEvents(event.id, formData);
 
       if (res.status === 200) {
         Swal.fire("Thành công", "Cập nhật sự kiện thành công", "success");
