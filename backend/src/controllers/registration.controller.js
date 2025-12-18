@@ -1,3 +1,4 @@
+// src/controllers/registration.controller.js
 import RegistrationRepository from "../repositories/RegistrationRepository.js";
 import EventRepository from "../repositories/EventRepository.js";
 import UserRepository from "../repositories/UserRepository.js";
@@ -7,17 +8,16 @@ import { sendPushNotification } from "../utils/sendPush.js";
 export const registerForEvent = async (req, res) => {
   try {
     const { eventId } = req.params;
-    const volunteerId = req.user._id;
+    const volunteerId = req.user.id; 
 
     const event = await EventRepository.findById(eventId);
     if (!event || event.status !== "approved") {
       return res.status(404).json({ message: "Sự kiện không tồn tại hoặc chưa được duyệt." });
     }
 
-    // Đếm số lượng người tham gia đã được duyệt
     const currentParticipants = await RegistrationRepository.countDocuments({
       event: eventId,
-      status: "approved" // Đã chuẩn hóa không dùng $in nếu chỉ có 1 giá trị
+      status: "approved"
     });
 
     if (currentParticipants >= event.maxParticipants) {
@@ -41,7 +41,7 @@ export const registerForEvent = async (req, res) => {
 export const cancelRegistration = async (req, res) => {
   try {
     const { eventId } = req.params;
-    const volunteerId = req.user._id;
+    const volunteerId = req.user.id; 
 
     const registration = await RegistrationRepository.findOne({ event: eventId, volunteer: volunteerId });
     if (!registration) return res.status(404).json({ message: "Bạn chưa đăng ký sự kiện này." });
@@ -55,13 +55,12 @@ export const cancelRegistration = async (req, res) => {
       const diffDays = Math.ceil((eventDate - now) / (1000 * 60 * 60 * 24));
 
       if (diffDays <= 2) {
-        // SỬA: Dùng hàm nghiệp vụ incrementPoints với giá trị âm để trừ điểm
         await UserRepository.incrementPoints(volunteerId, -10);
         penaltyMessage = " (Bạn bị trừ 10 điểm uy tín do hủy sát ngày diễn ra)";
       }
     }
 
-    await RegistrationRepository.findByIdAndDelete(registration._id);
+    await RegistrationRepository.findByIdAndDelete(registration.id);
     res.status(200).json({ message: "Hủy đăng ký thành công." + penaltyMessage });
   } catch (error) {
     res.status(500).json({ message: "Lỗi server", error: error.message });
@@ -72,7 +71,7 @@ export const cancelRegistration = async (req, res) => {
 export const getMyHistory = async (req, res) => {
   try {
     const history = await RegistrationRepository.find(
-      { volunteer: req.user._id }, 
+      { volunteer: req.user.id }, 
       null, 
       { sort: { createdAt: -1 } }, 
       "event"
@@ -94,7 +93,7 @@ export const getEventRegistrations = async (req, res) => {
       { event: eventId },
       null,
       { sort: { createdAt: -1 } },
-      { path: "volunteer", select: "name email avatar phone" }
+      "volunteer"
     );
 
     const results = registrations.map((reg) => {
@@ -125,8 +124,8 @@ export const updateRegistrationStatus = async (req, res) => {
   try {
     const { status } = req.body;
     const updatedReg = await RegistrationRepository.findByIdAndUpdate(req.params.registrationId, { status });
+    if (!updatedReg) return res.status(404).json({ message: "Không tìm thấy đơn đăng ký" });
     
-    // Đảm bảo lấy thông tin event qua Repository thay vì populate trực tiếp driver
     const populatedEvent = await EventRepository.findById(updatedReg.event, "name");
     
     res.status(200).json({ 
@@ -161,32 +160,29 @@ export const markAsCompleted = async (req, res) => {
     const event = await EventRepository.findById(registration.event);
     const eventPoints = event?.points || 0;
     
-    let pointsToAdd = 0, pushTitle = "", pushBody = "";
+    let pointsToAdd = 0;
+    let pushTitle = "";
+    let pushBody = "";
 
     switch (rating) {
-      case "GOOD":
-        pointsToAdd = eventPoints;
-        pushTitle = "Đánh giá: Tốt 🌟";
-        pushBody = `Bạn đã hoàn thành tốt nhiệm vụ tại "${event.name}". (+${pointsToAdd}đ)`;
+      case "GOOD": 
+        pointsToAdd = eventPoints; 
+        pushTitle = "Đánh giá: Tốt 🌟"; 
         break;
-      case "AVERAGE":
-        pointsToAdd = Math.floor(eventPoints / 2);
-        pushTitle = "Đánh giá: Trung bình 😐";
-        pushBody = `Bạn đã hoàn thành nhiệm vụ ở mức cơ bản tại "${event.name}". (+${pointsToAdd}đ)`;
+      case "AVERAGE": 
+        pointsToAdd = Math.floor(eventPoints / 2); 
+        pushTitle = "Đánh giá: Trung bình 😐"; 
         break;
-      case "BAD":
-        pointsToAdd = Math.floor(eventPoints / 5);
-        pushTitle = "Đánh giá: Kém 🔴";
-        pushBody = `Thái độ chưa tốt tại "${event.name}". (+${pointsToAdd}đ)`;
+      case "BAD": 
+        pointsToAdd = Math.floor(eventPoints / 5); 
+        pushTitle = "Đánh giá: Kém 🔴"; 
         break;
-      case "NO_SHOW":
-        pointsToAdd = -10;
-        pushTitle = "Đánh giá: Vắng mặt 👤-";
-        pushBody = `Bạn đã vắng mặt tại sự kiện "${event.name}". (-10đ)`;
+      case "NO_SHOW": 
+        pointsToAdd = -10; 
+        pushTitle = "Đánh giá: Vắng mặt 👤-"; 
         break;
     }
 
-    // SỬA: Sử dụng hàm nghiệp vụ đã đóng gói, không dùng $inc
     await UserRepository.incrementPoints(registration.volunteer, pointsToAdd);
     
     const updated = await RegistrationRepository.findByIdAndUpdate(
@@ -197,6 +193,12 @@ export const markAsCompleted = async (req, res) => {
     res.status(200).json({ message: "Đánh giá thành công", points: pointsToAdd, registration: updated });
 
     const url = `${process.env.CLIENT_URL || "http://localhost:3000"}/my-registrations`;
+    
+    // Đã sửa: Không khai báo lại pushBody mà chỉ gán giá trị
+    pushBody = pointsToAdd >= 0 
+      ? `Bạn đã hoàn thành nhiệm vụ tại "${event.name}". (+${pointsToAdd}đ)`
+      : `Bạn đã vắng mặt tại sự kiện "${event.name}". (-10đ)`;
+
     await sendPushNotification(registration.volunteer, pushTitle, pushBody, url).catch(() => {});
   } catch (error) {
     res.status(500).json({ message: "Lỗi server", error: error.message });

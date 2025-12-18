@@ -1,147 +1,98 @@
 /**
- * BaseRepository - đơn giản hoá truy xuất DB, tách controller khỏi driver cụ thể.
- *
- * Các phương thức trả về Promise. Các phương thức đọc (find/findOne/findById) mặc định trả về plain JS object (lean()).
- *
- * @template T
+ * BaseRepository - Đảm bảo tính độc lập dữ liệu (Data Independence)
  */
 export default class BaseRepository {
-  /**
-   * @param {import('mongoose').Model<T>} model
-   */
   constructor(model) {
     this.model = model;
   }
 
   /**
-   * Tìm nhiều document
-   * @param {Object} filter
-   * @param {Object|string|null} projection
-   * @param {Object} options - ví dụ { sort, limit, skip }
-   * @param {string} populate
-   * @param {boolean} lean - có trả về plain object hay không
-   * @returns {Promise<Array<T>>}
+   * Chuyển đổi dữ liệu từ Driver sang Entity sạch
    */
-  find(filter = {}, projection = null, options = {}, populate = "", lean = true) {
-    let q = this.model.find(filter, projection, options);
-    // flexible populate: string | array | object
-    if (populate) {
-      if (typeof populate === "string") q = q.populate(populate);
-      else if (Array.isArray(populate)) populate.forEach(p => q = q.populate(p));
-      else q = q.populate(populate);
+  transform(doc) {
+    if (!doc) return null;
+    if (Array.isArray(doc)) return doc.map(d => this.transform(d));
+    
+    // Sử dụng Object.assign để giữ nguyên các kiểu dữ liệu như Date
+    const obj = (doc.toObject ? doc.toObject() : { ...doc });
+    
+    if (obj._id) {
+      obj.id = obj._id.toString();
+      delete obj._id;
     }
-    return lean ? q.lean() : q;
+    delete obj.__v;
+    return obj;
   }
 
-  /**
-   * Tìm một document
-   * @param {Object} filter
-   * @param {Object|string|null} projection
-   * @param {string} populate
-   * @param {boolean} lean - có trả về plain object hay không
-   * @returns {Promise<T|null>}
-   */
-  findOne(filter = {}, projection = null, populate = "", lean = true) {
+  async find(filter = {}, projection = null, options = {}, populate = "") {
+    let q = this.model.find(filter, projection, options);
+    if (populate) q = q.populate(populate);
+    const docs = await q.lean();
+    return this.transform(docs);
+  }
+
+  async findOne(filter = {}, projection = null, populate = "") {
     let q = this.model.findOne(filter);
     if (projection) q = q.select(projection);
-    if (populate) {
-      if (typeof populate === "string") q = q.populate(populate);
-      else if (Array.isArray(populate)) populate.forEach(p => q = q.populate(p));
-      else q = q.populate(populate);
+    if (populate) q = q.populate(populate);
+    const doc = await q.lean();
+    return this.transform(doc);
+  }
+
+  async findById(id, projection = null, populate = "") {
+    try {
+      let q = this.model.findById(id);
+      if (projection) q = q.select(projection);
+      if (populate) q = q.populate(populate);
+      const doc = await q.lean();
+      return this.transform(doc);
+    } catch (error) {
+      return null;
     }
-    return lean ? q.lean() : q;
   }
 
-  /**
-   * Tìm theo id
-   * @param {string|import('mongoose').Types.ObjectId} id
-   * @param {Object|string|null} projection
-   * @param {string} populate
-   * @param {boolean} lean - có trả về plain object hay không
-   * @returns {Promise<T|null>}
-   */
-  findById(id, projection = null, populate = "", lean = true) {
-    let q = this.model.findById(id);
-    if (projection) q = q.select(projection);
-    if (populate) {
-      if (typeof populate === "string") q = q.populate(populate);
-      else if (Array.isArray(populate)) populate.forEach(p => q = q.populate(p));
-      else q = q.populate(populate);
+  async create(doc) {
+    const newDoc = await this.model.create(doc);
+    // Chuyển sang object thuần trước khi transform
+    return this.transform(newDoc.toObject());
+  }
+
+  async countDocuments(filter = {}) {
+    return await this.model.countDocuments(filter);
+  }
+
+  async aggregate(pipeline = []) {
+    const results = await this.model.aggregate(pipeline);
+    return this.transform(results);
+  }
+
+  async findOneAndUpdate(filter = {}, update = {}, options = { new: true }) {
+    const doc = await this.model.findOneAndUpdate(filter, update, { new: true, ...options }).lean();
+    return this.transform(doc);
+  }
+
+  async findByIdAndUpdate(id, update = {}, options = { new: true }) {
+    try {
+      const doc = await this.model.findByIdAndUpdate(id, update, { new: true, ...options }).lean();
+      return this.transform(doc);
+    } catch (error) {
+      return null;
     }
-    return lean ? q.lean() : q;
   }
 
-  /**
-   * Tạo document mới
-   * @param {Object} doc
-   * @returns {Promise<T>}
-   */
-  create(doc) {
-    return this.model.create(doc);
+  async findByIdAndDelete(id) {
+    try {
+      const doc = await this.model.findByIdAndDelete(id).lean();
+      return this.transform(doc);
+    } catch (error) {
+      return null;
+    }
   }
 
-  /**
-   * Count documents
-   * @param {Object} filter
-   * @returns {Promise<number>}
-   */
-  countDocuments(filter = {}) {
-    return this.model.countDocuments(filter);
-  }
-
-  /**
-   * Chạy aggregate pipeline
-   * @param {Array} pipeline
-   * @returns {Promise<Array>}
-   */
-  aggregate(pipeline = []) {
-    return this.model.aggregate(pipeline);
-  }
-
-  /**
-   * Find one and update
-   * @param {Object} filter
-   * @param {Object} update
-   * @param {Object} options
-   * @returns {Promise<any>}
-   */
-  findOneAndUpdate(filter = {}, update = {}, options = { new: true }) {
-    return this.model.findOneAndUpdate(filter, update, { new: true, ...options });
-  }
-
-  /**
-   * Find by id and update
-   * @param {string} id
-   * @param {Object} update
-   * @param {Object} options
-   * @returns {Promise<any>}
-   */
-  findByIdAndUpdate(id, update = {}, options = { new: true }) {
-    return this.model.findByIdAndUpdate(id, update, { new: true, ...options });
-  }
-
-  /**
-   * Find by id and delete
-   * @param {string} id
-   * @returns {Promise<any>}
-   */
-  findByIdAndDelete(id) {
-    return this.model.findByIdAndDelete(id);
-  }
-
-  /**
-   * Delete many
-   * @param {Object} filter
-   * @returns {Promise<any>}
-   */
   deleteMany(filter = {}) {
     return this.model.deleteMany(filter);
   }
 
-  /**
-   * Expose raw model for special cases (select +password, transactions, etc.)
-   * @returns {import('mongoose').Model<T>}
-   */
   rawModel() {
     return this.model;
   }

@@ -17,11 +17,35 @@ const subscriptionSchema = new mongoose.Schema(
       auth: { type: String, required: true },
     },
   },
-  { timestamps: true }
+  { 
+    timestamps: true,
+    // --- CẤU HÌNH ĐỘC LẬP CSDL (PHASE 2) ---
+    toJSON: {
+      virtuals: true,
+      versionKey: false,
+      transform: (doc, ret) => {
+        ret.id = ret._id.toString();
+        delete ret._id;
+      },
+    },
+    toObject: {
+      virtuals: true,
+      versionKey: false,
+      transform: (doc, ret) => {
+        ret.id = ret._id.toString();
+        delete ret._id;
+      },
+    },
+  }
 );
 
 // Index để tìm kiếm nhanh theo user
 subscriptionSchema.index({ user: 1 });
+
+// Tạo virtual field 'id' ánh xạ từ '_id'
+subscriptionSchema.virtual("id").get(function () {
+  return this._id.toHexString();
+});
 
 const Subscription = mongoose.model("Subscription", subscriptionSchema);
 

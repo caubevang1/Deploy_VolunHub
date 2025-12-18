@@ -1,7 +1,8 @@
+// src/middlewares/auth.js
 import jwt from "jsonwebtoken";
 import UserRepository from "../repositories/UserRepository.js";
-import Registration from "../models/registration.js";
-import Event from "../models/event.js";
+import RegistrationRepository from "../repositories/RegistrationRepository.js";
+import EventRepository from "../repositories/EventRepository.js";
 
 export const verifyToken = async (req, res, next) => {
   const authHeader = req.headers.authorization || "";
@@ -13,14 +14,15 @@ export const verifyToken = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    // UserRepository.findById trả về plain object
+    
+    // UserRepository.findById trả về đối tượng Entity sạch có trường .id
     const user = await UserRepository.findById(decoded.userId);
 
     if (!user) {
-      return res.status(401).json({ message: "Người dùng không tồn tại." });
+      return res.status(401).json({ message: "Người dùng không tồn tại hoặc phiên làm việc hết hạn." });
     }
 
-    // Gán vào req để các middleware/controller phía sau sử dụng
+    // Đảm bảo req.user dùng .id thống nhất cho toàn hệ thống
     req.user = user;
     next();
   } catch (err) {
@@ -33,7 +35,7 @@ export const admin = (req, res, next) => {
   if (req.user && role === "ADMIN") {
     next();
   } else {
-    res.status(403).json({ message: "Forbidden: Yêu cầu quyền Admin" });
+    res.status(403).json({ message: "Yêu cầu quyền Quản trị viên (Admin)." });
   }
 };
 
@@ -42,35 +44,33 @@ export const eventManager = (req, res, next) => {
   if (userRole === "EVENTMANAGER" || userRole === "ADMIN") {
     next();
   } else {
-    res.status(403).json({ message: "Forbidden: Yêu cầu quyền Quản lý" });
+    res.status(403).json({ message: "Yêu cầu quyền Quản lý sự kiện hoặc Admin." });
   }
 };
 
 export const isEventMember = async (req, res, next) => {
   try {
     const eventId = req.params.eventId || req.params.id || req.body.eventId;
-    const userId = req.user._id;
+    const userId = req.user.id;
     const userRole = String(req.user?.role || "").toUpperCase();
 
     if (userRole === "ADMIN") return next();
 
-    const event = await Event.findById(eventId);
+    const event = await EventRepository.findById(eventId);
     if (!event) return res.status(404).json({ message: "Không tìm thấy sự kiện." });
 
-    if (userRole === "EVENTMANAGER" && event.createdBy.toString() === userId.toString()) {
+    // So sánh ID chuỗi sạch
+    if (userRole === "EVENTMANAGER" && String(event.createdBy) === String(userId)) {
       return next();
     }
 
-    const registration = await Registration.findOne({
-      event: eventId,
-      volunteer: userId,
-      status: "approved",
-    });
+    // Kiểm tra tư cách thành viên thông qua logic đã đóng gói
+    const isMember = await RegistrationRepository.checkMemberStatus(userId, eventId);
 
-    if (registration) return next();
+    if (isMember) return next();
 
     res.status(403).json({ message: "Bạn không có quyền truy cập sự kiện này." });
   } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
+    res.status(500).json({ message: "Lỗi xác thực quyền truy cập sự kiện.", error: error.message });
   }
 };

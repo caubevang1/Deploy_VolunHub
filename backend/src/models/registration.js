@@ -6,22 +6,21 @@ const registrationSchema = new mongoose.Schema(
     // ID của sự kiện mà tình nguyện viên đăng ký
     event: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Event", // Tham chiếu đến model Event
-      required: true, // Bắt buộc phải có
+      ref: "Event",
+      required: true,
     },
     // ID của tình nguyện viên đăng ký
     volunteer: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User", // Tham chiếu đến model User
-      required: true, // Bắt buộc phải có
+      ref: "User",
+      required: true,
     },
     // Trạng thái của đơn đăng ký
     status: {
       type: String,
-      enum: ["pending", "approved", "rejected", "completed", "cancelled"], // Các giá trị hợp lệ
-      default: "pending", // Giá trị mặc định
+      enum: ["pending", "approved", "rejected", "completed", "cancelled"],
+      default: "pending",
     },
-
     performance: {
       type: String,
       enum: ["GOOD", "AVERAGE", "BAD", "NO_SHOW", null],
@@ -30,16 +29,38 @@ const registrationSchema = new mongoose.Schema(
     // Yêu cầu hủy đăng ký
     cancelRequest: {
       type: Boolean,
-      default: false, // Mặc định là không có yêu cầu hủy
+      default: false,
     },
   },
-  { timestamps: true } // Tự động thêm createdAt và updatedAt
+  { 
+    timestamps: true,
+    // --- CẤU HÌNH ĐỘC LẬP CSDL (PHASE 2) ---
+    toJSON: {
+      virtuals: true,
+      versionKey: false,
+      transform: (doc, ret) => {
+        ret.id = ret._id.toString();
+        delete ret._id;
+      },
+    },
+    toObject: {
+      virtuals: true,
+      versionKey: false,
+      transform: (doc, ret) => {
+        ret.id = ret._id.toString();
+        delete ret._id;
+      },
+    },
+  }
 );
 
 // Ngăn một người đăng ký cùng một sự kiện nhiều lần
 registrationSchema.index({ event: 1, volunteer: 1 }, { unique: true });
 
-// Tạo model Registration từ schema
+// Tạo virtual field 'id' ánh xạ từ '_id'
+registrationSchema.virtual("id").get(function () {
+  return this._id.toHexString();
+});
+
 const Registration = mongoose.model("Registration", registrationSchema);
-// Xuất model để sử dụng ở nơi khác
 export default Registration;

@@ -36,13 +36,13 @@ export default function VolunteerRanking() {
       ]);
 
       if (volunteerRes.status === 200) {
-        setVolunteers(volunteerRes.data);
-        setSortedData(volunteerRes.data);
+        setVolunteers(volunteerRes.data || []);
+        setSortedData(volunteerRes.data || []);
       }
 
       if (managerRes.status === 200) {
-        setManagers(managerRes.data);
-        setSortedManagerData(managerRes.data);
+        setManagers(managerRes.data || []);
+        setSortedManagerData(managerRes.data || []);
       }
     } catch (err) {
       console.error("Lỗi lấy bảng xếp hạng:", err);
@@ -58,14 +58,15 @@ export default function VolunteerRanking() {
     return <span className="text-gray-600 font-bold">{rank}</span>;
   };
 
-  // Tính rank dựa trên vị trí trong sortedData
+  // SỬA: Thay _id bằng id
   const getCurrentRank = (recordId) => {
-    const index = sortedData.findIndex((v) => v._id === recordId);
+    const index = sortedData.findIndex((v) => (v.id || v._id) === recordId);
     return index >= 0 ? index + 1 : 999;
   };
 
+  // SỬA: Thay _id bằng id
   const getRankClass = (record) => {
-    const currentRank = getCurrentRank(record._id);
+    const currentRank = getCurrentRank(record.id || record._id);
     if (currentRank === 1) return "rank-1";
     if (currentRank === 2) return "rank-2";
     if (currentRank === 3) return "rank-3";
@@ -79,9 +80,9 @@ export default function VolunteerRanking() {
       key: "rank",
       width: 80,
       align: "center",
-      render: (rank, record) => (
+      render: (_, record) => (
         <div className="flex items-center justify-center">
-          {getRankIcon(getCurrentRank(record._id))}
+          {getRankIcon(getCurrentRank(record.id || record._id))}
         </div>
       ),
     },
@@ -117,7 +118,7 @@ export default function VolunteerRanking() {
       align: "center",
       render: (points) => (
         <Tag color="gold" className="text-base font-bold px-4 py-1">
-          {points.toLocaleString()} điểm
+          {(points || 0).toLocaleString()} điểm
         </Tag>
       ),
     },
@@ -130,7 +131,7 @@ export default function VolunteerRanking() {
       render: (count) => (
         <div className="flex items-center justify-center gap-2">
           <Award size={16} className="text-green-600" />
-          <span className="font-semibold text-green-700">{count} sự kiện</span>
+          <span className="font-semibold text-green-700">{(count || 0)} sự kiện</span>
         </div>
       ),
     },
@@ -141,7 +142,7 @@ export default function VolunteerRanking() {
       width: 150,
       align: "center",
       render: (_, record) => {
-        const { points } = record;
+        const points = record.points || 0;
         let level = "Tân binh";
         let color = "default";
 
@@ -171,13 +172,15 @@ export default function VolunteerRanking() {
     },
   ];
 
+  // SỬA: Thay _id bằng id
   const getCurrentManagerRank = (recordId) => {
-    const index = sortedManagerData.findIndex((m) => m._id === recordId);
+    const index = sortedManagerData.findIndex((m) => (m.id || m._id) === recordId);
     return index >= 0 ? index + 1 : 999;
   };
 
+  // SỬA: Thay _id bằng id
   const getManagerRankClass = (record) => {
-    const currentRank = getCurrentManagerRank(record._id);
+    const currentRank = getCurrentManagerRank(record.id || record._id);
     if (currentRank === 1) return "rank-1";
     if (currentRank === 2) return "rank-2";
     if (currentRank === 3) return "rank-3";
@@ -191,9 +194,9 @@ export default function VolunteerRanking() {
       key: "rank",
       width: 80,
       align: "center",
-      render: (rank, record) => (
+      render: (_, record) => (
         <div className="flex items-center justify-center">
-          {getRankIcon(getCurrentManagerRank(record._id))}
+          {getRankIcon(getCurrentManagerRank(record.id || record._id))}
         </div>
       ),
     },
@@ -229,7 +232,7 @@ export default function VolunteerRanking() {
       align: "center",
       render: (score) => (
         <Tag color="blue" className="text-base font-bold px-4 py-1">
-          {score.toLocaleString()} điểm
+          {(score || 0).toLocaleString()} điểm
         </Tag>
       ),
     },
@@ -245,7 +248,7 @@ export default function VolunteerRanking() {
       width: 130,
       align: "center",
       render: (count) => (
-        <span className="font-semibold text-gray-700">{count}</span>
+        <span className="font-semibold text-gray-700">{(count || 0)}</span>
       ),
     },
     {
@@ -262,7 +265,7 @@ export default function VolunteerRanking() {
       render: (count) => (
         <div className="flex items-center justify-center gap-2">
           <Award size={16} className="text-green-600" />
-          <span className="font-semibold text-green-700">{count}</span>
+          <span className="font-semibold text-green-700">{(count || 0)}</span>
         </div>
       ),
     },
@@ -279,7 +282,7 @@ export default function VolunteerRanking() {
       align: "center",
       render: (count) => (
         <Tag color="purple" className="font-semibold">
-          {count} người
+          {(count || 0)} người
         </Tag>
       ),
     },
@@ -298,7 +301,6 @@ export default function VolunteerRanking() {
 
   return (
     <div className="volunteer-ranking-container">
-      {/* Header */}
       <div className="ranking-header">
         <div className="ranking-title-section">
           <Trophy size={40} className="text-yellow-500" />
@@ -311,81 +313,86 @@ export default function VolunteerRanking() {
         </div>
 
         {/* Top 3 Podium */}
-        {topThree.length >= 3 && (
+        {topThree.length > 0 && (
           <div className="podium-container">
             {/* Rank 2 */}
-            <div className="podium-item podium-2">
-              <div className="podium-rank-number">2</div>
-              <div className="podium-content">
-                <Avatar
-                  size={64}
-                  src={topThree[1]?.avatar || "/default-avatar.png"}
-                  className="podium-avatar"
-                />
-                <div className="podium-name">{topThree[1]?.name}</div>
-                <div className="podium-points">
-                  {activeTab === "volunteers"
-                    ? `${topThree[1]?.points} điểm`
-                    : `${topThree[1]?.score} điểm`}
-                </div>
-                <div className="podium-events">
-                  {activeTab === "volunteers"
-                    ? `${topThree[1]?.completedEvents} sự kiện`
-                    : `${topThree[1]?.completedEvents} sự kiện hoàn thành`}
+            {topThree[1] && (
+              <div className="podium-item podium-2">
+                <div className="podium-rank-number">2</div>
+                <div className="podium-content">
+                  <Avatar
+                    size={64}
+                    src={topThree[1]?.avatar || "/default-avatar.png"}
+                    className="podium-avatar"
+                  />
+                  <div className="podium-name">{topThree[1]?.name}</div>
+                  <div className="podium-points">
+                    {activeTab === "volunteers"
+                      ? `${(topThree[1]?.points || 0)} điểm`
+                      : `${(topThree[1]?.score || 0)} điểm`}
+                  </div>
+                  <div className="podium-events">
+                    {activeTab === "volunteers"
+                      ? `${(topThree[1]?.completedEvents || 0)} sự kiện`
+                      : `${(topThree[1]?.completedEvents || 0)} sự kiện hoàn thành`}
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Rank 1 */}
-            <div className="podium-item podium-1">
-              <div className="podium-rank-number">1</div>
-              <div className="podium-content">
-                <Avatar
-                  size={80}
-                  src={topThree[0]?.avatar || "/default-avatar.png"}
-                  className="podium-avatar"
-                />
-                <div className="podium-name">{topThree[0]?.name}</div>
-                <div className="podium-points">
-                  {activeTab === "volunteers"
-                    ? `${topThree[0]?.points} điểm`
-                    : `${topThree[0]?.score} điểm`}
-                </div>
-                <div className="podium-events">
-                  {activeTab === "volunteers"
-                    ? `${topThree[0]?.completedEvents} sự kiện`
-                    : `${topThree[0]?.completedEvents} sự kiện hoàn thành`}
+            {topThree[0] && (
+              <div className="podium-item podium-1">
+                <div className="podium-rank-number">1</div>
+                <div className="podium-content">
+                  <Avatar
+                    size={80}
+                    src={topThree[0]?.avatar || "/default-avatar.png"}
+                    className="podium-avatar"
+                  />
+                  <div className="podium-name">{topThree[0]?.name}</div>
+                  <div className="podium-points">
+                    {activeTab === "volunteers"
+                      ? `${(topThree[0]?.points || 0)} điểm`
+                      : `${(topThree[0]?.score || 0)} điểm`}
+                  </div>
+                  <div className="podium-events">
+                    {activeTab === "volunteers"
+                      ? `${(topThree[0]?.completedEvents || 0)} sự kiện`
+                      : `${(topThree[0]?.completedEvents || 0)} sự kiện hoàn thành`}
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Rank 3 */}
-            <div className="podium-item podium-3">
-              <div className="podium-rank-number">3</div>
-              <div className="podium-content">
-                <Avatar
-                  size={64}
-                  src={topThree[2]?.avatar || "/default-avatar.png"}
-                  className="podium-avatar"
-                />
-                <div className="podium-name">{topThree[2]?.name}</div>
-                <div className="podium-points">
-                  {activeTab === "volunteers"
-                    ? `${topThree[2]?.points} điểm`
-                    : `${topThree[2]?.score} điểm`}
-                </div>
-                <div className="podium-events">
-                  {activeTab === "volunteers"
-                    ? `${topThree[2]?.completedEvents} sự kiện`
-                    : `${topThree[2]?.completedEvents} sự kiện hoàn thành`}
+            {topThree[2] && (
+              <div className="podium-item podium-3">
+                <div className="podium-rank-number">3</div>
+                <div className="podium-content">
+                  <Avatar
+                    size={64}
+                    src={topThree[2]?.avatar || "/default-avatar.png"}
+                    className="podium-avatar"
+                  />
+                  <div className="podium-name">{topThree[2]?.name}</div>
+                  <div className="podium-points">
+                    {activeTab === "volunteers"
+                      ? `${(topThree[2]?.points || 0)} điểm`
+                      : `${(topThree[2]?.score || 0)} điểm`}
+                  </div>
+                  <div className="podium-events">
+                    {activeTab === "volunteers"
+                      ? `${(topThree[2]?.completedEvents || 0)} sự kiện`
+                      : `${(topThree[2]?.completedEvents || 0)} sự kiện hoàn thành`}
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         )}
       </div>
 
-      {/* Full Ranking Table with Tabs */}
       <Card className="ranking-table-card">
         <Tabs
           activeKey={activeTab}
@@ -406,7 +413,7 @@ export default function VolunteerRanking() {
                   <Table
                     columns={volunteerColumns}
                     dataSource={volunteers}
-                    rowKey="_id"
+                    rowKey={(record) => record.id || record._id} // SỬA: Linh hoạt key
                     pagination={{
                       pageSize: 20,
                       showSizeChanger: false,
@@ -435,7 +442,7 @@ export default function VolunteerRanking() {
                   <Table
                     columns={managerColumns}
                     dataSource={managers}
-                    rowKey="_id"
+                    rowKey={(record) => record.id || record._id} // SỬA: Linh hoạt key
                     pagination={{
                       pageSize: 20,
                       showSizeChanger: false,

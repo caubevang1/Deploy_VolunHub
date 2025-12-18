@@ -2,7 +2,6 @@ import mongoose from "mongoose";
 
 const eventSchema = new mongoose.Schema(
   {
-    // --- Thông tin cơ bản cho Tình nguyện viên xem ---
     name: {
       type: String,
       required: true,
@@ -36,48 +35,61 @@ const eventSchema = new mongoose.Schema(
     maxParticipants: {
       type: Number,
       required: true,
-      min: 1, // Ít nhất phải cho 1 người tham gia
+      min: 1,
     },
     coverImage: {
-      // Ảnh bìa sự kiện
       type: String,
       default: "default-event-image.jpg",
     },
-
     galleryImages: [
       {
         type: String,
       },
     ],
-
-    // --- Trường Vận hành & Quản lý ---
     status: {
-      // Dành cho Admin duyệt và quản lý vòng đời sự kiện
       type: String,
       enum: ["pending", "approved", "rejected", "completed"],
       default: "pending",
     },
     rejectionReason: {
-      // Lý do từ chối sự kiện (nếu status = "rejected")
       type: String,
       default: null,
     },
     createdBy: {
-      // Dành cho Event Manager, để biết ai tạo sự kiện
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
-
     likesCount: { type: Number, default: 0 },
     sharesCount: { type: Number, default: 0 },
     viewsCount: { type: Number, default: 0 },
   },
   {
-    // Tự động thêm 2 trường createdAt và updatedAt
     timestamps: true,
+    // --- Cấu hình vô trùng dữ liệu ---
+    toJSON: {
+      virtuals: true,
+      versionKey: false,
+      transform: (doc, ret) => {
+        ret.id = ret._id.toString();
+        delete ret._id;
+      },
+    },
+    toObject: {
+      virtuals: true,
+      versionKey: false,
+      transform: (doc, ret) => {
+        ret.id = ret._id.toString();
+        delete ret._id;
+      },
+    },
   }
 );
+
+// Tạo virtual field 'id' để thống nhất cách truy cập dữ liệu
+eventSchema.virtual("id").get(function () {
+  return this._id.toHexString();
+});
 
 const Event = mongoose.model("Event", eventSchema);
 export default Event;

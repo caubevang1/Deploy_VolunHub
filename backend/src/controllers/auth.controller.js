@@ -62,12 +62,8 @@ export const sendRegisterOtp = async (req, res) => {
     if (await UserRepository.findOne({ email })) return res.status(400).json({ message: "Email đã tồn tại." });
 
     const otp = generateOtp();
-    await OtpRepository.create({
-      email,
-      otp,
-      purpose: "REGISTER",
-      expiresAt: new Date(Date.now() + 5 * 60 * 1000),
-    });
+    await OtpRepository.createOtp(email, otp, "REGISTER");
+    
     await sendOtpEmail(email, otp, "Đăng ký tài khoản VolunteerHub");
     res.status(200).json({ message: "OTP đã được gửi." });
   } catch (err) {
@@ -82,11 +78,9 @@ export const verifyAndRegister = async (req, res) => {
     const validation = validateUserEntry(name, birthday, phone);
     if (validation.error) return res.status(400).json({ message: validation.error });
 
-    // SỬA: Dùng hàm verify đã đóng gói, không dùng rawModel()
-    const record = await OtpRepository.findAndVerify(email, otp, "REGISTER");
-    
-    if (!record || record.expiresAt < new Date()) {
-      return res.status(400).json({ message: "OTP hết hạn hoặc không tồn tại." });
+    const isValid = await OtpRepository.verifyOtp(email, otp, "REGISTER");
+    if (!isValid) {
+      return res.status(400).json({ message: "OTP không chính xác hoặc đã hết hạn." });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -112,24 +106,24 @@ export const verifyAndRegister = async (req, res) => {
 export const login = async (req, res) => {
   try {
     const { identifier, password } = req.body;
-
-    // SỬA: Dùng hàm chuyên dụng để lấy kèm password mà vẫn giữ tính độc lập
     const user = await UserRepository.findByIdentifierWithPassword(identifier);
 
-    if (!user || !(await bcrypt.compare(password, user.password))) {
+    if (!user || !user.password || !(await bcrypt.compare(password, user.password))) {
       return res.status(400).json({ message: "Sai tài khoản hoặc mật khẩu." });
     }
 
     if (user.status !== "ACTIVE") return res.status(403).json({ message: "Tài khoản bị khóa." });
 
     const token = jwt.sign(
-      { userId: user._id, role: user.role }, 
+      { userId: user.id, role: user.role }, // Đã dùng user.id
       process.env.JWT_SECRET, 
       { expiresIn: "1d" }
     );
 
-    const { password: _, ...userWithoutPassword } = user;
-    res.json({ token, user: userWithoutPassword });
+    const userResponse = { ...user };
+    delete userResponse.password; // Xóa an toàn
+
+    res.json({ token, user: userResponse });
   } catch (err) {
     res.status(500).json({ message: "Lỗi server", error: err.message });
   }
@@ -155,10 +149,9 @@ export const updateProfile = async (req, res) => {
       }
     }
 
-    const updated = await UserRepository.findByIdAndUpdate(req.user._id, { $set: updateData });
+    const updated = await UserRepository.findByIdAndUpdate(req.user.id, updateData);
     
-    // Đảm bảo trả về dữ liệu không có mật khẩu
-    const { password, ...userWithoutPassword } = updated;
+    const { password: _, ...userWithoutPassword } = updated;
     res.json({ message: "Cập nhật thành công.", user: userWithoutPassword });
   } catch (err) {
     rollbackUpload(req);
@@ -170,13 +163,10 @@ export const sendResetOtp = async (req, res) => {
   try {
     const { email } = req.body;
     if (!(await UserRepository.findOne({ email }))) return res.status(404).json({ message: "Email không tồn tại." });
+    
     const otp = generateOtp();
-    await OtpRepository.create({
-      email,
-      otp,
-      purpose: "RESET",
-      expiresAt: new Date(Date.now() + 5 * 60 * 1000),
-    });
+    await OtpRepository.createOtp(email, otp, "RESET");
+    
     await sendOtpEmail(email, otp, "Khôi phục mật khẩu");
     res.json({ message: "OTP đã gửi." });
   } catch (err) {
@@ -187,12 +177,13 @@ export const sendResetOtp = async (req, res) => {
 export const resetPassword = async (req, res) => {
   try {
     const { email, otp, newPassword } = req.body;
-    const record = await OtpRepository.findOne({ email, otp, purpose: "RESET" });
-    if (!record || record.expiresAt < new Date()) return res.status(400).json({ message: "OTP sai hoặc hết hạn." });
+    const isValid = await OtpRepository.verifyOtp(email, otp, "RESET");
+    if (!isValid) return res.status(400).json({ message: "OTP sai hoặc hết hạn." });
 
     const hashed = await bcrypt.hash(newPassword, 10);
-    await UserRepository.findOneAndUpdate({ email }, { password: hashed });
-    await OtpRepository.deleteMany({ email, purpose: "RESET" });
+    await UserRepository.updatePasswordByEmail(email, hashed);
+    await OtpRepository.clearOtps(email, "RESET");
+    
     res.json({ message: "Đã đổi mật khẩu." });
   } catch (err) {
     res.status(500).json({ message: "Lỗi server", error: err.message });
@@ -202,9 +193,7 @@ export const resetPassword = async (req, res) => {
 export const changePassword = async (req, res) => {
   try {
     const { oldPassword, newPassword } = req.body;
-    
-    // SỬA: Dùng findByIdAndUpdate để tránh dùng save() trực tiếp trên Document
-    const user = await UserRepository.findByIdWithPassword(req.user._id);
+    const user = await UserRepository.findByIdWithPassword(req.user.id);
     if (!user) return res.status(404).json({ message: "Người dùng không tồn tại." });
     
     if (!(await bcrypt.compare(oldPassword, user.password))) {
@@ -212,7 +201,7 @@ export const changePassword = async (req, res) => {
     }
 
     const hashedNewPassword = await bcrypt.hash(newPassword, 10);
-    await UserRepository.findByIdAndUpdate(req.user._id, { password: hashedNewPassword });
+    await UserRepository.findByIdAndUpdate(req.user.id, { password: hashedNewPassword });
     
     res.json({ message: "Đổi mật khẩu thành công." });
   } catch (err) {
@@ -221,12 +210,6 @@ export const changePassword = async (req, res) => {
 };
 
 export const getMe = async (req, res) => res.json(req.user);
-
-export const getAllUsers = async (req, res) => {
-  if (req.user.role !== "ADMIN") return res.status(403).json({ message: "Từ chối." });
-  const users = await UserRepository.find({}, "-password");
-  res.json(users);
-};
 
 export const register = async (req, res) => {
   try {

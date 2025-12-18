@@ -51,7 +51,7 @@ const userSchema = new mongoose.Schema(
     role: {
       type: String,
       enum: ["VOLUNTEER", "EVENTMANAGER", "ADMIN"],
-      require: true,
+      required: true, // Sửa lại require -> required
     },
     status: {
       type: String,
@@ -59,7 +59,36 @@ const userSchema = new mongoose.Schema(
       default: "ACTIVE",
     },
   },
-  { timestamps: true }
+  { 
+    timestamps: true,
+    // --- CẤU HÌNH ĐỘC LẬP CSDL (PHASE 2) ---
+    toJSON: {
+      virtuals: true,
+      versionKey: false,
+      transform: (doc, ret) => {
+        ret.id = ret._id.toString();
+        delete ret._id;
+        // Bảo mật: Không bao giờ trả về password khi convert sang JSON
+        delete ret.password;
+      },
+    },
+    toObject: {
+      virtuals: true,
+      versionKey: false,
+      transform: (doc, ret) => {
+        ret.id = ret._id.toString();
+        delete ret._id;
+      },
+    },
+  }
 );
+
+// Tạo virtual field 'id' ánh xạ từ '_id'
+userSchema.virtual("id").get(function () {
+  return this._id.toHexString();
+});
+
+// Bạn có thể thêm các method hỗ trợ tại đây nếu cần, ví dụ:
+// userSchema.methods.comparePassword = ...
 
 export default mongoose.model("User", userSchema);

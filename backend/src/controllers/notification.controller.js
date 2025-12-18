@@ -8,9 +8,8 @@ import { sendPushNotification } from "../utils/sendPush.js";
  */
 export const getMyNotifications = async (req, res) => {
   try {
-    // Tìm tất cả thông báo, trả về plain object qua lean (mặc định trong BaseRepository)
     const notifications = await NotificationRepository.find(
-      { user: req.user._id },
+      { user: req.user.id },
       null,
       { sort: { createdAt: -1 } }
     );
@@ -40,7 +39,6 @@ export const getVapidPublicKey = (req, res) => {
  */
 export const markAsRead = async (req, res) => {
   try {
-    // SỬA: Loại bỏ { new: true } vì BaseRepository đã xử lý mặc định
     const updated = await NotificationRepository.findByIdAndUpdate(
       req.params.id,
       { isRead: true }
@@ -59,6 +57,7 @@ export const markAsRead = async (req, res) => {
 export const saveSubscription = async (req, res) => {
   try {
     const { endpoint, keys } = req.body;
+    const userId = req.user.id; // SỬA: Dùng .id
 
     if (!endpoint || !keys?.p256dh || !keys?.auth) {
       return res.status(400).json({ message: "Thiếu thông tin subscription" });
@@ -67,11 +66,11 @@ export const saveSubscription = async (req, res) => {
     const existingByEndpoint = await SubscriptionRepository.findOne({ endpoint });
 
     if (existingByEndpoint) {
-      // Logic gán lại user nếu endpoint đã tồn tại cho user khác
-      if (String(existingByEndpoint.user) !== String(req.user._id)) {
+      // SỬA: So sánh ID chuỗi sạch
+      if (String(existingByEndpoint.user) !== String(userId)) {
         const reassigned = await SubscriptionRepository.findOneAndUpdate(
           { endpoint },
-          { user: req.user._id, keys }
+          { user: userId, keys }
         );
         return res.status(200).json({ 
           message: "Subscription transferred to current user", 
@@ -82,7 +81,7 @@ export const saveSubscription = async (req, res) => {
     }
 
     const newSubscription = await SubscriptionRepository.create({
-      user: req.user._id,
+      user: userId,
       endpoint,
       keys,
     });
@@ -98,7 +97,7 @@ export const saveSubscription = async (req, res) => {
  */
 export const getMySubscriptions = async (req, res) => {
   try {
-    const subs = await SubscriptionRepository.find({ user: req.user._id });
+    const subs = await SubscriptionRepository.find({ user: req.user.id });
     return res.json({ subscriptions: subs });
   } catch (error) {
     return res.status(500).json({ message: "Lỗi server", error: error.message });
@@ -110,8 +109,8 @@ export const getMySubscriptions = async (req, res) => {
  */
 export const testPushForMe = async (req, res) => {
   try {
-    const userId = req.user._id;
-    // Không đợi phản hồi lâu từ web-push để UI phản hồi nhanh
+    const userId = req.user.id;
+    // sendPushNotification bên trong utils cần xử lý ID chuỗi
     sendPushNotification(userId, "test", "Test push thành công!", "/")
       .catch((err) => console.error("testPush error:", err));
       

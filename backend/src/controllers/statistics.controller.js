@@ -8,29 +8,9 @@ import UserRepository from "../repositories/UserRepository.js";
  */
 export const getVolunteerStatistics = async (req, res) => {
   try {
-    const volunteerId = req.user._id;
-
-    const [totalRegistrations, totalCompleted, totalApproved, totalPending, totalCancelRequests] = 
-      await Promise.all([
-        RegistrationRepository.countDocuments({ volunteer: volunteerId }),
-        RegistrationRepository.countDocuments({ volunteer: volunteerId, status: "completed" }),
-        RegistrationRepository.countDocuments({ volunteer: volunteerId, status: "approved" }),
-        RegistrationRepository.countDocuments({ volunteer: volunteerId, status: "pending" }),
-        RegistrationRepository.countDocuments({ volunteer: volunteerId, cancelRequest: true }),
-      ]);
-
-    const completionRate = totalRegistrations ? ((totalCompleted / totalRegistrations) * 100).toFixed(2) : 0;
-    const approvalRate = totalRegistrations ? ((totalApproved / totalRegistrations) * 100).toFixed(2) : 0;
-
-    res.json({
-      totalRegistrations,
-      totalCompleted,
-      totalApproved,
-      totalPending,
-      totalCancelRequests,
-      completionRate,
-      approvalRate,
-    });
+    const volunteerId = req.user.id;
+    const stats = await RegistrationRepository.getVolunteerDashboardStats(volunteerId);
+    res.json(stats);
   } catch (error) {
     res.status(500).json({ message: "Lỗi lấy thống kê", error: error.message });
   }
@@ -41,34 +21,9 @@ export const getVolunteerStatistics = async (req, res) => {
  */
 export const getVolunteerStatisticsByMonth = async (req, res) => {
   try {
-    const volunteerId = req.user._id;
+    const volunteerId = req.user.id;
     const year = parseInt(req.query.year) || new Date().getFullYear();
-
-    // SỬA: Không viết $gte/$lte ở đây, dùng hàm Repository để đóng gói logic thời gian
-    const regs = await RegistrationRepository.findByTimeRange({
-      volunteer: volunteerId,
-      createdAt: {
-        $gte: new Date(`${year}-01-01`),
-        $lte: new Date(`${year}-12-31`),
-      },
-    });
-
-    const stats = Array.from({ length: 12 }, (_, i) => ({
-      month: i + 1,
-      total: 0,
-      completed: 0,
-      approved: 0,
-      pending: 0,
-    }));
-
-    regs.forEach((r) => {
-      const month = new Date(r.createdAt).getMonth();
-      stats[month].total++;
-      if (r.status === "completed") stats[month].completed++;
-      if (r.status === "approved") stats[month].approved++;
-      if (r.status === "pending") stats[month].pending++;
-    });
-
+    const stats = await RegistrationRepository.getVolunteerMonthlyStats(volunteerId, year);
     res.json({ year, monthlyStats: stats });
   } catch (error) {
     res.status(500).json({ message: "Lỗi lấy thống kê tháng", error: error.message });
@@ -80,22 +35,17 @@ export const getVolunteerStatisticsByMonth = async (req, res) => {
  */
 export const getManagerStatistics = async (req, res) => {
   try {
-    const managerId = req.user._id;
-    const myEvents = await EventRepository.find({ createdBy: managerId }, "_id status");
-    const eventIds = myEvents.map((e) => e._id);
-
-    const [totalRegistrations, totalCancelRequests] = await Promise.all([
-      RegistrationRepository.countDocuments({ event: { $in: eventIds } }),
-      RegistrationRepository.countDocuments({ event: { $in: eventIds }, cancelRequest: true }),
-    ]);
+    const managerId = req.user.id;
+    const myEvents = await EventRepository.getEventsByManager(managerId);
+    const eventIds = myEvents.map((e) => e.id);
+    const regStats = await RegistrationRepository.getManagerOverviewStats(eventIds);
 
     res.json({
       totalEvents: myEvents.length,
       pendingEvents: myEvents.filter((e) => e.status === "pending").length,
       approvedEvents: myEvents.filter((e) => e.status === "approved").length,
       completedEvents: myEvents.filter((e) => e.status === "completed").length,
-      totalRegistrations,
-      totalCancelRequests,
+      ...regStats
     });
   } catch (error) {
     res.status(500).json({ message: "Lỗi thống kê manager", error: error.message });
@@ -107,29 +57,11 @@ export const getManagerStatistics = async (req, res) => {
  */
 export const getManagerMonthlyStats = async (req, res) => {
   try {
-    const managerId = req.user._id;
+    const managerId = req.user.id;
     const year = parseInt(req.query.year) || new Date().getFullYear();
-
-    const myEvents = await EventRepository.find({ createdBy: managerId }, "_id");
-    const eventIds = myEvents.map((e) => e._id);
-
-    const regs = await RegistrationRepository.findByTimeRange({
-      event: { $in: eventIds },
-      createdAt: {
-        $gte: new Date(`${year}-01-01T00:00:00.000Z`),
-        $lte: new Date(`${year}-12-31T23:59:59.999Z`),
-      },
-    });
-
-    const monthly = Array.from({ length: 12 }, (_, i) => ({
-      month: i + 1,
-      registrations: 0,
-    }));
-
-    regs.forEach((r) => {
-      monthly[new Date(r.createdAt).getMonth()].registrations++;
-    });
-
+    const myEvents = await EventRepository.getEventsByManager(managerId);
+    const eventIds = myEvents.map((e) => e.id);
+    const monthly = await RegistrationRepository.getManagerMonthlyRegistrationStats(eventIds, year);
     res.json({ year, monthly });
   } catch (error) {
     res.status(500).json({ message: "Lỗi thống kê tháng manager", error: error.message });
@@ -137,34 +69,29 @@ export const getManagerMonthlyStats = async (req, res) => {
 };
 
 /**
- * 🌍 Lấy toàn bộ sự kiện kèm thống kê đăng ký
+ * 🌍 Lấy toàn bộ sự kiện kèm thống kê đăng ký (Công khai cho Dashboard)
  */
 export const getAllEventsForAllUsers = async (req, res) => {
   try {
-    const events = await EventRepository.find({}, null, { sort: { date: -1 } }, "createdBy");
+    // Chỉ lấy các sự kiện đã duyệt để hiển thị dashboard công khai
+    const events = await EventRepository.getEventsWithStats({ status: "approved" });
 
-    if (!events.length) {
-      return res.status(200).json({ message: "Chưa có sự kiện nào", events: [] });
+    if (!events || !events.length) {
+      return res.status(200).json({ total: 0, events: [] });
     }
 
-    const eventIds = events.map((e) => e._id);
-    
-    // SỬA: Thay thế logic Aggregate trực tiếp bằng hàm nghiệp vụ trong Repository
-    const registrationStats = await RegistrationRepository.getRegistrationStatsBatch(eventIds);
-
-    const statsMap = registrationStats.reduce((acc, s) => {
-      acc[s._id.toString()] = s;
-      return acc;
-    }, {});
+    const eventIds = events.map((e) => e.id);
+    const statsMap = await RegistrationRepository.getRegistrationStatsBatch(eventIds);
 
     const result = events.map((e) => ({
       ...e,
-      totalRegistrations: statsMap[e._id.toString()]?.totalRegistrations || 0,
-      cancelRequests: statsMap[e._id.toString()]?.cancelRequests || 0,
+      totalRegistrations: statsMap?.[e.id]?.totalRegistrations || 0,
+      cancelRequests: statsMap?.[e.id]?.cancelRequests || 0,
     }));
 
     res.status(200).json({ total: result.length, events: result });
   } catch (error) {
+    console.error("GetAllEventsStats Error:", error);
     res.status(500).json({ message: "Lỗi lấy danh sách sự kiện", error: error.message });
   }
 };
@@ -174,11 +101,7 @@ export const getAllEventsForAllUsers = async (req, res) => {
  */
 export const getRanking = async (req, res) => {
   try {
-    const leaderboard = await UserRepository.find(
-      { role: "VOLUNTEER" },
-      "name avatar points email",
-      { sort: { points: -1 }, limit: 10 }
-    );
+    const leaderboard = await UserRepository.getTopVolunteers(10);
     res.status(200).json(leaderboard);
   } catch (error) {
     res.status(500).json({ message: "Lỗi lấy bảng xếp hạng", error: error.message });

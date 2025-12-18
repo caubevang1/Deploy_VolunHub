@@ -1,14 +1,15 @@
 // backend/src/controllers/eventAction.controller.js
 import EventActionRepository from "../repositories/EventActionRepository.js";
 import EventRepository from "../repositories/EventRepository.js";
-import mongoose from "mongoose";
 
 // [POST] /api/events/:eventId/action
 export const handleEventAction = async (req, res) => {
   try {
     const { type } = req.body;
     const { eventId } = req.params;
-    const userId = req.user._id;
+    
+    // Đã sửa: Chỉ dùng .id (Tầng Middleware/Repository đã đảm bảo trường này)
+    const userId = req.user.id;
 
     if (!["LIKE", "SHARE", "VIEW"].includes(type)) {
       return res.status(400).json({ message: "Hành động không hợp lệ" });
@@ -18,14 +19,12 @@ export const handleEventAction = async (req, res) => {
     if (!event) return res.status(404).json({ message: "Sự kiện không tồn tại" });
 
     if (type === "LIKE") {
-      const existingLike = await EventActionRepository.findOne({
-        user: userId,
-        event: eventId,
-        type: "LIKE",
-      });
+      const existingLike = await EventActionRepository.findUserLike(userId, eventId);
 
       if (existingLike) {
-        await EventActionRepository.findByIdAndDelete(existingLike._id);
+        // Đã sửa: Dùng .id sạch sẽ
+        await EventActionRepository.findByIdAndDelete(existingLike.id);
+        
         const updatedEvent = await EventRepository.updateLikeCount(eventId, -1);
         return res.status(200).json({
           message: "Đã bỏ thích",
@@ -73,17 +72,12 @@ export const handleEventAction = async (req, res) => {
 export const getUserActionStatus = async (req, res) => {
   try {
     const { eventId } = req.params;
-    // Đảm bảo eventId hợp lệ trước khi tìm kiếm
-    if (!mongoose.isValidObjectId(eventId)) return res.status(200).json({ hasLiked: false });
+    const userId = req.user.id;
 
-    const liked = await EventActionRepository.findOne({
-      user: req.user._id,
-      event: eventId,
-      type: "LIKE",
-    });
-    res.status(200).json({ hasLiked: !!liked });
+    const hasLiked = await EventActionRepository.checkUserLiked(userId, eventId);
+    res.status(200).json({ hasLiked });
   } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
+    res.status(200).json({ hasLiked: false });
   }
 };
 
@@ -91,7 +85,7 @@ export const getUserActionStatus = async (req, res) => {
 export const getEventStats = async (req, res) => {
   try {
     const { eventId } = req.params;
-    const event = await EventRepository.findById(eventId, "likesCount sharesCount viewsCount");
+    const event = await EventRepository.findById(eventId);
     
     if (!event) return res.status(404).json({ message: "Không tồn tại" });
 
@@ -111,19 +105,7 @@ export const getEventsStatsBatch = async (req, res) => {
     const eventIds = Array.isArray(req.body?.eventIds) ? req.body.eventIds : [];
     if (eventIds.length === 0) return res.status(200).json({ stats: {} });
 
-    const events = await EventRepository.find(
-      { _id: { $in: eventIds } },
-      "likesCount sharesCount viewsCount"
-    );
-
-    const statsMap = events.reduce((acc, ev) => {
-      acc[String(ev._id)] = {
-        likesCount: ev.likesCount || 0,
-        sharesCount: ev.sharesCount || 0,
-        viewsCount: ev.viewsCount || 0,
-      };
-      return acc;
-    }, {});
+    const statsMap = await EventRepository.getStatsBatch(eventIds);
 
     res.status(200).json({ stats: statsMap });
   } catch (error) {

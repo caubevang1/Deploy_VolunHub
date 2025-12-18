@@ -58,18 +58,19 @@ const eventSchema = Joi.object({
 
 /**
  * Xử lý hoàn thành sự kiện: Cộng điểm và đổi trạng thái
- * ĐẢM BẢO EXPORT ĐỂ CRONJOB CÓ THỂ GỌI
  */
 export const processEventCompletion = async (event) => {
   try {
     if (!event || event.status === "completed") return;
 
-    // Tăng điểm cho manager thông qua hàm nghiệp vụ đã đóng gói trong Repository
+    // Tăng điểm cho manager
     await UserRepository.incrementPoints(event.createdBy, event.points || 10);
 
-    // Cập nhật trạng thái event thông qua Repository
+    // Sử dụng .id sạch sẽ từ Repository mapping
+    const eventId = event.id;
+    
     return await EventRepository.findByIdAndUpdate(
-      event._id || event.id, 
+      eventId, 
       { status: "completed", endDate: new Date() }
     );
   } catch (error) {
@@ -109,7 +110,7 @@ export const createEvent = async (req, res) => {
       points: eventPoints,
       coverImage: coverImagePath,
       galleryImages: galleryPaths,
-      createdBy: req.user._id,
+      createdBy: req.user.id, 
       status: "pending",
     });
 
@@ -129,9 +130,12 @@ export const updateEvent = async (req, res) => {
     const event = await EventRepository.findById(eventId);
 
     if (!event) return res.status(404).json({ message: "Không tìm thấy" });
-    if (String(event.createdBy) !== String(req.user._id)) {
+    
+    // So sánh chuỗi ID sạch
+    if (String(event.createdBy) !== String(req.user.id)) {
       return res.status(403).json({ message: "Không có quyền sửa" });
     }
+    
     if (event.status !== "pending") {
       return res.status(403).json({ message: `Sự kiện đã ở trạng thái '${event.status}'` });
     }
@@ -145,7 +149,8 @@ export const updateEvent = async (req, res) => {
       if (req.files.coverImage?.[0]) {
         updateData.coverImage = `/uploads/events/${req.files.coverImage[0].filename}`;
         if (event.coverImage && event.coverImage !== "default-event-image.jpg") {
-            try { fs.unlinkSync(path.join(process.cwd(), event.coverImage)); } catch (e) {}
+            const oldPath = path.join(process.cwd(), event.coverImage);
+            try { if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath); } catch (e) {}
         }
       }
       if (req.files.galleryImages) {
@@ -170,7 +175,7 @@ export const deleteEvent = async (req, res) => {
 
     if (!event) return res.status(404).json({ message: "Không tìm thấy" });
 
-    if (event.createdBy.toString() !== req.user._id.toString() && req.user.role !== "ADMIN") {
+    if (String(event.createdBy) !== String(req.user.id) && req.user.role !== "ADMIN") {
       return res.status(403).json({ message: "Không có quyền xóa" });
     }
 
@@ -178,9 +183,9 @@ export const deleteEvent = async (req, res) => {
     await EventRepository.findByIdAndDelete(eventId);
 
     await Promise.all([
-      RegistrationRepository.deleteMany({ event: eventId }),
-      PostRepository.deleteMany({ event: eventId }),
-      CommentRepository.deleteMany({ event: eventId }),
+      RegistrationRepository.deleteByEvent(eventId),
+      PostRepository.deleteByEvent(eventId),
+      CommentRepository.deleteByEvent(eventId),
     ]);
 
     res.status(200).json({ message: "Xóa sự kiện thành công." });
@@ -192,9 +197,11 @@ export const deleteEvent = async (req, res) => {
 // [PUT] /api/events/:id/complete -> Manager xác nhận hoàn thành
 export const completeEvent = async (req, res) => {
   try {
-    const event = await EventRepository.findById(req.params.id);
+    const eventId = req.params.id;
+    const event = await EventRepository.findById(eventId);
     if (!event) return res.status(404).json({ message: "Không tìm thấy" });
-    if (String(event.createdBy) !== String(req.user._id)) return res.status(403).json({ message: "Không có quyền" });
+    
+    if (String(event.createdBy) !== String(req.user.id)) return res.status(403).json({ message: "Không có quyền" });
     
     if (event.status !== "approved") return res.status(400).json({ message: "Sự kiện chưa duyệt" });
     if (event.status === "completed") return res.status(400).json({ message: "Đã hoàn thành trước đó" });
@@ -210,53 +217,25 @@ export const completeEvent = async (req, res) => {
 export const getApprovedEvents = async (req, res) => {
   try {
     const { category, date } = req.query;
-    const filter = { status: "approved" };
-
-    if (category) filter.category = category;
-    if (date) {
-      const d = new Date(date);
-      const nextD = new Date(date);
-      nextD.setDate(nextD.getDate() + 1);
-      filter.date = { $gte: d, $lt: nextD };
-    }
-
-    const events = await EventRepository.getEventsWithStats(filter);
+    const events = await EventRepository.getApprovedEventsFiltered({ category, date });
     res.status(200).json(events);
   } catch (error) {
     res.status(500).json({ message: "Lỗi server", error: error.message });
   }
 };
 
-// [GET] /api/events/public/:id -> Chi tiết sự kiện (Hỗ trợ ID/Name/Slug)
+// [GET] /api/events/public/:id -> Chi tiết sự kiện
 export const getEventDetails = async (req, res) => {
   try {
-    const param = req.params.id;
-    
-    // Xây dựng filter tìm kiếm linh hoạt
-    const filter = {
-      status: "approved",
-      $or: [
-        { name: param },
-        { slug: param }
-      ]
-    };
+    const identifier = req.params.id;
+    const event = await EventRepository.getSinglePublicEventDetail(identifier);
 
-    // Nếu param là ID hợp lệ, thêm vào filter tìm kiếm
-    if (param.match(/^[0-9a-fA-F]{24}$/)) {
-      filter.$or.push({ _id: param });
-    }
-
-    // Gọi hàm nghiệp vụ trong Repository
-    const events = await EventRepository.getEventsWithStats(filter);
-
-    if (!events || events.length === 0) {
+    if (!event) {
       return res.status(404).json({ message: "Không tìm thấy hoặc chưa duyệt." });
     }
 
-    // CỰC KỲ QUAN TRỌNG: Trả về Object đầu tiên (events[0]) thay vì cả mảng
-    res.status(200).json(events[0]);
+    res.status(200).json(event);
   } catch (error) {
-    console.error("❌ Lỗi getEventDetails:", error.message);
     res.status(500).json({ message: "Lỗi server", error: error.message });
   }
 };
@@ -264,7 +243,7 @@ export const getEventDetails = async (req, res) => {
 // [GET] /api/events/my-events -> Sự kiện của Manager hiện tại
 export const getMyEvents = async (req, res) => {
   try {
-    const events = await EventRepository.getEventsWithStats({ createdBy: req.user._id });
+    const events = await EventRepository.getEventsByManager(req.user.id);
     res.status(200).json(events);
   } catch (error) {
     res.status(500).json({ message: "Lỗi server", error: error.message });
@@ -279,9 +258,9 @@ export const getEventDetailsForManagement = async (req, res) => {
     if (!event) return res.status(404).json({ message: "Không tìm thấy" });
 
     const [registrations, posts, comments] = await Promise.all([
-      RegistrationRepository.find({ event: eventId }, null, { sort: { createdAt: -1 } }, "volunteer"),
-      PostRepository.find({ event: eventId }, null, { sort: { createdAt: -1 } }, "author"),
-      CommentRepository.find({ event: eventId }, null, { sort: { createdAt: -1 } }, "author")
+      RegistrationRepository.getRegistrationsByEvent(eventId),
+      PostRepository.getPostsByEvent(eventId),
+      CommentRepository.getCommentsByEvent(eventId)
     ]);
 
     const stats = {

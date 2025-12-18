@@ -7,27 +7,12 @@ import EventRepository from "../repositories/EventRepository.js";
  */
 export const getVolunteerDashboard = async (req, res) => {
   try {
-    const volunteerId = req.user._id;
-    const now = new Date();
+    const volunteerId = req.user.id;
+    
+    // Repo trả về object chứa 4 mảng đã map id sạch sẽ
+    const dashboardData = await RegistrationRepository.getVolunteerDashboardData(volunteerId);
 
-    // Sử dụng populate thông qua Repository (đúng chuẩn độc lập)
-    const registrations = await RegistrationRepository.find(
-      { volunteer: volunteerId },
-      null,
-      { sort: { createdAt: -1 } },
-      "event"
-    );
-
-    const completedEvents = registrations.filter((r) => r.status === "completed");
-    const currentEvents = registrations.filter(
-      (r) => r.status === "approved" && r.event && new Date(r.event.date) <= now
-    );
-    const upcomingEvents = registrations.filter(
-      (r) => r.status === "approved" && r.event && new Date(r.event.date) > now
-    );
-    const pendingEvents = registrations.filter((r) => r.status === "pending");
-
-    res.json({ completedEvents, currentEvents, upcomingEvents, pendingEvents });
+    res.json(dashboardData);
   } catch (error) {
     res.status(500).json({ message: "Lỗi khi lấy dashboard volunteer", error: error.message });
   }
@@ -38,24 +23,17 @@ export const getVolunteerDashboard = async (req, res) => {
  */
 export const getManagerEvents = async (req, res) => {
   try {
-    const managerId = req.user._id;
+    const managerId = req.user.id;
 
-    const events = await EventRepository.find(
-      { createdBy: managerId },
-      "_id name date location status category rejectionReason",
-      { sort: { date: 1 } }
-    );
+    // Repo tự lo việc lấy sự kiện và map id
+    const events = await EventRepository.getEventsByManager(managerId);
+    const eventIds = events.map((e) => e.id);
 
-    const eventIds = events.map((e) => e._id);
-
-    // GỌI HÀM NGHIỆP VỤ ĐÃ ĐƯỢC ĐÓNG GÓI TRONG REPOSITORY
-    const regStats = await RegistrationRepository.getRegistrationStatsByEventIds(eventIds);
-
-    const counts = new Map(regStats.map((r) => [String(r._id), r]));
+    // Lấy stats hàng loạt dưới dạng Map từ Repo
+    const statsMap = await RegistrationRepository.getRegistrationStatsBatch(eventIds);
 
     const data = events.map((e) => {
-      const stats = counts.get(String(e._id)) || { totalRegistrations: 0, cancelRequests: 0 };
-      // Sử dụng spread để tạo object mới (Plain Object), không dùng .toObject() của Mongoose
+      const stats = statsMap[e.id] || { totalRegistrations: 0, cancelRequests: 0 };
       return {
         ...e, 
         totalRegistrations: stats.totalRegistrations,
@@ -76,14 +54,15 @@ export const getManagerEventRegistrations = async (req, res) => {
   try {
     const { eventId } = req.params;
 
-    const eventDoc = await EventRepository.findById(eventId, "createdBy");
+    const eventDoc = await EventRepository.findById(eventId);
     if (!eventDoc) return res.status(404).json({ message: "Không tìm thấy sự kiện" });
 
-    if (String(eventDoc.createdBy) !== String(req.user._id)) {
+    // So sánh chuỗi ID sạch, không dùng gạch dưới
+    if (String(eventDoc.createdBy) !== String(req.user.id)) {
       return res.status(403).json({ message: "Bạn không có quyền xem" });
     }
 
-    const regs = await RegistrationRepository.find({ event: eventId }, null, { sort: { createdAt: -1 } }, "volunteer");
+    const regs = await RegistrationRepository.getRegistrationsByEvent(eventId);
     res.json(regs);
   } catch (error) {
     res.status(500).json({ message: "Lỗi lấy danh sách đăng ký", error: error.message });
@@ -97,12 +76,11 @@ export const approveCancelRequest = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Không dùng rawModel() ở đây nữa
     const regDoc = await RegistrationRepository.findById(id, null, "event");
-    
     if (!regDoc || !regDoc.event) return res.status(404).json({ message: "Không tìm thấy dữ liệu" });
 
-    if (String(regDoc.event.createdBy) !== String(req.user._id)) {
+    // createdBy trong event lúc này đã là string ID từ mapping của Repo
+    if (String(regDoc.event.createdBy) !== String(req.user.id)) {
       return res.status(403).json({ message: "Bạn không có quyền" });
     }
 
@@ -110,7 +88,7 @@ export const approveCancelRequest = async (req, res) => {
       return res.status(400).json({ message: "Yêu cầu không hợp lệ" });
     }
 
-    await RegistrationRepository.findByIdAndUpdate(id, { status: "cancelled", cancelRequest: false });
+    await RegistrationRepository.updateCancelStatus(id, "cancelled");
     res.json({ message: "✅ Đã chấp thuận yêu cầu hủy" });
   } catch (error) {
     res.status(500).json({ message: "Lỗi phê duyệt hủy", error: error.message });
@@ -127,11 +105,11 @@ export const rejectCancelRequest = async (req, res) => {
     const regDoc = await RegistrationRepository.findById(id, null, "event");
     if (!regDoc || !regDoc.event) return res.status(404).json({ message: "Không tìm thấy dữ liệu" });
 
-    if (String(regDoc.event.createdBy) !== String(req.user._id)) {
+    if (String(regDoc.event.createdBy) !== String(req.user.id)) {
       return res.status(403).json({ message: "Bạn không có quyền" });
     }
 
-    await RegistrationRepository.findByIdAndUpdate(id, { cancelRequest: false });
+    await RegistrationRepository.denyCancelRequest(id);
     res.json({ message: "❌ Đã từ chối yêu cầu hủy" });
   } catch (error) {
     res.status(500).json({ message: { error: error.message } });

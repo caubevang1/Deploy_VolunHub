@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo, useCallback } from "react";
-import { Calendar, Users, MapPin, Heart, Share2, Search } from "lucide-react";
+import { Calendar, MapPin, Heart, Share2, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { GetEvents, GetEventActionStats, GetEventsActionStatsBatch } from "../services/EventService";
+import { GetEvents, GetEventsActionStatsBatch } from "../services/EventService";
 import {
   GetMyEvent,
   CheckEventStatus,
@@ -67,19 +67,26 @@ export default function EventList() {
 
   const [tab, setTab] = useState("all");
 
-  // 1. CÁC HÀM HỖ TRỢ (Dùng useCallback để ổn định dependency)
+  // 1. CÁC HÀM HỖ TRỢ
   const fetchAllRealtimeStats = useCallback(async (eventList) => {
     if (!eventList || eventList.length === 0) return;
     try {
-      const ids = eventList.map((e) => e._id);
+      const ids = eventList.map((e) => e.id || e._id); 
       const res = await GetEventsActionStatsBatch(ids);
       if (res.status === 200 && res.data && res.data.stats) {
         const statsMap = res.data.stats;
         setEvents((prev) =>
-          prev.map((ev) => ({
-            ...ev,
-            ...(statsMap[ev._id] || { likesCount: ev.likesCount ?? ev.likes ?? 0, sharesCount: ev.sharesCount ?? 0, viewsCount: ev.viewsCount ?? 0 }),
-          }))
+          prev.map((ev) => {
+            const currentId = ev.id || ev._id;
+            return {
+              ...ev,
+              ...(statsMap[currentId] || { 
+                  likesCount: ev.likesCount ?? 0, 
+                  sharesCount: ev.sharesCount ?? 0, 
+                  viewsCount: ev.viewsCount ?? 0 
+              }),
+            };
+          })
         );
       }
     } catch (err) {
@@ -89,18 +96,19 @@ export default function EventList() {
 
   const checkLikeStatuses = useCallback(async (eventList) => {
     if (!eventList || eventList.length === 0) return;
-    const eventsToCheck = eventList.filter((e) => likedEvents[e._id] === undefined);
+    const eventsToCheck = eventList.filter((e) => likedEvents[e.id || e._id] === undefined);
     if (eventsToCheck.length === 0) return;
 
     const statusMap = {};
     await Promise.all(
       eventsToCheck.map(async (event) => {
         try {
-          const res = await CheckEventStatus(event._id);
-          if (res.status === 200) statusMap[event._id] = res.data.hasLiked;
+          const currentId = event.id || event._id;
+          const res = await CheckEventStatus(currentId);
+          if (res.status === 200) statusMap[currentId] = res.data.hasLiked;
         } catch (err) {
-          console.error("Check like error", err); // Đã dùng 'err' để tránh lỗi unused-vars
-          statusMap[event._id] = false;
+          console.error("Check like error", err);
+          statusMap[event.id || event._id] = false;
         }
       })
     );
@@ -113,21 +121,25 @@ export default function EventList() {
       try {
         const res = await GetEvents();
         if (res.status === 200) {
-          // map category
-          const raw = res.data.map((event) => ({
+          const rawData = Array.isArray(res.data) ? res.data : (res.data?.events || []);
+          const raw = rawData.map((event) => ({
             ...event,
+            id: event.id || event._id,
             category: categoryMapping[event.category] || event.category,
           }));
 
-          // --- NEW: fetch stats in BATCH and merge BEFORE setEvents to avoid flicker ---
           try {
-            const ids = raw.map((r) => r._id);
+            const ids = raw.map((r) => r.id);
             const statsRes = await GetEventsActionStatsBatch(ids);
             if (statsRes.status === 200 && statsRes.data?.stats) {
               const statsMap = statsRes.data.stats;
               const merged = raw.map((ev) => ({
                 ...ev,
-                ...(statsMap[ev._id] || { likesCount: ev.likesCount ?? ev.likes ?? 0, sharesCount: ev.sharesCount ?? 0, viewsCount: ev.viewsCount ?? 0 }),
+                ...(statsMap[ev.id] || { 
+                    likesCount: ev.likesCount ?? 0, 
+                    sharesCount: ev.sharesCount ?? 0, 
+                    viewsCount: ev.viewsCount ?? 0 
+                }),
               }));
               setEvents(merged);
             } else {
@@ -138,28 +150,24 @@ export default function EventList() {
             setEvents(raw);
           }
 
-          // Prefetch like statuses (so nút like có trạng thái ngay)
+          // Prefetch like statuses
           try {
+            const ids = raw.map(r => r.id);
             const statusMap = {};
             await Promise.all(
-              raw.map(async (ev) => {
+              ids.map(async (id) => {
                 try {
-                  const statusRes = await CheckEventStatus(ev._id);
-                  statusMap[ev._id] = statusRes.status === 200 ? !!statusRes.data.hasLiked : false;
-                } catch (err) {
-                  // previously: catch (_)
-                  statusMap[ev._id] = false;
-                  console.warn("CheckEventStatus failed for event", ev._id, err);
+                  const statusRes = await CheckEventStatus(id);
+                  statusMap[id] = statusRes.status === 200 ? !!statusRes.data.hasLiked : false;
+                } catch {
+                  statusMap[id] = false;
                 }
               })
             );
             setLikedEvents(statusMap);
-          } catch (err) {
-            console.warn("Failed to prefetch like statuses", err);
+          } catch (e) {
+            console.warn("Failed to prefetch like statuses", e);
           }
-
-          // Keep polling helper as fallback for later updates
-          // fetchAllRealtimeStats(merged); // optional, polling will refresh anyway
         }
       } catch (err) {
         console.error("Fetch events error", err);
@@ -176,8 +184,10 @@ export default function EventList() {
         const res = await GetMyEvent();
         if (res.status === 200) {
           const statusMap = {};
-          (res.data || []).forEach((item) => {
-            if (item.event?._id) statusMap[item.event._id] = item.status;
+          const list = Array.isArray(res.data) ? res.data : (res.data?.items || []);
+          list.forEach((item) => {
+            const eventId = item.event?.id || item.event?._id || item.event;
+            if (eventId) statusMap[eventId] = item.status;
           });
           setUserParticipationMap(statusMap);
         }
@@ -188,40 +198,34 @@ export default function EventList() {
     fetchMy();
   }, []);
 
-  // Debounce search
   useEffect(() => {
     const handler = setTimeout(() => setDebouncedQuery(filters.query), 300);
     return () => clearTimeout(handler);
   }, [filters.query]);
 
-  // 3. CORE LOGIC: THAY THẾ useEffect BẰNG useMemo (Sửa lỗi cascading renders)
+  // 3. CORE LOGIC
   const filteredEvents = useMemo(() => {
     let result = [...events];
 
-    // Lọc theo Tab
-    if (tab === "joined") result = result.filter((e) => userParticipationMap[e._id]);
-    else if (tab === "notJoined") result = result.filter((e) => !userParticipationMap[e._id]);
-    else if (tab === "liked") result = result.filter((e) => likedEvents[e._id]);
+    if (tab === "joined") result = result.filter((e) => userParticipationMap[e.id || e._id]);
+    else if (tab === "notJoined") result = result.filter((e) => !userParticipationMap[e.id || e._id]);
+    else if (tab === "liked") result = result.filter((e) => likedEvents[e.id || e._id]);
 
-    // Lọc theo Dropdown
     if (appliedFilters.category) result = result.filter((e) => e.category === appliedFilters.category);
-    if (appliedFilters.status) result = result.filter((e) => userParticipationMap[e._id] === appliedFilters.status);
+    if (appliedFilters.status) result = result.filter((e) => userParticipationMap[e.id || e._id] === appliedFilters.status);
 
-    // Tìm kiếm
     if (debouncedQuery.trim()) {
       result = result.filter((e) => 
         softMatch(e.name || "", debouncedQuery) || softMatch(e.location || "", debouncedQuery)
       );
     }
 
-    // Sắp xếp
     if (appliedFilters.dateOrder === "asc") result.sort((a, b) => new Date(a.date) - new Date(b.date));
     else if (appliedFilters.dateOrder === "desc") result.sort((a, b) => new Date(b.date) - new Date(a.date));
 
     return result;
   }, [events, appliedFilters, debouncedQuery, tab, likedEvents, userParticipationMap]);
 
-  // Polling (Stats tự động)
   useEffect(() => {
     const interval = setInterval(() => {
       if (filteredEvents.length > 0) fetchAllRealtimeStats(filteredEvents);
@@ -245,10 +249,10 @@ export default function EventList() {
         setLikedEvents((prev) => ({ ...prev, [eventId]: !isLiked }));
         setEvents((prev) =>
           prev.map((ev) =>
-            ev._id === eventId
+            (ev.id || ev._id) === eventId
               ? {
                   ...ev,
-                  likesCount: (typeof ev.likesCount === "number" ? ev.likesCount : ev.likes ?? 0) + (isLiked ? -1 : 1),
+                  likesCount: (ev.likesCount ?? 0) + (isLiked ? -1 : 1),
                 }
               : ev
           )
@@ -258,7 +262,7 @@ export default function EventList() {
       if (type === "SHARE") {
         setEvents((prev) =>
           prev.map((ev) =>
-            ev._id === eventId ? { ...ev, sharesCount: (ev.sharesCount ?? 0) + 1 } : ev
+            (ev.id || ev._id) === eventId ? { ...ev, sharesCount: (ev.sharesCount ?? 0) + 1 } : ev
           )
         );
         const res = await EventActions(eventId, { type: "SHARE" });
@@ -267,15 +271,6 @@ export default function EventList() {
       }
     } catch (err) {
       console.error(err);
-      try {
-        const sres = await GetEventActionStats(eventId);
-        if (sres.status === 200) {
-          setEvents((prev) => prev.map((ev) => (ev._id === eventId ? { ...ev, ...sres.data } : ev)));
-        }
-      } catch (err2) {
-        // Log instead of empty catch to satisfy eslint and aid debugging
-        console.warn("Failed to refresh stats for event", eventId, err2);
-      }
     }
   };
 
@@ -286,8 +281,8 @@ export default function EventList() {
 
   const tabCounts = useMemo(() => ({
     all: events.length,
-    joined: events.filter((e) => userParticipationMap[e._id]).length,
-    notJoined: events.filter((e) => !userParticipationMap[e._id]).length,
+    joined: events.filter((e) => userParticipationMap[e.id || e._id]).length,
+    notJoined: events.filter((e) => !userParticipationMap[e.id || e._id]).length,
     liked: Object.values(likedEvents).filter(Boolean).length,
     forYou: 0,
   }), [events, userParticipationMap, likedEvents]);
@@ -296,7 +291,6 @@ export default function EventList() {
 
   return (
     <div className="px-2 md:px-0">
-      {/* --- PHẦN UI GIỮ NGUYÊN NHƯ CŨ --- */}
       <div className="flex flex-col md:flex-row gap-3 mb-6">
         <select name="category" className="border p-2 rounded" value={filters.category} onChange={(e) => setFilters(p => ({ ...p, category: e.target.value }))}>
           <option value="">Loại sự kiện</option>
@@ -317,48 +311,49 @@ export default function EventList() {
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="flex gap-6 border-b mb-6 overflow-x-auto">
         {[{ key: "all", label: "Tất Cả" }, { key: "joined", label: "Đã Đăng Ký" }, { key: "notJoined", label: "Chưa Đăng Ký" }, { key: "liked", label: "Yêu Thích" }].map(t => (
-          <button key={t.key} onClick={() => setTab(t.key)} className={`pb-2 ${tab === t.key ? "border-b-2 border-[#DDB958] text-[#DDB958]" : ""}`}>
+          <button key={t.key} onClick={() => setTab(t.key)} className={`pb-2 whitespace-nowrap ${tab === t.key ? "border-b-2 border-[#DDB958] text-[#DDB958]" : ""}`}>
             {t.label} ({tabCounts[t.key]})
           </button>
         ))}
       </div>
 
-      {/* Grid danh sách */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredEvents.map((event) => (
-          <div key={event._id} className="bg-white rounded-2xl shadow-md overflow-hidden border hover:shadow-lg transition cursor-pointer" onClick={() => handleViewDetail(event._id)}>
-            <div className="relative">
-              <img src={event.coverImage?.startsWith("http") ? event.coverImage : `http://localhost:5000${event.coverImage}`} alt={event.name} className="h-60 w-full object-cover" />
-              {userParticipationMap[event._id] && (
-                <span className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded text-xs">
-                  {userParticipationMap[event._id] === 'approved' ? 'Đã tham gia' : 'Đang chờ'}
-                </span>
-              )}
-            </div>
-            <div className="p-5">
-              <h3 className="font-bold text-lg mb-2 line-clamp-1">{event.name}</h3>
-              <div className="text-sm text-gray-600 space-y-2 mb-4">
-                <div className="flex items-center gap-2"><Calendar size={14} /> {new Date(event.date).toLocaleDateString("vi-VN")}</div>
-                <div className="flex items-center gap-2"><MapPin size={14} /> {event.location}</div>
+        {filteredEvents.map((event) => {
+          const eventId = event.id || event._id;
+          return (
+            <div key={eventId} className="bg-white rounded-2xl shadow-md overflow-hidden border hover:shadow-lg transition cursor-pointer" onClick={() => handleViewDetail(eventId)}>
+              <div className="relative">
+                <img src={event.coverImage?.startsWith("http") ? event.coverImage : `http://localhost:5000${event.coverImage}`} alt={event.name} className="h-60 w-full object-cover" />
+                {userParticipationMap[eventId] && (
+                  <span className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded text-xs">
+                    {userParticipationMap[eventId] === 'approved' ? 'Đã tham gia' : 'Đang chờ'}
+                  </span>
+                )}
               </div>
-              <div className="flex justify-between items-center">
-                <div className="flex gap-4">
-                  <button onClick={(e) => handleInteraction(e, event._id, "LIKE")} className="flex items-center gap-1">
-                    <Heart size={20} className={likedEvents[event._id] ? "fill-red-500 text-red-500" : ""} />
-                    {typeof event.likesCount === "number" ? event.likesCount : (event.likes ?? 0)}
-                  </button>
-                  <button onClick={(e) => handleInteraction(e, event._id, "SHARE")} className="flex items-center gap-1 text-blue-500">
-                    <Share2 size={20} /> {event.sharesCount ?? 0}
-                  </button>
+              <div className="p-5">
+                <h3 className="font-bold text-lg mb-2 line-clamp-1">{event.name}</h3>
+                <div className="text-sm text-gray-600 space-y-2 mb-4">
+                  <div className="flex items-center gap-2"><Calendar size={14} /> {new Date(event.date).toLocaleDateString("vi-VN")}</div>
+                  <div className="flex items-center gap-2"><MapPin size={14} /> {event.location}</div>
                 </div>
-                <button className="bg-[#DCBA58] text-white px-4 py-1.5 rounded text-sm">Chi tiết</button>
+                <div className="flex justify-between items-center">
+                  <div className="flex gap-4">
+                    <button onClick={(e) => handleInteraction(e, eventId, "LIKE")} className="flex items-center gap-1">
+                      <Heart size={20} className={likedEvents[eventId] ? "fill-red-500 text-red-500" : ""} />
+                      {event.likesCount ?? 0}
+                    </button>
+                    <button onClick={(e) => handleInteraction(e, eventId, "SHARE")} className="flex items-center gap-1 text-blue-500">
+                      <Share2 size={20} /> {event.sharesCount ?? 0}
+                    </button>
+                  </div>
+                  <button className="bg-[#DCBA58] text-white px-4 py-1.5 rounded text-sm">Chi tiết</button>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
