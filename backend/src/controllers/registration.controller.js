@@ -8,31 +8,45 @@ import { sendPushNotification } from "../utils/sendPush.js";
 export const registerForEvent = async (req, res) => {
   try {
     const { eventId } = req.params;
-    const volunteerId = req.user.id; 
+    const volunteerId = req.user.id;
 
     const event = await EventRepository.findById(eventId);
     if (!event || event.status !== "approved") {
-      return res.status(404).json({ message: "Sự kiện không tồn tại hoặc chưa được duyệt." });
+      return res
+        .status(404)
+        .json({ message: "Sự kiện không tồn tại hoặc chưa được duyệt." });
     }
 
     const currentParticipants = await RegistrationRepository.countDocuments({
       event: eventId,
-      status: "approved"
+      status: "approved",
     });
 
     if (currentParticipants >= event.maxParticipants) {
-      return res.status(409).json({ message: "Rất tiếc, sự kiện này đã đủ số lượng người tham gia." });
+      return res
+        .status(409)
+        .json({
+          message: "Rất tiếc, sự kiện này đã đủ số lượng người tham gia.",
+        });
     }
 
-    const newRegistration = await RegistrationRepository.create({ 
-      event: eventId, 
-      volunteer: volunteerId, 
-      status: "pending" 
+    const newRegistration = await RegistrationRepository.create({
+      event: eventId,
+      volunteer: volunteerId,
+      status: "pending",
     });
 
-    res.status(201).json({ message: "Đăng ký thành công, vui lòng chờ duyệt", registration: newRegistration });
+    res
+      .status(201)
+      .json({
+        message: "Đăng ký thành công, vui lòng chờ duyệt",
+        registration: newRegistration,
+      });
   } catch (error) {
-    if (error.code === 11000) return res.status(409).json({ message: "Bạn đã đăng ký sự kiện này rồi." });
+    if (error.code === 11000)
+      return res
+        .status(409)
+        .json({ message: "Bạn đã đăng ký sự kiện này rồi." });
     res.status(500).json({ message: "Lỗi server", error: error.message });
   }
 };
@@ -41,10 +55,14 @@ export const registerForEvent = async (req, res) => {
 export const cancelRegistration = async (req, res) => {
   try {
     const { eventId } = req.params;
-    const volunteerId = req.user.id; 
+    const volunteerId = req.user.id;
 
-    const registration = await RegistrationRepository.findOne({ event: eventId, volunteer: volunteerId });
-    if (!registration) return res.status(404).json({ message: "Bạn chưa đăng ký sự kiện này." });
+    const registration = await RegistrationRepository.findOne({
+      event: eventId,
+      volunteer: volunteerId,
+    });
+    if (!registration)
+      return res.status(404).json({ message: "Bạn chưa đăng ký sự kiện này." });
 
     const event = await EventRepository.findById(eventId);
     let penaltyMessage = "";
@@ -61,7 +79,9 @@ export const cancelRegistration = async (req, res) => {
     }
 
     await RegistrationRepository.findByIdAndDelete(registration.id);
-    res.status(200).json({ message: "Hủy đăng ký thành công." + penaltyMessage });
+    res
+      .status(200)
+      .json({ message: "Hủy đăng ký thành công." + penaltyMessage });
   } catch (error) {
     res.status(500).json({ message: "Lỗi server", error: error.message });
   }
@@ -71,9 +91,9 @@ export const cancelRegistration = async (req, res) => {
 export const getMyHistory = async (req, res) => {
   try {
     const history = await RegistrationRepository.find(
-      { volunteer: req.user.id }, 
-      null, 
-      { sort: { createdAt: -1 } }, 
+      { volunteer: req.user.id },
+      null,
+      { sort: { createdAt: -1 } },
       "event"
     );
     res.status(200).json(history);
@@ -87,7 +107,8 @@ export const getEventRegistrations = async (req, res) => {
   try {
     const { eventId } = req.params;
     const event = await EventRepository.findById(eventId, "points status");
-    if (!event) return res.status(404).json({ message: "Sự kiện không tồn tại" });
+    if (!event)
+      return res.status(404).json({ message: "Sự kiện không tồn tại" });
 
     const registrations = await RegistrationRepository.find(
       { event: eventId },
@@ -97,16 +118,17 @@ export const getEventRegistrations = async (req, res) => {
     );
 
     const results = registrations.map((reg) => {
-      let evaluation = "Chưa đánh giá", pointsAwarded = 0;
+      let evaluation = "Chưa đánh giá",
+        pointsAwarded = 0;
       if (reg.status === "completed" && reg.performance) {
         const eventPoints = event.points || 0;
         evaluation = reg.performance;
-        
+
         const pointRules = {
-          "GOOD": eventPoints,
-          "AVERAGE": Math.floor(eventPoints / 2),
-          "BAD": Math.floor(eventPoints / 5),
-          "NO_SHOW": -10
+          GOOD: eventPoints,
+          AVERAGE: Math.floor(eventPoints / 2),
+          BAD: Math.floor(eventPoints / 5),
+          NO_SHOW: -10,
         };
         pointsAwarded = pointRules[reg.performance] ?? eventPoints;
       }
@@ -122,25 +144,55 @@ export const getEventRegistrations = async (req, res) => {
 // [PUT] /api/registrations/:registrationId/status
 export const updateRegistrationStatus = async (req, res) => {
   try {
-    const { status } = req.body;
-    const updatedReg = await RegistrationRepository.findByIdAndUpdate(req.params.registrationId, { status });
-    if (!updatedReg) return res.status(404).json({ message: "Không tìm thấy đơn đăng ký" });
-    
-    const populatedEvent = await EventRepository.findById(updatedReg.event, "name");
-    
-    res.status(200).json({ 
-      message: "Cập nhật trạng thái thành công", 
-      registration: { ...updatedReg, event: populatedEvent } 
+    const { status, rejectionReason } = req.body;
+
+    // Chuẩn bị dữ liệu cập nhật
+    const updateData = { status };
+    if (status === "rejected" && rejectionReason) {
+      updateData.rejectionReason = rejectionReason;
+    }
+
+    const updatedReg = await RegistrationRepository.findByIdAndUpdate(
+      req.params.registrationId,
+      updateData
+    );
+    if (!updatedReg)
+      return res.status(404).json({ message: "Không tìm thấy đơn đăng ký" });
+
+    const populatedEvent = await EventRepository.findById(
+      updatedReg.event,
+      "name"
+    );
+
+    res.status(200).json({
+      message: "Cập nhật trạng thái thành công",
+      registration: { ...updatedReg, event: populatedEvent },
     });
 
     if (updatedReg && populatedEvent) {
-      const url = `${process.env.CLIENT_URL || "http://localhost:3000"}/my-registrations`;
-      const title = status === "approved" ? "Đăng ký thành công! ✅" : "Thông báo từ chối ❌";
-      const message = status === "approved"
-        ? `Yêu cầu tham gia sự kiện "${populatedEvent.name}" đã được chấp thuận.`
-        : `Rất tiếc, yêu cầu đăng ký tham gia sự kiện "${populatedEvent.name}" đã bị từ chối.`;
-      
-      await sendPushNotification(updatedReg.volunteer, title, message, url).catch(() => {});
+      const url = `${
+        process.env.CLIENT_URL || "http://localhost:3000"
+      }/my-registrations`;
+      const title =
+        status === "approved"
+          ? "Đăng ký thành công! ✅"
+          : "Thông báo từ chối ❌";
+      let message =
+        status === "approved"
+          ? `Yêu cầu tham gia sự kiện "${populatedEvent.name}" đã được chấp thuận.`
+          : `Rất tiếc, yêu cầu đăng ký tham gia sự kiện "${populatedEvent.name}" đã bị từ chối.`;
+
+      // Thêm lý do từ chối vào thông báo nếu có
+      if (status === "rejected" && rejectionReason) {
+        message += ` Lý do: ${rejectionReason}`;
+      }
+
+      await sendPushNotification(
+        updatedReg.volunteer,
+        title,
+        message,
+        url
+      ).catch(() => {});
     }
   } catch (error) {
     res.status(500).json({ message: "Lỗi server", error: error.message });
@@ -152,54 +204,71 @@ export const markAsCompleted = async (req, res) => {
   try {
     const { registrationId } = req.params;
     const { performance } = req.body;
-    const rating = ["GOOD", "AVERAGE", "BAD", "NO_SHOW"].includes(performance) ? performance : "GOOD";
+    const rating = ["GOOD", "AVERAGE", "BAD", "NO_SHOW"].includes(performance)
+      ? performance
+      : "GOOD";
 
     const registration = await RegistrationRepository.findById(registrationId);
-    if (!registration) return res.status(404).json({ message: "Không tìm thấy đơn đăng ký." });
+    if (!registration)
+      return res.status(404).json({ message: "Không tìm thấy đơn đăng ký." });
 
     const event = await EventRepository.findById(registration.event);
     const eventPoints = event?.points || 0;
-    
+
     let pointsToAdd = 0;
     let pushTitle = "";
     let pushBody = "";
 
     switch (rating) {
-      case "GOOD": 
-        pointsToAdd = eventPoints; 
-        pushTitle = "Đánh giá: Tốt 🌟"; 
+      case "GOOD":
+        pointsToAdd = eventPoints;
+        pushTitle = "Đánh giá: Tốt 🌟";
         break;
-      case "AVERAGE": 
-        pointsToAdd = Math.floor(eventPoints / 2); 
-        pushTitle = "Đánh giá: Trung bình 😐"; 
+      case "AVERAGE":
+        pointsToAdd = Math.floor(eventPoints / 2);
+        pushTitle = "Đánh giá: Trung bình 😐";
         break;
-      case "BAD": 
-        pointsToAdd = Math.floor(eventPoints / 5); 
-        pushTitle = "Đánh giá: Kém 🔴"; 
+      case "BAD":
+        pointsToAdd = Math.floor(eventPoints / 5);
+        pushTitle = "Đánh giá: Kém 🔴";
         break;
-      case "NO_SHOW": 
-        pointsToAdd = -10; 
-        pushTitle = "Đánh giá: Vắng mặt 👤-"; 
+      case "NO_SHOW":
+        pointsToAdd = -10;
+        pushTitle = "Đánh giá: Vắng mặt 👤-";
         break;
     }
 
     await UserRepository.incrementPoints(registration.volunteer, pointsToAdd);
-    
+
     const updated = await RegistrationRepository.findByIdAndUpdate(
-      registrationId, 
+      registrationId,
       { status: "completed", performance: rating }
     );
 
-    res.status(200).json({ message: "Đánh giá thành công", points: pointsToAdd, registration: updated });
+    res
+      .status(200)
+      .json({
+        message: "Đánh giá thành công",
+        points: pointsToAdd,
+        registration: updated,
+      });
 
-    const url = `${process.env.CLIENT_URL || "http://localhost:3000"}/my-registrations`;
-    
+    const url = `${
+      process.env.CLIENT_URL || "http://localhost:3000"
+    }/my-registrations`;
+
     // Đã sửa: Không khai báo lại pushBody mà chỉ gán giá trị
-    pushBody = pointsToAdd >= 0 
-      ? `Bạn đã hoàn thành nhiệm vụ tại "${event.name}". (+${pointsToAdd}đ)`
-      : `Bạn đã vắng mặt tại sự kiện "${event.name}". (-10đ)`;
+    pushBody =
+      pointsToAdd >= 0
+        ? `Bạn đã hoàn thành nhiệm vụ tại "${event.name}". (+${pointsToAdd}đ)`
+        : `Bạn đã vắng mặt tại sự kiện "${event.name}". (-10đ)`;
 
-    await sendPushNotification(registration.volunteer, pushTitle, pushBody, url).catch(() => {});
+    await sendPushNotification(
+      registration.volunteer,
+      pushTitle,
+      pushBody,
+      url
+    ).catch(() => {});
   } catch (error) {
     res.status(500).json({ message: "Lỗi server", error: error.message });
   }

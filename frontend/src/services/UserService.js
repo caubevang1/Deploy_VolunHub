@@ -18,6 +18,9 @@ export const UpdateUser = (formData) => {
   return http.put("/auth/me", formData); // hoặc http.put('/users/me', formData)
 };
 
+export const ChangePassword = (data) => http.put(`/auth/change-password`, data);
+export const ChangeEmail = (data) => http.put(`/auth/change-email`, data);
+
 //User Events
 export const Registration = (eventId) => http.post(`/registrations/${eventId}`);
 export const CancelRegistration = (eventId) =>

@@ -36,7 +36,7 @@ const validateUserEntry = (name, birthday, phone) => {
       today.getDate() < birthDate.getDate())
   )
     age--;
-  
+
   if (age < 10 || age > 80)
     return { error: `Tuổi (${age}) không phù hợp để tham gia hệ thống.` };
 
@@ -59,11 +59,12 @@ const rollbackUpload = (req) => {
 export const sendRegisterOtp = async (req, res) => {
   try {
     const { email } = req.body;
-    if (await UserRepository.findOne({ email })) return res.status(400).json({ message: "Email đã tồn tại." });
+    if (await UserRepository.findOne({ email }))
+      return res.status(400).json({ message: "Email đã tồn tại." });
 
     const otp = generateOtp();
     await OtpRepository.createOtp(email, otp, "REGISTER");
-    
+
     await sendOtpEmail(email, otp, "Đăng ký tài khoản VolunteerHub");
     res.status(200).json({ message: "OTP đã được gửi." });
   } catch (err) {
@@ -73,14 +74,28 @@ export const sendRegisterOtp = async (req, res) => {
 
 export const verifyAndRegister = async (req, res) => {
   try {
-    const { email, name, username, birthday, password, otp, gender, phone, avatar, role } = req.body;
+    const {
+      email,
+      name,
+      username,
+      birthday,
+      password,
+      otp,
+      gender,
+      phone,
+      avatar,
+      role,
+    } = req.body;
 
     const validation = validateUserEntry(name, birthday, phone);
-    if (validation.error) return res.status(400).json({ message: validation.error });
+    if (validation.error)
+      return res.status(400).json({ message: validation.error });
 
     const isValid = await OtpRepository.verifyOtp(email, otp, "REGISTER");
     if (!isValid) {
-      return res.status(400).json({ message: "OTP không chính xác hoặc đã hết hạn." });
+      return res
+        .status(400)
+        .json({ message: "OTP không chính xác hoặc đã hết hạn." });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -108,15 +123,20 @@ export const login = async (req, res) => {
     const { identifier, password } = req.body;
     const user = await UserRepository.findByIdentifierWithPassword(identifier);
 
-    if (!user || !user.password || !(await bcrypt.compare(password, user.password))) {
+    if (
+      !user ||
+      !user.password ||
+      !(await bcrypt.compare(password, user.password))
+    ) {
       return res.status(400).json({ message: "Sai tài khoản hoặc mật khẩu." });
     }
 
-    if (user.status !== "ACTIVE") return res.status(403).json({ message: "Tài khoản bị khóa." });
+    if (user.status !== "ACTIVE")
+      return res.status(403).json({ message: "Tài khoản bị khóa." });
 
     const token = jwt.sign(
       { userId: user.id, role: user.role }, // Đã dùng user.id
-      process.env.JWT_SECRET, 
+      process.env.JWT_SECRET,
       { expiresIn: "1d" }
     );
 
@@ -149,8 +169,11 @@ export const updateProfile = async (req, res) => {
       }
     }
 
-    const updated = await UserRepository.findByIdAndUpdate(req.user.id, updateData);
-    
+    const updated = await UserRepository.findByIdAndUpdate(
+      req.user.id,
+      updateData
+    );
+
     const { password: _, ...userWithoutPassword } = updated;
     res.json({ message: "Cập nhật thành công.", user: userWithoutPassword });
   } catch (err) {
@@ -162,11 +185,12 @@ export const updateProfile = async (req, res) => {
 export const sendResetOtp = async (req, res) => {
   try {
     const { email } = req.body;
-    if (!(await UserRepository.findOne({ email }))) return res.status(404).json({ message: "Email không tồn tại." });
-    
+    if (!(await UserRepository.findOne({ email })))
+      return res.status(404).json({ message: "Email không tồn tại." });
+
     const otp = generateOtp();
     await OtpRepository.createOtp(email, otp, "RESET");
-    
+
     await sendOtpEmail(email, otp, "Khôi phục mật khẩu");
     res.json({ message: "OTP đã gửi." });
   } catch (err) {
@@ -178,12 +202,13 @@ export const resetPassword = async (req, res) => {
   try {
     const { email, otp, newPassword } = req.body;
     const isValid = await OtpRepository.verifyOtp(email, otp, "RESET");
-    if (!isValid) return res.status(400).json({ message: "OTP sai hoặc hết hạn." });
+    if (!isValid)
+      return res.status(400).json({ message: "OTP sai hoặc hết hạn." });
 
     const hashed = await bcrypt.hash(newPassword, 10);
     await UserRepository.updatePasswordByEmail(email, hashed);
     await OtpRepository.clearOtps(email, "RESET");
-    
+
     res.json({ message: "Đã đổi mật khẩu." });
   } catch (err) {
     res.status(500).json({ message: "Lỗi server", error: err.message });
@@ -194,15 +219,18 @@ export const changePassword = async (req, res) => {
   try {
     const { oldPassword, newPassword } = req.body;
     const user = await UserRepository.findByIdWithPassword(req.user.id);
-    if (!user) return res.status(404).json({ message: "Người dùng không tồn tại." });
-    
+    if (!user)
+      return res.status(404).json({ message: "Người dùng không tồn tại." });
+
     if (!(await bcrypt.compare(oldPassword, user.password))) {
       return res.status(400).json({ message: "Mật khẩu cũ sai." });
     }
 
     const hashedNewPassword = await bcrypt.hash(newPassword, 10);
-    await UserRepository.findByIdAndUpdate(req.user.id, { password: hashedNewPassword });
-    
+    await UserRepository.findByIdAndUpdate(req.user.id, {
+      password: hashedNewPassword,
+    });
+
     res.json({ message: "Đổi mật khẩu thành công." });
   } catch (err) {
     res.status(500).json({ message: "Lỗi server", error: err.message });
@@ -213,9 +241,11 @@ export const getMe = async (req, res) => res.json(req.user);
 
 export const register = async (req, res) => {
   try {
-    const { username, email, password, name, birthday, gender, phone, role } = req.body;
+    const { username, email, password, name, birthday, gender, phone, role } =
+      req.body;
     const validation = validateUserEntry(name, birthday, phone);
-    if (validation.error) return res.status(400).json({ message: validation.error });
+    if (validation.error)
+      return res.status(400).json({ message: validation.error });
 
     await UserRepository.create({
       username,
@@ -229,6 +259,36 @@ export const register = async (req, res) => {
       role: role || "VOLUNTEER",
     });
     res.status(201).json({ message: "Đăng ký thành công" });
+  } catch (err) {
+    res.status(500).json({ message: "Lỗi server", error: err.message });
+  }
+};
+
+export const changeEmail = async (req, res) => {
+  try {
+    const { newEmail, password } = req.body;
+    if (!newEmail)
+      return res.status(400).json({ message: "Vui lòng cung cấp email mới." });
+
+    // Kiểm tra email đã tồn tại
+    const existing = await UserRepository.findOne({ email: newEmail });
+    if (existing)
+      return res.status(400).json({ message: "Email đã được sử dụng." });
+
+    const user = await UserRepository.findByIdWithPassword(req.user.id);
+    if (!user)
+      return res.status(404).json({ message: "Người dùng không tồn tại." });
+
+    // Yêu cầu mật khẩu hiện tại để xác thực
+    if (!(await bcrypt.compare(password || "", user.password))) {
+      return res.status(400).json({ message: "Mật khẩu không chính xác." });
+    }
+
+    const updated = await UserRepository.findByIdAndUpdate(req.user.id, {
+      email: newEmail,
+    });
+    const { password: _, ...userWithoutPassword } = updated;
+    res.json({ message: "Đổi email thành công.", user: userWithoutPassword });
   } catch (err) {
     res.status(500).json({ message: "Lỗi server", error: err.message });
   }

@@ -10,20 +10,22 @@ export const getEventPosts = async (req, res) => {
   try {
     const { eventId } = req.params;
     const event = await EventRepository.findById(eventId);
-    
+
     if (!event) {
-      return res.status(404).json({ message: 'Không tìm thấy sự kiện.' });
+      return res.status(404).json({ message: "Không tìm thấy sự kiện." });
     }
-    
+
     // Chỉ cho phép xem bài viết nếu sự kiện đã được duyệt
-    if (event.status !== 'approved') {
-      return res.status(403).json({ message: 'Sự kiện chưa được duyệt. Không thể xem bài viết.' });
+    if (event.status !== "approved") {
+      return res
+        .status(403)
+        .json({ message: "Sự kiện chưa được duyệt. Không thể xem bài viết." });
     }
 
     const posts = await PostRepository.getPostsByEvent(eventId);
     res.status(200).json(posts);
   } catch (error) {
-    res.status(500).json({ message: 'Lỗi server', error: error.message });
+    res.status(500).json({ message: "Lỗi server", error: error.message });
   }
 };
 
@@ -42,16 +44,18 @@ export const createPost = async (req, res) => {
 
     const event = await EventRepository.findById(eventId);
     if (!event) {
-      return res.status(404).json({ message: 'Không tìm thấy sự kiện.' });
+      return res.status(404).json({ message: "Không tìm thấy sự kiện." });
     }
-    
-    if (event.status !== 'approved') {
-      return res.status(403).json({ message: 'Chỉ có thể đăng bài khi sự kiện đã được duyệt.' });
+
+    if (event.status !== "approved") {
+      return res
+        .status(403)
+        .json({ message: "Chỉ có thể đăng bài khi sự kiện đã được duyệt." });
     }
 
     const newPost = await PostRepository.create({
       content: content.trim(),
-      author: req.user.id, 
+      author: req.user.id,
       event: eventId,
     });
 
@@ -59,7 +63,7 @@ export const createPost = async (req, res) => {
     const populatedPost = await PostRepository.getPostWithAuthor(newPost.id);
     res.status(201).json(populatedPost);
   } catch (error) {
-    res.status(500).json({ message: 'Lỗi server', error: error.message });
+    res.status(500).json({ message: "Lỗi server", error: error.message });
   }
 };
 
@@ -87,15 +91,15 @@ export const toggleLikePost = async (req, res) => {
 
     // Lấy dữ liệu mới nhất kèm author để Frontend đồng bộ UI mượt mà
     const updatedPost = await PostRepository.getPostWithAuthor(postId);
-    
-    res.status(200).json({ 
+
+    res.status(200).json({
       message: "Cập nhật like thành công.",
       likesCount: updatedPost.likes?.length || 0,
       hasLiked: !hasLiked,
-      post: updatedPost
+      post: updatedPost,
     });
   } catch (error) {
-    res.status(500).json({ message: 'Lỗi server', error: error.message });
+    res.status(500).json({ message: "Lỗi server", error: error.message });
   }
 };
 
@@ -114,17 +118,28 @@ export const deletePost = async (req, res) => {
       return res.status(404).json({ message: "Không tìm thấy bài đăng." });
     }
 
-    // Kiểm tra quyền: Admin hoặc chính chủ bài viết mới được xóa
-    // Sử dụng post.author.id (nếu đã populate) hoặc post.author (nếu là ID thô)
+    // Lấy thông tin sự kiện để kiểm tra người quản lý
+    const event = await EventRepository.findById(post.event);
+    if (!event) {
+      return res.status(404).json({ message: "Không tìm thấy sự kiện." });
+    }
+
+    // Kiểm tra quyền: Admin, Event Manager (người tạo sự kiện), hoặc chính chủ bài viết
     const authorId = post.author?.id || post.author;
-    if (userRole !== 'ADMIN' && String(authorId) !== String(userId)) {
-      return res.status(403).json({ message: 'Bạn không có quyền xóa bài đăng này.' });
+    const eventCreatorId = event.createdBy?.id || event.createdBy;
+    const isAdmin = userRole === "ADMIN";
+    const isEventManager = String(eventCreatorId) === String(userId);
+    const isAuthor = String(authorId) === String(userId);
+
+    if (!isAdmin && !isEventManager && !isAuthor) {
+      return res
+        .status(403)
+        .json({ message: "Bạn không có quyền xóa bài đăng này." });
     }
 
     await PostRepository.findByIdAndDelete(postId);
     res.status(200).json({ message: "Xóa bài đăng thành công." });
-
   } catch (error) {
-    res.status(500).json({ message: 'Lỗi server', error: error.message });
+    res.status(500).json({ message: "Lỗi server", error: error.message });
   }
 };

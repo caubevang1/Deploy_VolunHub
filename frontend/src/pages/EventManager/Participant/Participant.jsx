@@ -83,6 +83,10 @@ export default function Participants() {
   const [selectedParticipant, setSelectedParticipant] = useState(null);
   const [submittingRating, setSubmittingRating] = useState(false);
 
+  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+  const [selectedForRejection, setSelectedForRejection] = useState(null);
+  const [selectedRejectionReason, setSelectedRejectionReason] = useState("");
+
   // ✅ Sửa lỗi fetchParticipants missing dependency
   const fetchParticipants = useCallback(async () => {
     setLoading(true);
@@ -162,7 +166,15 @@ export default function Participants() {
   };
 
   const handleUpdateStatus = async (registrationId, status, name) => {
-    const actionText = status === "approved" ? "duyệt" : "từ chối";
+    // Nếu từ chối, hiển thị modal chọn lý do
+    if (status === "rejected") {
+      setSelectedForRejection({ id: registrationId, name });
+      setIsRejectModalOpen(true);
+      return;
+    }
+
+    // Nếu duyệt, xử lý như cũ
+    const actionText = "duyệt";
     const result = await Swal.fire({
       title: `Bạn có chắc muốn ${actionText}?`,
       html: `Tình nguyện viên: <strong>${name}</strong>`,
@@ -170,7 +182,7 @@ export default function Participants() {
       showCancelButton: true,
       confirmButtonText: "Xác nhận",
       cancelButtonText: "Hủy",
-      confirmButtonColor: status === "approved" ? "#22C55E" : "#EA4343",
+      confirmButtonColor: "#22C55E",
       cancelButtonColor: "#d33",
     });
 
@@ -188,6 +200,37 @@ export default function Participants() {
     }
   };
 
+  const handleConfirmRejection = async () => {
+    if (!selectedRejectionReason) {
+      message.warning("Vui lòng chọn lý do từ chối");
+      return;
+    }
+
+    setIsRejectModalOpen(false);
+
+    try {
+      const res = await UpdateParticipantStatus(
+        selectedForRejection.id,
+        "rejected",
+        selectedRejectionReason
+      );
+      if (res.status === 200) {
+        Swal.fire(
+          "Thành công",
+          "Đã từ chối đăng ký và gửi thông báo",
+          "success"
+        );
+        fetchParticipants();
+      }
+    } catch (err) {
+      console.error(err);
+      Swal.fire("Lỗi", "Không thể cập nhật trạng thái", "error");
+    } finally {
+      setSelectedRejectionReason("");
+      setSelectedForRejection(null);
+    }
+  };
+
   const openRatingModal = (record) => {
     setSelectedParticipant(record);
     setIsRatingModalOpen(true);
@@ -196,7 +239,9 @@ export default function Participants() {
   const handleSubmitRating = async (performance) => {
     if (!selectedParticipant) return;
 
-    const selectedOption = PERFORMANCE_OPTIONS.find((o) => o.key === performance);
+    const selectedOption = PERFORMANCE_OPTIONS.find(
+      (o) => o.key === performance
+    );
     const confirmResult = await Swal.fire({
       title: "Xác nhận đánh giá",
       html: `Bạn có chắc chắn muốn đánh giá: <br/><strong>${selectedParticipant.volunteer?.name}</strong> <br/> <strong style="color: #DDB958; font-size: 1.2em;">${selectedOption?.label}</strong>?`,
@@ -209,10 +254,17 @@ export default function Participants() {
 
     setSubmittingRating(true);
     try {
-      const res = await MarkCompletedParticipants(selectedParticipant.id, { performance });
+      const res = await MarkCompletedParticipants(selectedParticipant.id, {
+        performance,
+      });
       if (res.status === 200) {
         setIsRatingModalOpen(false);
-        Swal.fire({ icon: "success", title: "Đánh giá thành công!", timer: 1500, showConfirmButton: false });
+        Swal.fire({
+          icon: "success",
+          title: "Đánh giá thành công!",
+          timer: 1500,
+          showConfirmButton: false,
+        });
         fetchParticipants();
       }
     } catch (err) {
@@ -227,24 +279,43 @@ export default function Participants() {
     {
       title: "Tình nguyện viên",
       dataIndex: ["volunteer", "name"],
-      render: (text) => <div className="font-semibold text-gray-800">{text}</div>,
-      sorter: (a, b) => (a.volunteer?.name || "").localeCompare(b.volunteer?.name || ""),
+      render: (text) => (
+        <div className="font-semibold text-gray-800">{text}</div>
+      ),
+      sorter: (a, b) =>
+        (a.volunteer?.name || "").localeCompare(b.volunteer?.name || ""),
     },
     {
       title: "Email",
       dataIndex: ["volunteer", "email"],
-      render: (text) => <div className="font-semibold text-gray-500 text-sm">{text || "—"}</div>,
-      sorter: (a, b) => (a.volunteer?.email || "").localeCompare(b.volunteer?.email || ""),
+      render: (text) => (
+        <div className="font-semibold text-gray-500 text-sm">{text || "—"}</div>
+      ),
+      sorter: (a, b) =>
+        (a.volunteer?.email || "").localeCompare(b.volunteer?.email || ""),
     },
     {
       title: "Trạng thái",
       dataIndex: "status",
       width: 150,
       render: (status) => {
-        const colors = { pending: "#DDB958", approved: "#00C950", rejected: "red", completed: "#2B7FFF" };
-        const labels = { pending: "Chờ duyệt", approved: "Đã duyệt", rejected: "Từ chối", completed: "Hoàn thành" };
+        const colors = {
+          pending: "#DDB958",
+          approved: "#00C950",
+          rejected: "red",
+          completed: "#2B7FFF",
+        };
+        const labels = {
+          pending: "Chờ duyệt",
+          approved: "Đã duyệt",
+          rejected: "Từ chối",
+          completed: "Hoàn thành",
+        };
         return (
-          <Tag style={{ color: colors[status] || "#999" }} className="!font-semibold !bg-transparent !border-none !text-[14px] !pl-0">
+          <Tag
+            style={{ color: colors[status] || "#999" }}
+            className="!font-semibold !bg-transparent !border-none !text-[14px] !pl-0"
+          >
             {labels[status] || status?.toUpperCase()}
           </Tag>
         );
@@ -268,7 +339,9 @@ export default function Participants() {
         };
 
         return (
-          <div className={`${option.color} px-3 py-1 rounded-md flex items-center justify-center gap-2 w-[130px] mx-auto whitespace-nowrap`}>
+          <div
+            className={`${option.color} px-3 py-1 rounded-md flex items-center justify-center gap-2 w-[130px] mx-auto whitespace-nowrap`}
+          >
             {iconMap[option.key]}
             <span className="font-semibold">{option.label}</span>
           </div>
@@ -283,20 +356,49 @@ export default function Participants() {
         <div className="flex flex-col justify-center items-center gap-2">
           {record.status === "pending" && (
             <>
-              <Button type="primary" className="!bg-green-500 w-18" size="small" onClick={() => handleUpdateStatus(record.id, "approved", record.volunteer?.name)}>
+              <Button
+                type="primary"
+                className="!bg-green-500 w-18"
+                size="small"
+                onClick={() =>
+                  handleUpdateStatus(
+                    record.id,
+                    "approved",
+                    record.volunteer?.name
+                  )
+                }
+              >
                 Duyệt
               </Button>
-              <Button size="small" className="!bg-red-500 !text-white w-18" onClick={() => handleUpdateStatus(record.id, "rejected", record.volunteer?.name)}>
+              <Button
+                size="small"
+                className="!bg-red-500 !text-white w-18"
+                onClick={() =>
+                  handleUpdateStatus(
+                    record.id,
+                    "rejected",
+                    record.volunteer?.name
+                  )
+                }
+              >
                 Từ chối
               </Button>
             </>
           )}
           {record.status === "approved" && (
-            <Button type="primary" className="!bg-blue-500" onClick={() => openRatingModal(record)}>
+            <Button
+              type="primary"
+              className="!bg-blue-500"
+              onClick={() => openRatingModal(record)}
+            >
               Đánh giá
             </Button>
           )}
-          {record.status === "completed" && <span className="text-green-600 font-medium text-xs">Đã kết thúc</span>}
+          {record.status === "completed" && (
+            <span className="text-green-600 font-medium text-xs">
+              Đã kết thúc
+            </span>
+          )}
         </div>
       ),
     },
@@ -305,8 +407,12 @@ export default function Participants() {
   return (
     <div className="p-4 bg-white rounded-lg shadow-sm">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl uppercase font-bold text-gray-800">Quản lý Tình Nguyện Viên</h2>
-        <Button icon={<ReloadOutlined />} onClick={fetchParticipants}>Tải lại</Button>
+        <h2 className="text-2xl uppercase font-bold text-gray-800">
+          Quản lý Tình Nguyện Viên
+        </h2>
+        <Button icon={<ReloadOutlined />} onClick={fetchParticipants}>
+          Tải lại
+        </Button>
       </div>
 
       <AutoComplete
@@ -323,22 +429,102 @@ export default function Participants() {
         }}
       />
 
-      <Table columns={columns} dataSource={data} rowKey="id" loading={loading} pagination={{ pageSize: 8 }} />
+      <Table
+        columns={columns}
+        dataSource={data}
+        rowKey="id"
+        loading={loading}
+        pagination={{ pageSize: 8 }}
+      />
 
-      <Modal footer={null} open={isRatingModalOpen} onCancel={() => setIsRatingModalOpen(false)} width={700} centered>
+      {/* Modal từ chối với lý do */}
+      <Modal
+        title={
+          <div className="text-xl font-bold text-red-500">Từ chối đăng ký</div>
+        }
+        open={isRejectModalOpen}
+        onCancel={() => {
+          setIsRejectModalOpen(false);
+          setSelectedRejectionReason("");
+          setSelectedForRejection(null);
+        }}
+        onOk={handleConfirmRejection}
+        okText="Xác nhận từ chối"
+        cancelText="Hủy"
+        okButtonProps={{ danger: true }}
+        centered
+      >
+        <div className="my-4">
+          <p className="mb-4">
+            Tình nguyện viên:{" "}
+            <strong className="text-lg">{selectedForRejection?.name}</strong>
+          </p>
+          <p className="mb-2 font-semibold">Vui lòng chọn lý do từ chối:</p>
+          <div className="space-y-2">
+            {[
+              "Không đủ điều kiện tham gia",
+              "Đã đủ số lượng tình nguyện viên",
+              "Không phù hợp với yêu cầu sự kiện",
+              "Lịch trình không phù hợp",
+              "Điểm uy tín không đủ",
+              "Lý do khác",
+            ].map((reason) => (
+              <div
+                key={reason}
+                className={`p-3 border rounded cursor-pointer transition-all ${
+                  selectedRejectionReason === reason
+                    ? "border-red-500 bg-red-50"
+                    : "border-gray-300 hover:border-red-300 hover:bg-gray-50"
+                }`}
+                onClick={() => setSelectedRejectionReason(reason)}
+              >
+                <div className="flex items-center">
+                  <input
+                    type="radio"
+                    checked={selectedRejectionReason === reason}
+                    onChange={() => setSelectedRejectionReason(reason)}
+                    className="mr-2"
+                  />
+                  <span>{reason}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        footer={null}
+        open={isRatingModalOpen}
+        onCancel={() => setIsRatingModalOpen(false)}
+        width={700}
+        centered
+      >
         <div className="text-center mb-8 mt-4">
-          <h3 className="text-2xl font-bold text-gray-800">Đánh giá Tình Nguyện Viên</h3>
+          <h3 className="text-2xl font-bold text-gray-800">
+            Đánh giá Tình Nguyện Viên
+          </h3>
           <p className="text-gray-500 mt-2">
             Chọn mức độ hoàn thành của: <br />
-            <span className="text-[#001529] font-bold text-3xl">{selectedParticipant?.volunteer?.name}</span>
+            <span className="text-[#001529] font-bold text-3xl">
+              {selectedParticipant?.volunteer?.name}
+            </span>
           </p>
         </div>
         <div className="grid grid-cols-2 gap-4 px-4 pb-6">
           {PERFORMANCE_OPTIONS.map((option) => (
             <div
               key={option.key}
-              onClick={() => !submittingRating && handleSubmitRating(option.key)}
-              className={`group relative cursor-pointer rounded-xl border-2 p-6 transition-all ${option.color} ${submittingRating ? "opacity-50 pointer-events-none" : "hover:-translate-y-1 hover:shadow-lg"}`}
+              onClick={() =>
+                !submittingRating && handleSubmitRating(option.key)
+              }
+              className={`group relative cursor-pointer rounded-xl border-2 p-6 transition-all ${
+                option.color
+              } ${
+                submittingRating
+                  ? "opacity-50 pointer-events-none"
+                  : "hover:-translate-y-1 hover:shadow-lg"
+              }`}
             >
               {option.icon}
               <div className="font-bold text-lg mb-1">{option.label}</div>

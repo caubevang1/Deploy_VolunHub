@@ -12,7 +12,11 @@ import { Parser } from "json2csv";
 // --- HELPERS ---
 
 const formatDateValue = (value) =>
-  value instanceof Date ? value.toISOString() : value ? new Date(value).toISOString() : "";
+  value instanceof Date
+    ? value.toISOString()
+    : value
+    ? new Date(value).toISOString()
+    : "";
 
 const sendExportResponse = (res, data, filenamePrefix, format, fields) => {
   const normalizedFormat = format === "json" ? "json" : "csv";
@@ -20,26 +24,31 @@ const sendExportResponse = (res, data, filenamePrefix, format, fields) => {
   const filename = `${filenamePrefix}-${dateStamp}.${normalizedFormat}`;
 
   if (normalizedFormat === "json") {
-    res.header("Content-Type", "application/json");
+    res.header("Content-Type", "application/json; charset=utf-8");
     res.attachment(filename);
     res.send(JSON.stringify(data, null, 2));
     return;
   }
-  const derivedFields = fields && fields.length ? fields : Object.keys(data[0] || {});
+  const derivedFields =
+    fields && fields.length ? fields : Object.keys(data[0] || {});
   const parser = new Parser({ fields: derivedFields });
   const csv = data.length ? parser.parse(data) : "";
-  res.header("Content-Type", "text/csv");
+  // Prepend UTF-8 BOM so Excel recognizes UTF-8 encoded CSV (fixes Vietnamese characters)
+  const csvWithBom = "\uFEFF" + csv;
+  res.header("Content-Type", "text/csv; charset=utf-8");
   res.attachment(filename);
-  res.send(csv);
+  res.send(csvWithBom);
 };
 
 const deleteEventFiles = (event) => {
   const defaultCover = "default-event-image.jpg";
   const filesToDelete = [event.coverImage, ...(event.galleryImages || [])];
-  filesToDelete.forEach(img => {
+  filesToDelete.forEach((img) => {
     if (img && img !== defaultCover && !img.startsWith("http")) {
       const p = path.join(process.cwd(), img);
-      try { if (fs.existsSync(p)) fs.unlinkSync(p); } catch (e) {}
+      try {
+        if (fs.existsSync(p)) fs.unlinkSync(p);
+      } catch (e) {}
     }
   });
 };
@@ -49,11 +58,16 @@ const deleteEventFiles = (event) => {
 export const getEventDetail = async (req, res) => {
   try {
     const event = await EventRepository.getEventWithStatsById(req.params.id);
-    if (!event) return res.status(404).json({ message: "Không tìm thấy sự kiện trong CSDL" });
+    if (!event)
+      return res
+        .status(404)
+        .json({ message: "Không tìm thấy sự kiện trong CSDL" });
     res.status(200).json(event);
   } catch (error) {
     console.error("LỖI CONTROLLER DETAIL:", error);
-    res.status(500).json({ message: "Lỗi server chi tiết", error: error.message });
+    res
+      .status(500)
+      .json({ message: "Lỗi server chi tiết", error: error.message });
   }
 };
 
@@ -69,7 +83,8 @@ export const getPendingEvents = async (req, res) => {
 export const approveEvent = async (req, res) => {
   try {
     const event = await EventRepository.updateStatus(req.params.id, "approved");
-    if (!event) return res.status(404).json({ message: "Không tìm thấy sự kiện" });
+    if (!event)
+      return res.status(404).json({ message: "Không tìm thấy sự kiện" });
     res.status(200).json({ message: "Duyệt sự kiện thành công", event });
   } catch (error) {
     res.status(500).json({ message: "Lỗi server", error: error.message });
@@ -80,15 +95,18 @@ export const rejectEvent = async (req, res) => {
   try {
     const { reason } = req.body;
     const event = await EventRepository.rejectEvent(req.params.id, reason);
-    if (!event) return res.status(404).json({ message: "Không tìm thấy sự kiện" });
+    if (!event)
+      return res.status(404).json({ message: "Không tìm thấy sự kiện" });
 
     if (event.createdBy) {
       sendPushNotification(
         event.createdBy,
         "Sự kiện bị từ chối",
-        `Sự kiện "${event.name}" đã bị từ chối. Lý do: ${reason || "Không có lý do cụ thể"}`,
+        `Sự kiện "${event.name}" đã bị từ chối. Lý do: ${
+          reason || "Không có lý do cụ thể"
+        }`,
         "/quanlisukien/su-kien"
-      ).catch(err => console.error("Lỗi gửi thông báo:", err));
+      ).catch((err) => console.error("Lỗi gửi thông báo:", err));
     }
     res.status(200).json({ message: "Từ chối sự kiện thành công", event });
   } catch (error) {
@@ -100,11 +118,12 @@ export const deleteEventByAdmin = async (req, res) => {
   try {
     const eventId = req.params.id;
     const event = await EventRepository.findById(eventId);
-    if (!event) return res.status(404).json({ message: "Không tìm thấy sự kiện" });
+    if (!event)
+      return res.status(404).json({ message: "Không tìm thấy sự kiện" });
 
     deleteEventFiles(event);
     await EventRepository.findByIdAndDelete(eventId);
-    
+
     await Promise.all([
       RegistrationRepository.deleteByEvent(eventId),
       PostRepository.deleteByEvent(eventId),
@@ -138,8 +157,12 @@ export const getAllUsers = async (req, res) => {
 
 export const updateUserStatus = async (req, res) => {
   try {
-    const user = await UserRepository.updateStatus(req.params.id, req.body.status);
-    if (!user) return res.status(404).json({ message: "Không tìm thấy người dùng" });
+    const user = await UserRepository.updateStatus(
+      req.params.id,
+      req.body.status
+    );
+    if (!user)
+      return res.status(404).json({ message: "Không tìm thấy người dùng" });
     res.status(200).json({ message: "Cập nhật trạng thái thành công", user });
   } catch (error) {
     res.status(500).json({ message: "Lỗi server", error: error.message });
@@ -153,11 +176,16 @@ export const updateUserRole = async (req, res) => {
     const currentAdminId = req.user.id;
 
     if (String(userId) === String(currentAdminId)) {
-      return res.status(400).json({ message: "Admin không thể tự thay đổi vai trò chính mình." });
+      return res
+        .status(400)
+        .json({ message: "Admin không thể tự thay đổi vai trò chính mình." });
     }
     const updatedUser = await UserRepository.updateRole(userId, role);
-    if (!updatedUser) return res.status(404).json({ message: "Không tìm thấy người dùng." });
-    res.status(200).json({ message: "Cập nhật vai trò thành công.", user: updatedUser });
+    if (!updatedUser)
+      return res.status(404).json({ message: "Không tìm thấy người dùng." });
+    res
+      .status(200)
+      .json({ message: "Cập nhật vai trò thành công.", user: updatedUser });
   } catch (error) {
     res.status(500).json({ message: "Lỗi server", error: error.message });
   }
@@ -179,15 +207,15 @@ export const exportEvents = async (req, res) => {
   try {
     const format = (req.query.format || "csv").toLowerCase();
     const events = await EventRepository.getAllSystemEventsWithStats();
-    const data = events.map(e => ({
-      id: String(e.id), 
-      name: e.name || "", 
+    const data = events.map((e) => ({
+      id: String(e.id),
+      name: e.name || "",
       category: e.category || "",
-      startDate: formatDateValue(e.date), 
+      startDate: formatDateValue(e.date),
       endDate: formatDateValue(e.endDate),
-      location: e.location || "", 
-      status: e.status || "", 
-      manager: e.createdBy?.name || "N/A"
+      location: e.location || "",
+      status: e.status || "",
+      manager: e.createdBy?.name || "N/A",
     }));
     sendExportResponse(res, data, "events-export", format);
   } catch (error) {
@@ -229,19 +257,25 @@ export const getTrendingEvents = async (req, res) => {
 
 export const getRecentActivity = async (req, res) => {
   try {
-    const recentlyPublished = await EventRepository.getEventsByStatus("approved");
-    
+    const recentlyPublished = await EventRepository.getEventsByStatus(
+      "approved"
+    );
+
     // Đảm bảo không lỗi nếu các Repository khác chưa có dữ liệu
     let recentPosts = [];
-    try { recentPosts = await PostRepository.findRecent(10); } catch(e) {}
-    
-    let recentComments = [];
-    try { recentComments = await CommentRepository.findRecent(10); } catch(e) {}
+    try {
+      recentPosts = await PostRepository.findRecent(10);
+    } catch (e) {}
 
-    res.status(200).json({ 
-      recentlyPublished: recentlyPublished.slice(0, 5), 
-      recentPosts, 
-      recentComments 
+    let recentComments = [];
+    try {
+      recentComments = await CommentRepository.findRecent(10);
+    } catch (e) {}
+
+    res.status(200).json({
+      recentlyPublished: recentlyPublished.slice(0, 5),
+      recentPosts,
+      recentComments,
     });
   } catch (error) {
     res.status(500).json({ message: "Lỗi server", error: error.message });
@@ -250,7 +284,9 @@ export const getRecentActivity = async (req, res) => {
 
 export const getVolunteerRanking = async (req, res) => {
   try {
-    const data = await RegistrationRepository.getVolunteerRankingWithCompletion(10);
+    const data = await RegistrationRepository.getVolunteerRankingWithCompletion(
+      10
+    );
     res.status(200).json(data);
   } catch (error) {
     res.status(500).json({ message: "Lỗi server", error: error.message });

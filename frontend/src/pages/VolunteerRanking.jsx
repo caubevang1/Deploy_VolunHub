@@ -131,7 +131,9 @@ export default function VolunteerRanking() {
       render: (count) => (
         <div className="flex items-center justify-center gap-2">
           <Award size={16} className="text-green-600" />
-          <span className="font-semibold text-green-700">{(count || 0)} sự kiện</span>
+          <span className="font-semibold text-green-700">
+            {count || 0} sự kiện
+          </span>
         </div>
       ),
     },
@@ -174,7 +176,9 @@ export default function VolunteerRanking() {
 
   // SỬA: Thay _id bằng id
   const getCurrentManagerRank = (recordId) => {
-    const index = sortedManagerData.findIndex((m) => (m.id || mid) === recordId);
+    const index = sortedManagerData.findIndex(
+      (m) => (m.id || mid) === recordId
+    );
     return index >= 0 ? index + 1 : 999;
   };
 
@@ -248,27 +252,10 @@ export default function VolunteerRanking() {
       width: 130,
       align: "center",
       render: (count) => (
-        <span className="font-semibold text-gray-700">{(count || 0)}</span>
+        <span className="font-semibold text-gray-700">{count || 0}</span>
       ),
     },
-    {
-      title: (
-        <div className="flex items-center gap-2">
-          <CheckCircle size={16} />
-          <span>Hoàn thành</span>
-        </div>
-      ),
-      dataIndex: "completedEvents",
-      key: "completedEvents",
-      width: 130,
-      align: "center",
-      render: (count) => (
-        <div className="flex items-center justify-center gap-2">
-          <Award size={16} className="text-green-600" />
-          <span className="font-semibold text-green-700">{(count || 0)}</span>
-        </div>
-      ),
-    },
+    /* 'Hoàn thành' column removed for managers */
     {
       title: (
         <div className="flex items-center gap-2">
@@ -282,7 +269,7 @@ export default function VolunteerRanking() {
       align: "center",
       render: (count) => (
         <Tag color="purple" className="font-semibold">
-          {(count || 0)} người
+          {count || 0} người
         </Tag>
       ),
     },
@@ -328,13 +315,13 @@ export default function VolunteerRanking() {
                   <div className="podium-name">{topThree[1]?.name}</div>
                   <div className="podium-points">
                     {activeTab === "volunteers"
-                      ? `${(topThree[1]?.points || 0)} điểm`
-                      : `${(topThree[1]?.score || 0)} điểm`}
+                      ? `${topThree[1]?.points || 0} điểm`
+                      : `${topThree[1]?.score || 0} điểm`}
                   </div>
                   <div className="podium-events">
                     {activeTab === "volunteers"
-                      ? `${(topThree[1]?.completedEvents || 0)} sự kiện`
-                      : `${(topThree[1]?.completedEvents || 0)} sự kiện hoàn thành`}
+                      ? `${topThree[1]?.completedEvents || 0} sự kiện`
+                      : `${topThree[1]?.completedEvents || 0} sự kiện`}
                   </div>
                 </div>
               </div>
@@ -353,13 +340,13 @@ export default function VolunteerRanking() {
                   <div className="podium-name">{topThree[0]?.name}</div>
                   <div className="podium-points">
                     {activeTab === "volunteers"
-                      ? `${(topThree[0]?.points || 0)} điểm`
-                      : `${(topThree[0]?.score || 0)} điểm`}
+                      ? `${topThree[0]?.points || 0} điểm`
+                      : `${topThree[0]?.score || 0} điểm`}
                   </div>
                   <div className="podium-events">
                     {activeTab === "volunteers"
-                      ? `${(topThree[0]?.completedEvents || 0)} sự kiện`
-                      : `${(topThree[0]?.completedEvents || 0)} sự kiện hoàn thành`}
+                      ? `${topThree[0]?.completedEvents || 0} sự kiện`
+                      : `${topThree[0]?.completedEvents || 0} sự kiện`}
                   </div>
                 </div>
               </div>
@@ -378,13 +365,13 @@ export default function VolunteerRanking() {
                   <div className="podium-name">{topThree[2]?.name}</div>
                   <div className="podium-points">
                     {activeTab === "volunteers"
-                      ? `${(topThree[2]?.points || 0)} điểm`
-                      : `${(topThree[2]?.score || 0)} điểm`}
+                      ? `${topThree[2]?.points || 0} điểm`
+                      : `${topThree[2]?.score || 0} điểm`}
                   </div>
                   <div className="podium-events">
                     {activeTab === "volunteers"
-                      ? `${(topThree[2]?.completedEvents || 0)} sự kiện`
-                      : `${(topThree[2]?.completedEvents || 0)} sự kiện hoàn thành`}
+                      ? `${topThree[2]?.completedEvents || 0} sự kiện`
+                      : `${topThree[2]?.completedEvents || 0} sự kiện`}
                   </div>
                 </div>
               </div>

@@ -31,8 +31,13 @@ const registrationSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    // Lý do từ chối đăng ký
+    rejectionReason: {
+      type: String,
+      default: null,
+    },
   },
-  { 
+  {
     timestamps: true,
     // --- CẤU HÌNH ĐỘC LẬP CSDL (PHASE 2) ---
     toJSON: {

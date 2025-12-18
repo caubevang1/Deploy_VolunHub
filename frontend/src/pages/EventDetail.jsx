@@ -26,9 +26,15 @@ import {
 import Swal from "sweetalert2";
 
 const categoryMapping = {
-  Community: "Cộng đồng", Education: "Giáo dục", Healthcare: "Sức khỏe",
-  Environment: "Môi trường", EventSupport: "Sự kiện", Technical: "Kỹ thuật",
-  Emergency: "Cứu trợ khẩn cấp", Online: "Trực tuyến", Corporate: "Doanh nghiệp",
+  Community: "Cộng đồng",
+  Education: "Giáo dục",
+  Healthcare: "Sức khỏe",
+  Environment: "Môi trường",
+  EventSupport: "Sự kiện",
+  Technical: "Kỹ thuật",
+  Emergency: "Cứu trợ khẩn cấp",
+  Online: "Trực tuyến",
+  Corporate: "Doanh nghiệp",
 };
 
 export default function EventDetail() {
@@ -38,7 +44,11 @@ export default function EventDetail() {
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [registrationStatus, setRegistrationStatus] = useState("");
-  const [stats, setStats] = useState({ likesCount: 0, sharesCount: 0, viewsCount: 0 });
+  const [stats, setStats] = useState({
+    likesCount: 0,
+    sharesCount: 0,
+    viewsCount: 0,
+  });
   const [isLiked, setIsLiked] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
 
@@ -64,10 +74,13 @@ export default function EventDetail() {
 
           const [statsRes, likeRes] = await Promise.allSettled([
             GetEventActionStats(eventId),
-            CheckEventStatus(eventId)
+            CheckEventStatus(eventId),
           ]);
 
-          if (statsRes.status === "fulfilled" && statsRes.value.status === 200) {
+          if (
+            statsRes.status === "fulfilled" &&
+            statsRes.value.status === 200
+          ) {
             setStats(statsRes.value.data);
           }
           if (likeRes.status === "fulfilled" && likeRes.value.status === 200) {
@@ -109,17 +122,29 @@ export default function EventDetail() {
 
   const handleRegister = async () => {
     if (registrationStatus) {
-      Swal.fire({ icon: "warning", title: "Thông báo", text: "Bạn không thể đăng ký lại vào lúc này." });
+      Swal.fire({
+        icon: "warning",
+        title: "Thông báo",
+        text: "Bạn không thể đăng ký lại vào lúc này.",
+      });
       return;
     }
     try {
       const res = await Registration(eventId);
       if (res.status === 201) {
         setRegistrationStatus("pending");
-        Swal.fire({ icon: "success", title: "Đăng ký thành công", text: "Đang chờ duyệt." });
+        Swal.fire({
+          icon: "success",
+          title: "Đăng ký thành công",
+          text: "Đang chờ duyệt.",
+        });
       }
     } catch (err) {
-      Swal.fire({ icon: "error", title: "Thất bại", text: err.response?.data?.message || "Lỗi server." });
+      Swal.fire({
+        icon: "error",
+        title: "Thất bại",
+        text: err.response?.data?.message || "Lỗi server.",
+      });
     }
   };
 
@@ -142,7 +167,11 @@ export default function EventDetail() {
       } catch (err) {
         // FIX LỖI ESLINT: Sử dụng err để log
         console.error("Lỗi hủy đăng ký:", err);
-        Swal.fire({ icon: "error", title: "Thất bại", text: "Không thể hủy đăng ký." });
+        Swal.fire({
+          icon: "error",
+          title: "Thất bại",
+          text: "Không thể hủy đăng ký.",
+        });
       }
     }
   };
@@ -151,7 +180,10 @@ export default function EventDetail() {
     try {
       const prevLiked = isLiked;
       setIsLiked(!prevLiked);
-      setStats(p => ({ ...p, likesCount: p.likesCount + (!prevLiked ? 1 : -1) }));
+      setStats((p) => ({
+        ...p,
+        likesCount: p.likesCount + (!prevLiked ? 1 : -1),
+      }));
       await EventActions(eventId, { type: "LIKE" });
     } catch (error) {
       // FIX LỖI ESLINT: Sử dụng error để log
@@ -163,10 +195,16 @@ export default function EventDetail() {
   const handleShare = async () => {
     try {
       const res = await EventActions(eventId, { type: "SHARE" });
-      const shareLink = res.data?.link || `${window.location.origin}/su-kien/${eventId}`;
+      const shareLink =
+        res.data?.link || `${window.location.origin}/su-kien/${eventId}`;
       await navigator.clipboard.writeText(shareLink);
-      Swal.fire({ icon: "success", title: "Đã sao chép liên kết!", timer: 1500, showConfirmButton: false });
-      setStats(p => ({ ...p, sharesCount: p.sharesCount + 1 }));
+      Swal.fire({
+        icon: "success",
+        title: "Đã sao chép liên kết!",
+        timer: 1500,
+        showConfirmButton: false,
+      });
+      setStats((p) => ({ ...p, sharesCount: p.sharesCount + 1 }));
     } catch (error) {
       console.error("Lỗi khi chia sẻ:", error);
     }
@@ -186,48 +224,122 @@ export default function EventDetail() {
     return html;
   };
 
-  if (loading) return <div className="text-center py-20 animate-pulse">Đang tải...</div>;
-  if (!event) return <div className="text-center mt-20 text-red-500">Không tìm thấy sự kiện!</div>;
+  if (loading)
+    return <div className="text-center py-20 animate-pulse">Đang tải...</div>;
+  if (!event)
+    return (
+      <div className="text-center mt-20 text-red-500">
+        Không tìm thấy sự kiện!
+      </div>
+    );
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 max-w-7xl mx-auto mt-6 px-4 mb-10">
       <div className="flex-1 bg-white shadow-lg rounded-2xl overflow-hidden text-[#111827]">
-        <h1 className="text-2xl md:text-4xl font-bold px-6 pt-8">{event.name}</h1>
+        <h1 className="text-2xl md:text-4xl font-bold px-6 pt-8">
+          {event.name}
+        </h1>
         <div className="px-6 py-6">
-          <img src={event.coverImage ? `http://localhost:5000${event.coverImage}` : "/default-event.png"} className="w-full max-h-[500px] object-cover rounded-xl" alt={event.name} />
+          <img
+            src={
+              event.coverImage
+                ? `http://localhost:5000${event.coverImage}`
+                : "/default-event.png"
+            }
+            className="w-full max-h-[500px] object-cover rounded-xl"
+            alt={event.name}
+          />
         </div>
 
         <div className="px-6 md:px-12 py-6 text-gray-700 grid grid-cols-1 sm:grid-cols-2 gap-8">
           <div className="space-y-4">
-            <div className="flex items-center gap-3"><Calendar className="text-blue-500" size={20} /> <span><strong>Ngày tổ chức:</strong> {new Date(event.date).toLocaleDateString("vi-VN")}</span></div>
-            <div className="flex items-center gap-3"><Tag className="text-orange-500" size={20} /> <span><strong>Loại:</strong> {categoryMapping[event.category] || event.category}</span></div>
-            <div className="flex items-center gap-3"><MapPin className="text-red-500" size={20} /> <span><strong>Địa điểm:</strong> {event.location}</span></div>
+            <div className="flex items-center gap-3">
+              <Calendar className="text-blue-500" size={20} />{" "}
+              <span>
+                <strong>Ngày tổ chức:</strong>{" "}
+                {new Date(event.date).toLocaleDateString("vi-VN")}
+              </span>
+            </div>
+            <div className="flex items-center gap-3">
+              <Tag className="text-orange-500" size={20} />{" "}
+              <span>
+                <strong>Loại:</strong>{" "}
+                {categoryMapping[event.category] || event.category}
+              </span>
+            </div>
+            <div className="flex items-center gap-3">
+              <MapPin className="text-red-500" size={20} />{" "}
+              <span>
+                <strong>Địa điểm:</strong> {event.location}
+              </span>
+            </div>
           </div>
           <div className="space-y-4">
-            <div className="flex items-center gap-3"><Calendar className="text-blue-500" size={20} /> <span><strong>Ngày kết thúc:</strong> {new Date(event.endDate).toLocaleDateString("vi-VN")}</span></div>
-            <div className="flex items-center gap-3"><Users className="text-green-500" size={20} /> <span><strong>Tham gia:</strong> {event.currentParticipants || 0}/{event.maxParticipants}</span></div>
-            <div className="flex items-start gap-3"><Phone className="text-purple-500 mt-1" size={20} /> <span><strong>Liên hệ:</strong> {event.createdBy?.phone || "N/A"} ({event.createdBy?.name || "Người quản lý"})</span></div>
+            <div className="flex items-center gap-3">
+              <Calendar className="text-blue-500" size={20} />{" "}
+              <span>
+                <strong>Ngày kết thúc:</strong>{" "}
+                {new Date(event.endDate).toLocaleDateString("vi-VN")}
+              </span>
+            </div>
+            <div className="flex items-center gap-3">
+              <Users className="text-green-500" size={20} />{" "}
+              <span>
+                <strong>Tham gia:</strong> {event.currentParticipants || 0}/
+                {event.maxParticipants}
+              </span>
+            </div>
+            <div className="flex items-start gap-3">
+              <Phone className="text-purple-500 mt-1" size={20} />{" "}
+              <span>
+                <strong>Liên hệ:</strong> {event.createdBy?.phone || "N/A"} (
+                {event.createdBy?.name || "Người quản lý"})
+              </span>
+            </div>
           </div>
         </div>
 
         {registrationStatus && (
           <div className="px-6 pb-6 text-center">
-             <div className={`inline-block px-6 py-2 rounded-full font-bold text-sm shadow-sm
-              ${registrationStatus === "pending" ? "bg-gray-500 text-white" : ""}
-              ${registrationStatus === "approved" ? "bg-green-50 text-green-600" : ""}
-              ${registrationStatus === "completed" ? "bg-blue-50 text-blue-600" : ""}
-              ${registrationStatus === "rejected" ? "bg-red-50 text-red-600" : ""}`}>
-                {registrationStatus === "pending" && "Đang chờ duyệt"}
-                {registrationStatus === "approved" && "Đăng ký thành công"}
-                {registrationStatus === "completed" && "Bạn đã hoàn thành sự kiện này"}
-                {registrationStatus === "rejected" && "Yêu cầu tham gia bị từ chối"}
-             </div>
+            <div
+              className={`inline-block px-6 py-2 rounded-full font-bold text-sm shadow-sm
+              ${
+                registrationStatus === "pending" ? "bg-gray-500 text-white" : ""
+              }
+              ${
+                registrationStatus === "approved"
+                  ? "bg-green-50 text-green-600"
+                  : ""
+              }
+              ${
+                registrationStatus === "completed"
+                  ? "bg-blue-50 text-blue-600"
+                  : ""
+              }
+              ${
+                registrationStatus === "rejected"
+                  ? "bg-red-50 text-red-600"
+                  : ""
+              }`}
+            >
+              {registrationStatus === "pending" && "Đang chờ duyệt"}
+              {registrationStatus === "approved" && "Đăng ký thành công"}
+              {registrationStatus === "completed" &&
+                "Bạn đã hoàn thành sự kiện này"}
+              {registrationStatus === "rejected" &&
+                "Yêu cầu tham gia bị từ chối"}
+            </div>
           </div>
         )}
 
         <div className="px-6 md:px-12 pb-12 border-t pt-8">
           <h2 className="text-2xl font-bold mb-6">Mô tả chi tiết</h2>
-          <div className="prose prose-blue max-w-none text-gray-800" dangerouslySetInnerHTML={{ __html: renderDescription(event.description, event.galleryImages) }} />
+          <div
+            className="prose prose-blue max-w-none text-gray-800"
+            dangerouslySetInnerHTML={{
+              __html: renderDescription(event.description, event.galleryImages),
+            }}
+          />
         </div>
       </div>
 
@@ -235,32 +347,54 @@ export default function EventDetail() {
         <div className="bg-white shadow-lg rounded-2xl p-6 sticky top-24 border border-gray-100">
           <h3 className="text-xl font-bold mb-6">Thao tác</h3>
           <div className="space-y-3">
-            <button onClick={() => navigate(-1)} className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-blue-500 text-blue-600 rounded-lg hover:bg-blue-50 font-medium">
+            <button
+              onClick={() => navigate(-1)}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-blue-500 text-blue-600 rounded-lg hover:bg-blue-50 font-medium"
+            >
               <ArrowLeft size={20} /> <span>Trở về</span>
             </button>
-            <button onClick={handleLike} className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-red-500 text-red-600 rounded-lg hover:bg-red-50 font-medium">
-              <Heart size={20} className={isLiked ? "fill-red-600" : ""} /> <span>Yêu thích</span>
+            <button
+              onClick={handleLike}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-red-500 text-red-600 rounded-lg hover:bg-red-50 font-medium"
+            >
+              <Heart size={20} className={isLiked ? "fill-red-600" : ""} />{" "}
+              <span>Yêu thích</span>
             </button>
-            <button onClick={handleShare} className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-green-500 text-green-600 rounded-lg hover:bg-green-50 font-medium">
+            <button
+              onClick={handleShare}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-green-500 text-green-600 rounded-lg hover:bg-green-50 font-medium"
+            >
               <Share2 size={20} /> <span>Chia sẻ</span>
             </button>
 
-            {(registrationStatus === "approved" || currentUser?.role === "ADMIN") && event.status === "approved" && (
-              <button onClick={() => navigate(`/su-kien/${eventId}/trao-doi`)} 
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-purple-500 text-purple-600 rounded-lg font-medium">
-                <MessageSquare size={20} /> <span>Kênh Trao Đổi</span>
-              </button>
-            )}
+            {(registrationStatus === "approved" ||
+              currentUser?.role === "ADMIN" ||
+              String(event.createdBy?.id || event.createdBy) ===
+                String(currentUser?.id)) &&
+              event.status === "approved" && (
+                <button
+                  onClick={() => navigate(`/su-kien/${eventId}/trao-doi`)}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-purple-500 text-purple-600 rounded-lg hover:bg-purple-50 font-medium"
+                >
+                  <MessageSquare size={20} /> <span>Kênh thảo luận</span>
+                </button>
+              )}
 
             {!registrationStatus && (
-              <button onClick={handleRegister} 
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-[#DDB958] text-[#DDB958] rounded-lg font-medium">
+              <button
+                onClick={handleRegister}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-[#DDB958] text-[#DDB958] rounded-lg font-medium"
+              >
                 <CheckCircle size={20} /> <span>Đăng ký tham gia</span>
               </button>
             )}
 
-            {(registrationStatus === "pending" || registrationStatus === "approved") && (
-              <button onClick={handleCancelRegistration} className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-gray-500 text-gray-600 rounded-lg font-medium">
+            {(registrationStatus === "pending" ||
+              registrationStatus === "approved") && (
+              <button
+                onClick={handleCancelRegistration}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-gray-500 text-gray-600 rounded-lg font-medium"
+              >
                 <X size={20} /> <span>Hủy đăng ký</span>
               </button>
             )}
@@ -268,9 +402,24 @@ export default function EventDetail() {
 
           <div className="mt-8 pt-6 border-t space-y-4">
             <h3 className="text-lg font-bold mb-2">Thống kê</h3>
-            <div className="flex items-center gap-3"><Heart size={18} className="text-red-500"/> <span><strong>Yêu thích:</strong> {stats.likesCount}</span></div>
-            <div className="flex items-center gap-3"><Share2 size={18} className="text-green-500"/> <span><strong>Chia sẻ:</strong> {stats.sharesCount}</span></div>
-            <div className="flex items-center gap-3"><Eye size={18} className="text-blue-500"/> <span><strong>Lượt xem:</strong> {stats.viewsCount}</span></div>
+            <div className="flex items-center gap-3">
+              <Heart size={18} className="text-red-500" />{" "}
+              <span>
+                <strong>Yêu thích:</strong> {stats.likesCount}
+              </span>
+            </div>
+            <div className="flex items-center gap-3">
+              <Share2 size={18} className="text-green-500" />{" "}
+              <span>
+                <strong>Chia sẻ:</strong> {stats.sharesCount}
+              </span>
+            </div>
+            <div className="flex items-center gap-3">
+              <Eye size={18} className="text-blue-500" />{" "}
+              <span>
+                <strong>Lượt xem:</strong> {stats.viewsCount}
+              </span>
+            </div>
           </div>
         </div>
       </div>

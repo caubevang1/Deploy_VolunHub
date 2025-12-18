@@ -2,7 +2,12 @@ import { useEffect, useState } from "react";
 import { Tabs } from "antd";
 import moment from "moment";
 import { EditOutlined, SaveOutlined } from "@ant-design/icons";
-import { GetUserInfo, UpdateUser } from "../services/UserService";
+import {
+  GetUserInfo,
+  UpdateUser,
+  ChangePassword,
+  ChangeEmail,
+} from "../services/UserService";
 import cats from "../assets/img/cats_b1-removebg-preview.png";
 import bear from "../assets/img/bearb1-removebg-preview.png";
 import dog from "../assets/img/dog_b1-removebg-preview.png";
@@ -148,10 +153,27 @@ const ThongTinNguoiDung = ({ user, onUserUpdated }) => {
 
       <div className="content relative max-w-[1100px] mx-auto px-6 !py-[50px] bg-white rounded-3xl shadow-lg ">
         {/* Ảnh trang trí */}
-        <img src={cats} alt="cat" className="absolute -top-[53px] left-[20px] w-[200px] drop-shadow-lg z-10" />
-        <img src={bear} alt="bear" className="absolute bottom-[180px] -right-[90px] w-[135px] drop-shadow-lg z-10" />
-        <img src={dog} alt="dog" className="absolute bottom-[-8px] right-[150px] w-[350px] drop-shadow-lg z-10" />
-        <img src={lizard} alt="lizard" className="absolute top-[56px] right-[230px] w-[80px] drop-shadow-lg z-10" style={{ transform: "scaleY(-1)" }} />
+        <img
+          src={cats}
+          alt="cat"
+          className="absolute -top-[53px] left-[20px] w-[200px] drop-shadow-lg z-10"
+        />
+        <img
+          src={bear}
+          alt="bear"
+          className="absolute bottom-[180px] -right-[90px] w-[135px] drop-shadow-lg z-10"
+        />
+        <img
+          src={dog}
+          alt="dog"
+          className="absolute bottom-[-8px] right-[150px] w-[350px] drop-shadow-lg z-10"
+        />
+        <img
+          src={lizard}
+          alt="lizard"
+          className="absolute top-[56px] right-[230px] w-[80px] drop-shadow-lg z-10"
+          style={{ transform: "scaleY(-1)" }}
+        />
 
         {/* Header */}
         <div className="absolute top-4 left-0 w-full flex justify-between items-center px-6 text-sm">
@@ -195,18 +217,19 @@ const ThongTinNguoiDung = ({ user, onUserUpdated }) => {
 
             {/* Trạng thái người dùng */}
             <div
-              className={`px-4 py-2 mr-2 rounded-full shadow font-bold text-[14px] text-white ${user?.status === "ACTIVE"
-                ? "bg-green-500"
-                : user?.status === "LOCKED"
+              className={`px-4 py-2 mr-2 rounded-full shadow font-bold text-[14px] text-white ${
+                user?.status === "ACTIVE"
+                  ? "bg-green-500"
+                  : user?.status === "LOCKED"
                   ? "bg-red-500"
                   : "bg-gray-400"
-                }`}
+              }`}
             >
               {user?.status === "ACTIVE"
                 ? "ĐANG HOẠT ĐỘNG"
                 : user?.status === "LOCKED"
-                  ? "BỊ KHÓA"
-                  : "Không rõ"}
+                ? "BỊ KHÓA"
+                : "Không rõ"}
             </div>
           </div>
         </div>
@@ -216,12 +239,13 @@ const ThongTinNguoiDung = ({ user, onUserUpdated }) => {
           <div
             className="content__avatar w-[200px] h-[200px] rounded-full bg-cover bg-center relative cursor-pointer -mt-[130px] shadow-lg"
             style={{
-              backgroundImage: `url(${avatarPreview ||
+              backgroundImage: `url(${
+                avatarPreview ||
                 (user?.avatar?.startsWith("http")
                   ? user.avatar
                   : `http://localhost:5000${user?.avatar}`) ||
                 "https://cdn-icons-png.flaticon.com/512/149/149071.png"
-                })`,
+              })`,
             }}
           >
             {editMode && (
@@ -273,29 +297,37 @@ const ThongTinNguoiDung = ({ user, onUserUpdated }) => {
 
                 return (
                   <span
-                    className={`px-3 py-1 rounded-sm text-sm font-semibold text-white relative overflow-hidden ${color === "purple" ? "bg-purple-500" :
-                      color === "red" ? "bg-red-500" :
-                        color === "orange" ? "bg-orange-500" :
-                          color === "blue" ? "bg-blue-500" :
-                            color === "cyan" ? "bg-cyan-500" :
-                              "bg-gray-500"
-                      }`}
+                    className={`px-3 py-1 rounded-sm text-sm font-semibold text-white relative overflow-hidden ${
+                      color === "purple"
+                        ? "bg-purple-500"
+                        : color === "red"
+                        ? "bg-red-500"
+                        : color === "orange"
+                        ? "bg-orange-500"
+                        : color === "blue"
+                        ? "bg-blue-500"
+                        : color === "cyan"
+                        ? "bg-cyan-500"
+                        : "bg-gray-500"
+                    }`}
                     style={{
-                      boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
+                      boxShadow: "0 4px 15px rgba(0,0,0,0.2)",
                     }}
                   >
                     <span className="relative z-10">{level}</span>
                     <span
                       className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-30"
                       style={{
-                        animation: 'shine 3s infinite linear',
-                        transform: 'translateX(-100%)',
+                        animation: "shine 3s infinite linear",
+                        transform: "translateX(-100%)",
                       }}
                     ></span>
                   </span>
                 );
               })()}
-              <h1 className="text-3xl font-semibold text-gray-800">{user?.name}</h1>
+              <h1 className="text-3xl font-semibold text-gray-800">
+                {user?.name}
+              </h1>
             </div>
           )}
         </div>
@@ -314,8 +346,18 @@ const ThongTinNguoiDung = ({ user, onUserUpdated }) => {
         {/* 2 cột thông tin */}
         <div className="flex justify-between gap-12 content__list mt-6 text-[20px] px-4 py-2">
           <ul className="flex-1 space-y-8">
-            <InfoRow label="Tên đăng nhập" name="username" editData={user} editMode={false} />
-            <InfoRow label="Email" name="email" editData={user} editMode={false} />
+            <InfoRow
+              label="Tên đăng nhập"
+              name="username"
+              editData={user}
+              editMode={false}
+            />
+            <InfoRow
+              label="Email"
+              name="email"
+              editData={user}
+              editMode={false}
+            />
             <InfoRow
               label="Giới tính"
               name="gender"
@@ -349,22 +391,41 @@ const ThongTinNguoiDung = ({ user, onUserUpdated }) => {
 };
 
 // =================== ROW COMPONENT ===================
-const InfoRow = ({ label, name, editData, handleInputChange, editMode, type = "text" }) => {
+const InfoRow = ({
+  label,
+  name,
+  editData,
+  handleInputChange,
+  editMode,
+  type = "text",
+}) => {
   const renderGender = () => {
     if (editMode) {
       return (
         <div className="flex gap-4">
           <button
             type="button"
-            onClick={() => handleInputChange({ target: { name, value: "Male" } })}
-            className={`p-2 rounded ${editData[name] === "Male" ? "bg-blue-500 text-white" : "bg-gray-200"}`}
+            onClick={() =>
+              handleInputChange({ target: { name, value: "Male" } })
+            }
+            className={`p-2 rounded ${
+              editData[name] === "Male"
+                ? "bg-blue-500 text-white"
+                : "bg-gray-200"
+            }`}
           >
             <FontAwesomeIcon icon={faMars} />
           </button>
           <button
             type="button"
-            onClick={() => handleInputChange({ target: { name, value: "Female" } })}
-            className={`p-2 rounded ${editData[name] === "Female" ? "bg-pink-500 text-white" : "bg-gray-200"}`}
+            onClick={() =>
+              handleInputChange({ target: { name, value: "Female" } })
+            }
+            className={`p-2 rounded ${
+              editData[name] === "Female"
+                ? "bg-pink-500 text-white"
+                : "bg-gray-200"
+            }`}
           >
             <FontAwesomeIcon icon={faVenus} />
           </button>
@@ -391,7 +452,9 @@ const InfoRow = ({ label, name, editData, handleInputChange, editMode, type = "t
           <input
             type="date"
             name={name}
-            value={editData[name] ? moment(editData[name]).format("YYYY-MM-DD") : ""}
+            value={
+              editData[name] ? moment(editData[name]).format("YYYY-MM-DD") : ""
+            }
             onChange={handleInputChange}
             className="border-b border-gray-400 flex-1"
           />
@@ -409,18 +472,302 @@ const InfoRow = ({ label, name, editData, handleInputChange, editMode, type = "t
     }
 
     if (type === "date" && editData[name]) {
-      return <span className="flex-1 text-gray-600 font-medium">{moment(editData[name]).format("DD/MM/YYYY")}</span>;
+      return (
+        <span className="flex-1 text-gray-600 font-medium">
+          {moment(editData[name]).format("DD/MM/YYYY")}
+        </span>
+      );
     }
 
     // Xử lý hiển thị nếu là điểm số (hoặc các trường số khác)
-    return <span className="flex-1 text-gray-600 font-medium">{editData[name]}</span>;
+    return (
+      <span className="flex-1 text-gray-600 font-medium">{editData[name]}</span>
+    );
   };
 
   return (
-    <li className={`flex items-center gap-3 pb-6 ${type !== 'gender' ? 'border-b border-gray-200' : ''}`}>
+    <li
+      className={`flex items-center gap-3 pb-6 ${
+        type !== "gender" ? "border-b border-gray-200" : ""
+      }`}
+    >
       <strong className="w-40">{label}:</strong>
       <div className="flex-1">{renderField()}</div>
     </li>
+  );
+};
+
+// =================== PASSWORD & EMAIL FORMS ===================
+const sharedInput =
+  "w-full border border-gray-300 p-3 rounded-lg focus:outline-none focus:border-[#576CBC] focus:ring-2 focus:ring-[#576CBC]/20 transition-all";
+const sharedLabel = "block text-sm font-semibold text-gray-700 mb-2";
+const sharedBtnPrimary =
+  "bg-[#DDB958] hover:bg-[#C9A847] text-white font-semibold px-6 py-3 rounded-lg transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed";
+const sharedBtnAccent =
+  "bg-[#576CBC] hover:bg-[#4A5BA8] text-white font-semibold px-6 py-3 rounded-lg transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed";
+
+const PasswordForm = ({ onSuccess }) => {
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!oldPassword || !newPassword)
+      return Swal.fire("Lỗi", "Vui lòng điền đầy đủ thông tin.", "warning");
+    if (newPassword !== confirmPassword)
+      return Swal.fire("Lỗi", "Mật khẩu mới không khớp.", "warning");
+    if (newPassword.length < 6)
+      return Swal.fire("Lỗi", "Mật khẩu phải ít nhất 6 ký tự.", "warning");
+
+    setLoading(true);
+    try {
+      const res = await ChangePassword({ oldPassword, newPassword });
+      Swal.fire(
+        "Thành công",
+        res.data?.message || "Đổi mật khẩu thành công.",
+        "success"
+      );
+      setOldPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      if (onSuccess) onSuccess();
+    } catch (err) {
+      Swal.fire(
+        "Lỗi",
+        err.response?.data?.message || "Có lỗi xảy ra.",
+        "error"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div
+      className="profile-page theme-purple min-h-screen py-[6rem]"
+      style={{
+        backgroundImage: `linear-gradient(to right, #576CBC, #7C83D3), linear-gradient(to bottom, transparent 50%, white 50%)`,
+        backgroundRepeat: "no-repeat",
+        backgroundSize: "100% 50%, 100% 100%",
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
+      {/* Animated floating circles */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div
+          className="absolute w-64 h-64 bg-white/10 rounded-full"
+          style={{
+            top: "10%",
+            left: "5%",
+            animation: "float 15s ease-in-out infinite",
+          }}
+        ></div>
+        <div
+          className="absolute w-48 h-48 bg-white/10 rounded-full"
+          style={{
+            top: "30%",
+            right: "10%",
+            animation: "float 20s ease-in-out infinite reverse",
+          }}
+        ></div>
+        <div
+          className="absolute w-32 h-32 bg-white/10 rounded-full"
+          style={{
+            bottom: "20%",
+            left: "15%",
+            animation: "float 18s ease-in-out infinite",
+          }}
+        ></div>
+      </div>
+
+      <style>{`
+        @keyframes float {
+          0%, 100% { transform: translateY(0) translateX(0); }
+          25% { transform: translateY(-20px) translateX(10px); }
+          50% { transform: translateY(-40px) translateX(-10px); }
+          75% { transform: translateY(-20px) translateX(15px); }
+        }
+      `}</style>
+
+      <div className="content relative max-w-[700px] mx-auto px-6 py-12 bg-white rounded-3xl shadow-lg">
+        <div className="mb-8">
+          <h3 className="text-3xl font-bold text-center text-gray-800 mb-2">
+            Đổi mật khẩu
+          </h3>
+          <p className="text-center text-gray-500 text-sm">
+            Bảo mật tài khoản của bạn
+          </p>
+        </div>
+        <form onSubmit={submit} className="space-y-5">
+          <div>
+            <label className={sharedLabel}>Mật khẩu hiện tại</label>
+            <input
+              type="password"
+              value={oldPassword}
+              onChange={(e) => setOldPassword(e.target.value)}
+              className={sharedInput}
+              placeholder="Nhập mật khẩu hiện tại"
+            />
+          </div>
+          <div>
+            <label className={sharedLabel}>Mật khẩu mới</label>
+            <input
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              className={sharedInput}
+              placeholder="Nhập mật khẩu mới (tối thiểu 6 ký tự)"
+            />
+          </div>
+          <div>
+            <label className={sharedLabel}>Xác nhận mật khẩu mới</label>
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className={sharedInput}
+              placeholder="Nhập lại mật khẩu mới"
+            />
+          </div>
+          <div className="pt-4">
+            <button
+              type="submit"
+              className={sharedBtnPrimary + " w-full"}
+              disabled={loading}
+            >
+              {loading ? "Đang xử lý..." : "Đổi mật khẩu"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+const EmailForm = ({ user, onUpdated }) => {
+  const [newEmail, setNewEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!newEmail || !password)
+      return Swal.fire("Lỗi", "Vui lòng điền email và mật khẩu.", "warning");
+    setLoading(true);
+    try {
+      const res = await ChangeEmail({ newEmail, password });
+      Swal.fire(
+        "Thành công",
+        res.data?.message || "Đổi email thành công.",
+        "success"
+      );
+      if (res.data?.user && onUpdated) onUpdated(res.data.user);
+      setNewEmail("");
+      setPassword("");
+    } catch (err) {
+      Swal.fire(
+        "Lỗi",
+        err.response?.data?.message || "Có lỗi xảy ra.",
+        "error"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div
+      className="profile-page theme-purple min-h-screen py-[6rem]"
+      style={{
+        backgroundImage: `linear-gradient(to right, #576CBC, #7C83D3), linear-gradient(to bottom, transparent 50%, white 50%)`,
+        backgroundRepeat: "no-repeat",
+        backgroundSize: "100% 50%, 100% 100%",
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
+      {/* Animated floating circles */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div
+          className="absolute w-64 h-64 bg-white/10 rounded-full"
+          style={{
+            top: "15%",
+            left: "8%",
+            animation: "float 18s ease-in-out infinite",
+          }}
+        ></div>
+        <div
+          className="absolute w-48 h-48 bg-white/10 rounded-full"
+          style={{
+            top: "35%",
+            right: "12%",
+            animation: "float 22s ease-in-out infinite reverse",
+          }}
+        ></div>
+        <div
+          className="absolute w-32 h-32 bg-white/10 rounded-full"
+          style={{
+            bottom: "25%",
+            left: "18%",
+            animation: "float 16s ease-in-out infinite",
+          }}
+        ></div>
+      </div>
+
+      <style>{`
+        @keyframes float {
+          0%, 100% { transform: translateY(0) translateX(0); }
+          25% { transform: translateY(-20px) translateX(10px); }
+          50% { transform: translateY(-40px) translateX(-10px); }
+          75% { transform: translateY(-20px) translateX(15px); }
+        }
+      `}</style>
+
+      <div className="content relative max-w-[700px] mx-auto px-6 py-12 bg-white rounded-3xl shadow-lg">
+        <div className="mb-8">
+          <h3 className="text-3xl font-bold text-center text-gray-800 mb-2">
+            Đổi email
+          </h3>
+          <p className="text-center text-gray-500 text-sm">
+            Cập nhật địa chỉ email của bạn
+          </p>
+        </div>
+        <form onSubmit={submit} className="space-y-5">
+          <div>
+            <label className={sharedLabel}>Email mới</label>
+            <input
+              type="email"
+              value={newEmail}
+              onChange={(e) => setNewEmail(e.target.value)}
+              className={sharedInput}
+              placeholder="Nhập email mới"
+            />
+          </div>
+          <div>
+            <label className={sharedLabel}>Mật khẩu hiện tại</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className={sharedInput}
+              placeholder="Xác thực bằng mật khẩu"
+            />
+          </div>
+          <div className="pt-4">
+            <button
+              type="submit"
+              className={sharedBtnAccent + " w-full"}
+              disabled={loading}
+            >
+              {loading ? "Đang xử lý..." : "Đổi email"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 };
 
@@ -445,10 +792,30 @@ const InforUser = () => {
   const items = [
     {
       label: (
-        <span className="text-[15px] sm:text-[20px] font-bold ml-2">Thông tin tài khoản</span>
+        <span className="text-[15px] sm:text-[20px] font-bold ml-2">
+          Thông tin tài khoản
+        </span>
       ),
       key: 1,
       children: <ThongTinNguoiDung user={user} onUserUpdated={setUser} />,
+    },
+    {
+      label: (
+        <span className="text-[15px] sm:text-[20px] font-bold ml-2">
+          Đổi mật khẩu
+        </span>
+      ),
+      key: 2,
+      children: <PasswordForm onSuccess={() => {}} />,
+    },
+    {
+      label: (
+        <span className="text-[15px] sm:text-[20px] font-bold ml-2">
+          Đổi email
+        </span>
+      ),
+      key: 3,
+      children: <EmailForm user={user} onUpdated={setUser} />,
     },
   ];
 

@@ -82,7 +82,7 @@ export default function Dashboard() {
       const approvedEvents = allEvents.filter(
         (ev) => (ev.status || "").toLowerCase() === "approved"
       );
-      
+
       // Khởi tạo stats cơ bản
       let tempStats = { totalEvents: approvedEvents.length };
 
@@ -90,38 +90,48 @@ export default function Dashboard() {
         const myRes = await GetMyEvent();
         const myRegs = Array.isArray(myRes?.data) ? myRes.data : [];
         setMyEvents(myRegs);
-        
+
         tempStats = {
           ...tempStats,
           myRegistrations: myRegs.length,
-          approvedRegistrations: myRegs.filter((r) => r.status === "approved").length,
-          pendingRegistrations: myRegs.filter((r) => r.status === "pending").length,
-          rejectedRegistrations: myRegs.filter((r) => r.status === "rejected").length,
-          completedRegistrations: myRegs.filter((r) => r.status === "completed").length,
+          approvedRegistrations: myRegs.filter((r) => r.status === "approved")
+            .length,
+          pendingRegistrations: myRegs.filter((r) => r.status === "pending")
+            .length,
+          rejectedRegistrations: myRegs.filter((r) => r.status === "rejected")
+            .length,
+          completedRegistrations: myRegs.filter((r) => r.status === "completed")
+            .length,
         };
       } catch (err) {
         console.error("Fetch my events error:", err);
       }
-      
+
       setStats((prev) => ({ ...prev, ...tempStats }));
 
       const now = Date.now();
       setNewEvents(
         approvedEvents
-          .filter((e) => (now - new Date(e.createdAt).getTime()) / 86400000 <= 7)
+          .filter(
+            (e) => (now - new Date(e.createdAt).getTime()) / 86400000 <= 7
+          )
           .slice(0, 5)
       );
 
       setTrendingEvents(
         [...approvedEvents]
-          .sort((a, b) => (b.totalRegistrations || 0) - (a.totalRegistrations || 0))
+          .sort(
+            (a, b) => (b.totalRegistrations || 0) - (a.totalRegistrations || 0)
+          )
           .slice(0, 6)
       );
 
       // Cập nhật hoạt động mới: Fix 403 bằng cách chỉ lấy post từ sự kiện của tôi
       const myApprovedEvents = myEvents
-        .filter(reg => reg.status === 'approved' || reg.status === 'completed')
-        .map(reg => reg.event)
+        .filter(
+          (reg) => reg.status === "approved" || reg.status === "completed"
+        )
+        .map((reg) => reg.event)
         .filter(Boolean); // Lọc bỏ event null/undefined
 
       const eventsWithPosts = [];
@@ -143,11 +153,14 @@ export default function Dashboard() {
             }
           } catch (err) {
             // Lỗi 403 ở đây là bình thường nếu user không phải member, nên chỉ ghi console.warn
-            console.warn(`Could not fetch posts for event ${e.id}:`, err.message);
+            console.warn(
+              `Could not fetch posts for event ${e.id}:`,
+              err.message
+            );
           }
         })
       );
-      
+
       setEventsWithActivity(
         eventsWithPosts
           .sort((a, b) => new Date(b.lastActivity) - new Date(a.lastActivity))
@@ -180,11 +193,24 @@ export default function Dashboard() {
       <span>
         {parts.map((part, i) => {
           if (part.startsWith('"') && part.endsWith('"')) {
-            return <strong key={i} className="text-blue-600 mx-0.5">{part.replace(/"/g, "")}</strong>;
+            return (
+              <strong key={i} className="text-blue-600 mx-0.5">
+                {part.replace(/"/g, "")}
+              </strong>
+            );
           }
           if (part.startsWith("(") && part.endsWith(")")) {
             const scoreText = part.replace(/[()]/g, "");
-            return <strong key={i} className={`${scoreText.includes("-") ? "text-red-500" : "text-green-500"} mx-0.5`}>{scoreText}</strong>;
+            return (
+              <strong
+                key={i}
+                className={`${
+                  scoreText.includes("-") ? "text-red-500" : "text-green-500"
+                } mx-0.5`}
+              >
+                {scoreText}
+              </strong>
+            );
           }
           return part;
         })}
@@ -198,7 +224,10 @@ export default function Dashboard() {
       title: "Tên sự kiện",
       dataIndex: "name",
       render: (text, record) => (
-        <a onClick={() => navigate(`/su-kien/${record.id}`)} className="text-blue-600 font-medium">
+        <a
+          onClick={() => navigate(`/su-kien/${record.id}`)}
+          className="text-blue-600 font-medium"
+        >
           {text}
         </a>
       ),
@@ -220,7 +249,10 @@ export default function Dashboard() {
       title: "Tên sự kiện",
       dataIndex: ["event", "name"],
       render: (text, record) => (
-        <a onClick={() => navigate(`/su-kien/${record.event?.id}`)} className="text-blue-600 font-medium">
+        <a
+          onClick={() => navigate(`/su-kien/${record.event?.id}`)}
+          className="text-blue-600 font-medium"
+        >
           {text}
         </a>
       ),
@@ -228,8 +260,17 @@ export default function Dashboard() {
     {
       title: "Trạng thái",
       dataIndex: "status",
-      render: (s) => (
-        <Tag color={statusMapping[s]?.color || "default"}>{statusMapping[s]?.text || s}</Tag>
+      render: (s, record) => (
+        <div>
+          <Tag color={statusMapping[s]?.color || "default"}>
+            {statusMapping[s]?.text || s}
+          </Tag>
+          {s === "rejected" && record.rejectionReason && (
+            <div className="text-xs text-red-500 mt-1">
+              Lý do: {record.rejectionReason}
+            </div>
+          )}
+        </div>
       ),
     },
     {
@@ -240,45 +281,93 @@ export default function Dashboard() {
   ];
 
   const trendingColumns = [
-    { title: "STT", key: "index", align: "center", width: 60, render: (_, __, index) => index + 1 },
+    {
+      title: "STT",
+      key: "index",
+      align: "center",
+      width: 60,
+      render: (_, __, index) => index + 1,
+    },
     {
       title: "Tên sự kiện",
       dataIndex: "name",
       render: (text, record) => (
-        <a onClick={() => navigate(`/su-kien/${record.id}`)} className="text-blue-600 font-semibold">{text}</a>
+        <a
+          onClick={() => navigate(`/su-kien/${record.id}`)}
+          className="text-blue-600 font-semibold"
+        >
+          {text}
+        </a>
       ),
     },
     {
       title: "Đăng ký",
       align: "center",
-      render: (_, record) => <Badge count={record.totalRegistrations || 0} showZero color="blue" />,
+      render: (_, record) => (
+        <Badge count={record.totalRegistrations || 0} showZero color="blue" />
+      ),
     },
   ];
 
   if (loading)
-    return <div className="flex justify-center items-center h-screen"><Spin size="large" tip="Đang tải dữ liệu..." /></div>;
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <Spin size="large" tip="Đang tải dữ liệu..." />
+      </div>
+    );
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       <div className="flex justify-between mb-6">
         <h2 className="text-3xl font-bold text-gray-800">Dashboard</h2>
-        <Button icon={<ReloadOutlined />} onClick={fetchDashboardData} size="large">Làm mới</Button>
+        <Button
+          icon={<ReloadOutlined />}
+          onClick={fetchDashboardData}
+          size="large"
+        >
+          Làm mới
+        </Button>
       </div>
 
       <Row gutter={[16, 16]} className="mb-6">
         {[
-          { t: "Đã Đăng Ký", v: stats.myRegistrations, c: "#52c41a", i: <StarOutlined /> },
-          { t: "Chờ Duyệt", v: stats.pendingRegistrations, c: "#faad14", i: <ClockCircleOutlined /> },
-          { t: "Đã Duyệt", v: stats.approvedRegistrations, c: "#1890ff", i: <CheckCircleOutlined /> },
-          { t: "Hoàn Thành", v: stats.completedRegistrations, c: "#722ed1", i: <TrophyOutlined /> },
+          {
+            t: "Đã Đăng Ký",
+            v: stats.myRegistrations,
+            c: "#52c41a",
+            i: <StarOutlined />,
+          },
+          {
+            t: "Chờ Duyệt",
+            v: stats.pendingRegistrations,
+            c: "#faad14",
+            i: <ClockCircleOutlined />,
+          },
+          {
+            t: "Đã Duyệt",
+            v: stats.approvedRegistrations,
+            c: "#1890ff",
+            i: <CheckCircleOutlined />,
+          },
+          {
+            t: "Hoàn Thành",
+            v: stats.completedRegistrations,
+            c: "#722ed1",
+            i: <TrophyOutlined />,
+          },
         ].map((item, idx) => (
           <Col xs={24} sm={12} lg={6} key={idx}>
-            <Card style={{ borderTop: `4px solid ${item.c}` }} className="shadow-sm">
+            <Card
+              style={{ borderTop: `4px solid ${item.c}` }}
+              className="shadow-sm"
+            >
               <Statistic
                 title={item.t}
                 value={item.v}
                 valueStyle={{ color: item.c, fontWeight: "bold" }}
-                prefix={React.cloneElement(item.i, { style: { color: item.c } })}
+                prefix={React.cloneElement(item.i, {
+                  style: { color: item.c },
+                })}
               />
             </Card>
           </Col>
@@ -298,7 +387,11 @@ export default function Dashboard() {
                 label: "Sắp diễn ra",
                 children: (
                   <Table
-                    dataSource={myEvents.filter(e => e.status === "approved" && dayjs(e.event?.date).isAfter(dayjs()))}
+                    dataSource={myEvents.filter(
+                      (e) =>
+                        e.status === "approved" &&
+                        dayjs(e.event?.date).isAfter(dayjs())
+                    )}
                     columns={myEventColumns}
                     rowKey="id"
                     pagination={false}
@@ -310,21 +403,41 @@ export default function Dashboard() {
                 key: "completed",
                 label: "Đã tham gia",
                 children: (
-                  <Table dataSource={myEvents.filter(e => e.status === "completed")} columns={myEventColumns} rowKey="id" pagination={false} size="small" />
+                  <Table
+                    dataSource={myEvents.filter(
+                      (e) => e.status === "completed"
+                    )}
+                    columns={myEventColumns}
+                    rowKey="id"
+                    pagination={false}
+                    size="small"
+                  />
                 ),
               },
               {
                 key: "rejected",
                 label: "Từ chối",
                 children: (
-                  <Table dataSource={myEvents.filter(e => e.status === "rejected")} columns={myEventColumns} rowKey="id" pagination={false} size="small" />
+                  <Table
+                    dataSource={myEvents.filter((e) => e.status === "rejected")}
+                    columns={myEventColumns}
+                    rowKey="id"
+                    pagination={false}
+                    size="small"
+                  />
                 ),
               },
               {
                 key: "pending",
                 label: "Chờ duyệt",
                 children: (
-                  <Table dataSource={myEvents.filter(e => e.status === "pending")} columns={myEventColumns} rowKey="id" pagination={false} size="small" />
+                  <Table
+                    dataSource={myEvents.filter((e) => e.status === "pending")}
+                    columns={myEventColumns}
+                    rowKey="id"
+                    pagination={false}
+                    size="small"
+                  />
                 ),
               },
             ]}
@@ -335,12 +448,26 @@ export default function Dashboard() {
       <Row gutter={[16, 16]} className="mb-6">
         <Col xs={24} lg={12}>
           <Card title="Sự Kiện Mới (7 ngày qua)" className="shadow-sm">
-            <Table dataSource={newEvents} columns={newEventColumns} rowKey="id" pagination={false} size="small" locale={{ emptyText: "Không có sự kiện mới" }} />
+            <Table
+              dataSource={newEvents}
+              columns={newEventColumns}
+              rowKey="id"
+              pagination={false}
+              size="small"
+              locale={{ emptyText: "Không có sự kiện mới" }}
+            />
           </Card>
         </Col>
         <Col xs={24} lg={12}>
           <Card title="Sự Kiện Hot Nhất" className="shadow-sm">
-            <Table dataSource={trendingEvents} columns={trendingColumns} rowKey="id" pagination={false} size="small" locale={{ emptyText: "Chưa có dữ liệu" }} />
+            <Table
+              dataSource={trendingEvents}
+              columns={trendingColumns}
+              rowKey="id"
+              pagination={false}
+              size="small"
+              locale={{ emptyText: "Chưa có dữ liệu" }}
+            />
           </Card>
         </Col>
       </Row>
@@ -352,10 +479,22 @@ export default function Dashboard() {
               size="small"
               dataSource={eventsWithActivity}
               renderItem={(e) => (
-                <List.Item onClick={() => navigate(`/su-kien/${e.id}`)} className="cursor-pointer">
+                <List.Item
+                  onClick={() => navigate(`/su-kien/${e.id}`)}
+                  className="cursor-pointer"
+                >
                   <List.Item.Meta
-                    avatar={<Avatar icon={<CommentOutlined />} style={{ backgroundColor: "#52c41a" }} />}
-                    title={<span className="text-blue-600 font-semibold">{e.name}</span>}
+                    avatar={
+                      <Avatar
+                        icon={<CommentOutlined />}
+                        style={{ backgroundColor: "#52c41a" }}
+                      />
+                    }
+                    title={
+                      <span className="text-blue-600 font-semibold">
+                        {e.name}
+                      </span>
+                    }
                     description={
                       <Space>
                         <Tag color="green">+{e.recentPosts} bài</Tag>
@@ -377,12 +516,27 @@ export default function Dashboard() {
               renderItem={(n) => (
                 <List.Item className={!n.isRead ? "bg-blue-50" : ""}>
                   <List.Item.Meta
-                    avatar={<Avatar icon={<BellOutlined />} style={{ backgroundColor: n.isRead ? "#d9d9d9" : "#1890ff" }} />}
-                    title={<span className={!n.isRead ? "font-semibold" : ""}>{n.type || "Thông báo"}</span>}
+                    avatar={
+                      <Avatar
+                        icon={<BellOutlined />}
+                        style={{
+                          backgroundColor: n.isRead ? "#d9d9d9" : "#1890ff",
+                        }}
+                      />
+                    }
+                    title={
+                      <span className={!n.isRead ? "font-semibold" : ""}>
+                        {n.type || "Thông báo"}
+                      </span>
+                    }
                     description={
                       <div>
-                        <div className="text-sm text-gray-700">{renderMessage(n.message)}</div>
-                        <span className="text-xs text-gray-500">{dayjs(n.createdAt).fromNow()}</span>
+                        <div className="text-sm text-gray-700">
+                          {renderMessage(n.message)}
+                        </div>
+                        <span className="text-xs text-gray-500">
+                          {dayjs(n.createdAt).fromNow()}
+                        </span>
                       </div>
                     }
                   />
