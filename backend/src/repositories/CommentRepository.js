@@ -8,74 +8,38 @@ class CommentRepository extends BaseRepository {
   }
 
   /**
-   * Helper chuẩn hóa dữ liệu trả về cho Controller (Xóa sạch _id và __v)
-   */
-  #mapToEntity(doc) {
-    if (!doc) return null;
-    if (Array.isArray(doc)) return doc.map(d => this.#mapToEntity(d));
-    
-    const obj = { ...doc, id: doc._id?.toString() || doc.id };
-    delete obj._id;
-    delete obj.__v;
-
-    // Xử lý đệ quy cho các trường đã populate (author, event, user, post)
-    const populateFields = ['author', 'event', 'user', 'post'];
-    populateFields.forEach(field => {
-      if (obj[field] && typeof obj[field] === 'object') {
-        obj[field].id = obj[field]._id?.toString() || obj[field].id;
-        delete obj[field]._id;
-      }
-    });
-    
-    return obj;
-  }
-
-  /**
    * Lấy bình luận kèm thông tin tác giả
    */
   async getCommentWithAuthor(commentId) {
-    const res = await this.findById(commentId, null, "author");
-    return this.#mapToEntity(res);
+    const res = await this.model.findById(commentId)
+      .populate("author", "name avatar")
+      .lean();
+    return this.transform(res);
   }
 
   /**
    * Lấy danh sách bình luận theo bài đăng
    */
   async getByPostId(postId) {
-    const res = await this.find(
-      { post: postId }, 
-      null, 
-      { sort: { createdAt: 1 } }, 
-      "author"
-    );
-    return this.#mapToEntity(res);
-  }
-
-  /**
-   * Lấy danh sách bình luận theo sự kiện
-   */
-  async getCommentsByEvent(eventId) {
-    const res = await this.find(
-      { event: eventId }, 
-      null, 
-      { sort: { createdAt: -1 } }, 
-      "author"
-    );
-    return this.#mapToEntity(res);
+    const res = await this.model.find({ post: postId })
+      .populate("author", "name avatar")
+      .sort({ createdAt: 1 })
+      .lean();
+    return this.transform(res);
   }
 
   /**
    * Kiểm tra người dùng đã like bình luận chưa
    */
   async checkUserLiked(commentId, userId) {
-    const comment = await this.findById(commentId);
+    const comment = await this.model.findById(commentId).lean();
     if (!comment || !comment.likes) return false;
-    // So sánh ID dạng string để đảm bảo tính độc lập CSDL
-    return comment.likes.some(id => String(id) === String(userId));
+    // So sánh string an toàn
+    return comment.likes.some(id => id.toString() === userId.toString());
   }
 
   /**
-   * Thêm like ($addToSet giúp tránh trùng lặp)
+   * Thêm like
    */
   async pushLike(commentId, userId) {
     return await this.model.updateOne(
@@ -98,20 +62,20 @@ class CommentRepository extends BaseRepository {
    * Tìm bình luận mới nhất (Admin Dashboard)
    */
   async findRecent(limit = 10) {
-    const res = await this.find(
-      {}, 
-      null, 
-      { sort: { createdAt: -1 }, limit }, 
-      "event user"
-    );
-    return this.#mapToEntity(res);
+    const res = await this.model.find({})
+      .populate("author", "name avatar")
+      .populate("event", "name")
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean();
+    return this.transform(res);
   }
 
   /**
    * Xóa tất cả bình luận thuộc một sự kiện
    */
   async deleteByEvent(eventId) {
-    return await this.deleteMany({ event: eventId });
+    return await this.model.deleteMany({ event: eventId });
   }
 }
 

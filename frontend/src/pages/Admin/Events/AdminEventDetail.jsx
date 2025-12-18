@@ -38,9 +38,8 @@ export default function AdminEventDetail() {
       try {
         const res = await GetEventDetail(eventId);
         if (res.status === 200) {
-          // Xử lý dữ liệu trả về (đảm bảo lấy đúng object)
-          const data = Array.isArray(res.data) ? res.data[0] : res.data;
-          setEvent(data);
+          // Repo transform trả về object sạch, không cần [0] hay xử lý phức tạp
+          setEvent(res.data);
         }
       } catch (err) {
         console.error("Lỗi lấy chi tiết sự kiện:", err);
@@ -129,7 +128,7 @@ export default function AdminEventDetail() {
           
           {event.status === "approved" && (
             <button
-              onClick={() => navigate(`/admin/su-kien/${eventId}/trao-doi`)}
+              onClick={() => navigate(`/admin/su-kien/${event.id}/trao-doi`)}
               className="flex items-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold shadow-md transition-all"
             >
               <MessageSquare size={20} />

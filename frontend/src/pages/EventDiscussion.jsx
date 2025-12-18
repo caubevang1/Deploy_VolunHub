@@ -47,13 +47,12 @@ function CommentSection({
   commentsMap,
   setCommentsMap,
   fetchPosts,
-  eventCreatedBy,
 }) {
   const [newComment, setNewComment] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const commentInputRef = useRef(null);
 
-  const postId = post._id;
+  const postId = post.id; // SỬA: Luôn dùng .id sạch từ Backend
   const comments = commentsMap[postId] || [];
 
   // Xử lý chọn emoji cho comment
@@ -65,7 +64,6 @@ function CommentSection({
 
   // Tự động fetch comments khi click vào icon
   const handleToggleComments = () => {
-    // SỬA LỖI LOGIC: Chỉ fetch khi chưa có dữ liệu trong state VÀ bài viết có commentCount > 0
     if (commentsMap[postId] === undefined && post.commentCount > 0) {
       fetchCommentsForPost(postId);
     }
@@ -96,7 +94,7 @@ function CommentSection({
     }
   };
 
-  // THÊM TÍNH NĂNG: Xử lý nhấn phím (cho phép gửi bằng Enter)
+  // Xử lý nhấn phím (cho phép gửi bằng Enter)
   const handleInputKeyDown = (event) => {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
@@ -122,7 +120,7 @@ function CommentSection({
         // Cập nhật state comments (xóa khỏi danh sách)
         setCommentsMap((prev) => ({
           ...prev,
-          [postId]: comments.filter((c) => c._id !== commentId),
+          [postId]: comments.filter((c) => c.id !== commentId), // SỬA: So sánh qua id
         }));
 
         // Cập nhật lại post list để hiển thị commentCount mới (giảm 1)
@@ -150,13 +148,13 @@ function CommentSection({
     setCommentsMap((prev) => ({
       ...prev,
       [postId]: comments.map((c) => {
-        if (c._id === commentId) {
-          const currentlyLiked = c.likes?.includes(currentUser._id);
+        if (c.id === commentId) { // SỬA: id sạch
+          const currentlyLiked = c.likes?.includes(currentUser.id); // SỬA: dùng .id
           return {
             ...c,
             likes: currentlyLiked
-              ? c.likes.filter((id) => id !== currentUser._id)
-              : [...(c.likes || []), currentUser._id],
+              ? c.likes.filter((id) => id !== currentUser.id)
+              : [...(c.likes || []), currentUser.id],
           };
         }
         return c;
@@ -167,22 +165,9 @@ function CommentSection({
       await ToggleLikeComment(commentId);
     } catch (err) {
       console.error("Lỗi like comment:", err);
-      // Rollback
-      setCommentsMap((prev) => ({
-        ...prev,
-        [postId]: comments.map((c) => {
-          if (c._id === commentId) {
-            const currentlyLiked = c.likes?.includes(currentUser._id);
-            return {
-              ...c,
-              likes: currentlyLiked
-                ? c.likes.filter((id) => id !== currentUser._id)
-                : [...(c.likes || []), currentUser._id],
-            };
-          }
-          return c;
-        }),
-      }));
+      // Tải lại dữ liệu chuẩn nếu lỗi
+      const refreshRes = await GetPostComments(postId);
+      setCommentsMap(prev => ({ ...prev, [postId]: refreshRes.data }));
     }
   };
 
@@ -232,7 +217,7 @@ function CommentSection({
             </button>
           </div>
           {showEmojiPicker && (
-            <div className="absolute top-12 right-0 z-50">
+            <div className="absolute top-12 right-0 z-50 shadow-2xl">
               <EmojiPicker onEmojiClick={handleEmojiClick} />
             </div>
           )}
@@ -243,34 +228,30 @@ function CommentSection({
       {commentsMap[postId] !== undefined && comments.length > 0 && (
         <div className="comment-list">
           {comments.map((comment) => {
-            const isLiked = comment.likes?.includes(currentUser?._id);
-            const isEventManager =
-              currentUser?.role === "EVENTMANAGER" &&
-              eventCreatedBy === currentUser?._id;
+            const isLiked = comment.likes?.includes(currentUser?.id); // SỬA: id sạch
             const canDelete =
               currentUser?.role === "ADMIN" ||
-              isEventManager ||
-              comment.author._id === currentUser?._id;
+              comment.author?.id === currentUser?.id; // SỬA: author.id sạch
 
             return (
-              <div key={comment._id} className="text-sm">
+              <div key={comment.id} className="text-sm"> {/* SỬA: Dùng id làm key */}
                 <div className="flex items-start gap-2">
                   <img
-                    src={comment.author.avatar || "/default-avatar.png"}
-                    alt={comment.author.name}
+                    src={comment.author?.avatar || "/default-avatar.png"}
+                    alt={comment.author?.name}
                     className="w-7 h-7 rounded-full object-cover mt-1"
                   />
                   <div className="flex-1">
                     <div className="comment-bubble">
                       <p className="font-semibold text-gray-800">
-                        {comment.author.name}
+                        {comment.author?.name || "Người dùng"}
                       </p>
                       <p className="text-gray-700">{comment.content}</p>
                     </div>
                     <div className="comment-meta flex items-center gap-3 text-xs">
                       <span
                         className="cursor-pointer hover:text-blue-500"
-                        onClick={() => handleToggleLike(comment._id)}
+                        onClick={() => handleToggleLike(comment.id)}
                       >
                         {isLiked ? "Bỏ thích" : "Thích"}
                       </span>
@@ -280,7 +261,7 @@ function CommentSection({
                       {canDelete && (
                         <span
                           className="delete-link cursor-pointer hover:text-red-500"
-                          onClick={() => handleDeleteComment(comment._id)}
+                          onClick={() => handleDeleteComment(comment.id)}
                         >
                           | Xóa
                         </span>
@@ -344,13 +325,10 @@ export default function EventDiscussion() {
         if (res.status === 200) {
           setEvent(res.data);
 
-          // Admin có thể truy cập tất cả discussion
-          if (currentUser?.role === "ADMIN") {
-            setCanAccess(true);
-            return;
-          }
-
-          if (res.data.status !== "approved") {
+          // Admin hoặc thành viên sự kiện đã duyệt mới có thể truy cập
+          if (currentUser?.role === "ADMIN" || res.data.status === "approved") {
+             setCanAccess(true);
+          } else {
             Swal.fire({
               icon: "warning",
               title: "Không thể truy cập",
@@ -360,11 +338,9 @@ export default function EventDiscussion() {
             navigate(-1);
             return;
           }
-          setCanAccess(true);
         }
       } catch (err) {
         console.error("Lỗi lấy thông tin sự kiện:", err);
-        // Admin không bị chặn bởi lỗi 403
         if (err.response?.status === 403 && currentUser?.role !== "ADMIN") {
           Swal.fire({
             icon: "error",
@@ -374,16 +350,15 @@ export default function EventDiscussion() {
           });
           navigate(-1);
         } else if (currentUser?.role === "ADMIN") {
-          // Admin vẫn có thể tiếp tục dù có lỗi
           setCanAccess(true);
         }
       }
       setLoading(false);
     }
-    fetchEvent();
+    if (currentUser) fetchEvent();
   }, [eventId, navigate, currentUser]);
 
-  // Giữ fetchPosts là useCallback để ổn định khi truyền xuống component con
+  // Giữ fetchPosts là useCallback để ổn định
   const fetchPosts = useCallback(async () => {
     try {
       const res = await GetEventPosts(eventId);
@@ -396,21 +371,8 @@ export default function EventDiscussion() {
   }, [eventId]);
 
   useEffect(() => {
-    if (canAccess) {
-      const loadPosts = async () => {
-        try {
-          const res = await GetEventPosts(eventId);
-          if (res.status === 200) {
-            setPosts(res.data);
-          }
-        } catch (err) {
-          console.error("Lỗi lấy bài viết:", err);
-        }
-      };
-
-      loadPosts();
-    }
-  }, [canAccess, eventId]);
+    if (canAccess) fetchPosts();
+  }, [canAccess, fetchPosts]);
 
   // Format ngày giờ
   const formatDate = (dateString) => {
@@ -456,8 +418,8 @@ export default function EventDiscussion() {
   };
 
   // Fetch Comments cho 1 Post
-  const fetchCommentsForPost = async (postId) => {
-    if (commentsMap[postId] !== undefined) return;
+  const fetchCommentsForPost = async (postId, force = false) => {
+    if (!force && commentsMap[postId] !== undefined) return;
 
     try {
       const res = await GetPostComments(postId);
@@ -515,16 +477,16 @@ export default function EventDiscussion() {
   };
 
   const handleToggleLike = async (postId) => {
-    // Optimistic Update: Cập nhật UI ngay lập tức
+    // Optimistic Update
     setPosts((prevPosts) =>
       prevPosts.map((post) => {
-        if (post._id === postId) {
-          const currentlyLiked = post.likes?.includes(currentUser._id);
+        if (post.id === postId) { // SỬA: id sạch
+          const currentlyLiked = post.likes?.includes(currentUser.id); // SỬA: dùng .id
           return {
             ...post,
             likes: currentlyLiked
-              ? post.likes.filter((id) => id !== currentUser._id) // Unlike
-              : [...(post.likes || []), currentUser._id], // Like
+              ? post.likes.filter((id) => id !== currentUser.id) // Unlike
+              : [...(post.likes || []), currentUser.id], // Like
           };
         }
         return post;
@@ -536,30 +498,7 @@ export default function EventDiscussion() {
       await ToggleLikePost(postId);
     } catch (err) {
       console.error("Lỗi like post:", err);
-
-      // Rollback nếu API thất bại
-      setPosts((prevPosts) =>
-        prevPosts.map((post) => {
-          if (post._id === postId) {
-            const currentlyLiked = post.likes?.includes(currentUser._id);
-            return {
-              ...post,
-              likes: currentlyLiked
-                ? post.likes.filter((id) => id !== currentUser._id)
-                : [...(post.likes || []), currentUser._id],
-            };
-          }
-          return post;
-        })
-      );
-
-      Swal.fire({
-        icon: "error",
-        title: "Lỗi",
-        text: "Không thể cập nhật like",
-        timer: 1500,
-        showConfirmButton: false,
-      });
+      fetchPosts(); // Rollback bằng cách tải lại
     }
   };
 
@@ -576,23 +515,21 @@ export default function EventDiscussion() {
 
     if (result.isConfirmed) {
       try {
-        const res = await DeletePost(postId);
-        if (res.status === 200) {
-          setPosts(posts.filter((post) => post._id !== postId));
-          // Xóa luôn comments của post này khỏi state
-          setCommentsMap((prev) => {
-            const newMap = { ...prev };
-            delete newMap[postId];
-            return newMap;
-          });
+        await DeletePost(postId);
+        setPosts(posts.filter((post) => post.id !== postId)); // SỬA: id sạch
+        // Xóa luôn comments của post này khỏi state
+        setCommentsMap((prev) => {
+          const newMap = { ...prev };
+          delete newMap[postId];
+          return newMap;
+        });
 
-          Swal.fire({
-            icon: "success",
-            title: "Đã xóa bài viết",
-            timer: 1500,
-            showConfirmButton: false,
-          });
-        }
+        Swal.fire({
+          icon: "success",
+          title: "Đã xóa bài viết",
+          timer: 1500,
+          showConfirmButton: false,
+        });
       } catch (err) {
         Swal.fire({
           icon: "error",
@@ -607,7 +544,7 @@ export default function EventDiscussion() {
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <div className="text-lg">Đang tải...</div>
+        <Loader className="animate-spin text-blue-600" size={32} />
       </div>
     );
   }
@@ -620,16 +557,15 @@ export default function EventDiscussion() {
       <div className="discussion-header">
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-blue-600 hover:text-blue-800 mb-4"
+          className="flex items-center gap-2 text-blue-600 hover:text-blue-800 mb-4 transition-colors"
         >
           <ArrowLeft size={20} />
           <span>Quay lại</span>
         </button>
 
-        {/* Event Info Card - Enhanced */}
-        <div className="event-info-card">
-          {/* Event Image - Full Width */}
-          <div className="event-cover-image">
+        {/* Event Info Card */}
+        <div className="event-info-card shadow-lg rounded-2xl overflow-hidden border border-gray-100">
+          <div className="event-cover-image relative h-48 sm:h-64">
             <img
               src={
                 event.coverImage
@@ -639,55 +575,38 @@ export default function EventDiscussion() {
               alt={event.name}
               className="w-full h-full object-cover"
             />
-          </div>
-
-          {/* Event Details */}
-          <div className="event-info-content">
-            <div className="flex items-start justify-between gap-3">
-              <h1 className="text-2xl font-bold text-gray-900 flex-1">
-                {event.name}
-              </h1>
-              {/* Status Badge */}
-              <div className="flex-shrink-0">
+            <div className="absolute top-4 right-4">
                 {event.status === "approved" && (
-                  <span className="status-badge status-approved">
+                  <span className="status-badge status-approved bg-green-500 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 shadow-sm">
                     <CheckCircle2 size={14} />
                     Đã duyệt
                   </span>
                 )}
-                {event.status === "pending" && (
-                  <span className="status-badge status-pending">
-                    <Clock size={14} />
-                    Chờ duyệt
-                  </span>
-                )}
-                {event.status === "completed" && (
-                  <span className="status-badge status-completed">
-                    <Award size={14} />
-                    Hoàn thành
-                  </span>
-                )}
-              </div>
+            </div>
+          </div>
+
+          <div className="event-info-content p-6 bg-white">
+            <div className="flex items-start justify-between gap-3 mb-4">
+              <h1 className="text-2xl font-bold text-gray-900 flex-1">
+                {event.name}
+              </h1>
             </div>
 
-            {/* Meta Info - Single Line */}
-            <div className="event-meta-line">
-              <div className="flex items-center gap-1.5">
-                <Calendar size={14} className="text-gray-500" />
-                <span className="text-xs text-gray-600">
-                  {formatDate(event.startDate)} - {formatDate(event.endDate)}
+            <div className="event-meta-line flex flex-wrap gap-y-2 gap-x-4 items-center">
+              <div className="flex items-center gap-1.5 bg-blue-50 px-3 py-1 rounded-lg">
+                <Calendar size={14} className="text-blue-500" />
+                <span className="text-xs text-blue-700 font-medium">
+                  {formatDate(event.date)} - {formatDate(event.endDate)}
                 </span>
               </div>
-              <span className="text-gray-300">•</span>
-              <div className="flex items-center gap-1.5">
-                <MapPin size={14} className="text-gray-500" />
-                <span className="text-xs text-gray-600">{event.location}</span>
+              <div className="flex items-center gap-1.5 bg-red-50 px-3 py-1 rounded-lg">
+                <MapPin size={14} className="text-red-500" />
+                <span className="text-xs text-red-700 font-medium">{event.location}</span>
               </div>
-              <span className="text-gray-300">•</span>
-              <div className="flex items-center gap-1.5">
-                <Users size={14} className="text-gray-500" />
-                <span className="text-xs text-gray-600">
-                  {event.requiredParticipants} người
+              <div className="flex items-center gap-1.5 bg-green-50 px-3 py-1 rounded-lg">
+                <Users size={14} className="text-green-500" />
+                <span className="text-xs text-green-700 font-medium">
+                  {event.maxParticipants} người
                 </span>
               </div>
             </div>
@@ -696,18 +615,18 @@ export default function EventDiscussion() {
       </div>
 
       {/* Composer - Post Form */}
-      <div className="composer-card">
-        <div className="composer-header">
+      <div className="composer-card bg-white mt-8 p-6 rounded-2xl shadow-md border border-gray-50">
+        <div className="composer-header flex items-center gap-3 mb-4">
           <img
             src={currentUser?.avatar || "/default-avatar.png"}
             alt={currentUser?.name}
-            className="w-10 h-10 rounded-full object-cover"
+            className="w-10 h-10 rounded-full object-cover ring-2 ring-blue-50"
           />
           <div className="flex-1">
             <p className="font-semibold text-gray-900 text-sm">
               {currentUser?.name}
             </p>
-            <p className="text-xs text-gray-500">Chia sẻ cập nhật</p>
+            <p className="text-xs text-gray-400">Chia sẻ cập nhật sự kiện</p>
           </div>
         </div>
 
@@ -719,37 +638,37 @@ export default function EventDiscussion() {
             placeholder={`${
               currentUser?.name || "Bạn"
             } ơi, viết cập nhật cho sự kiện này...`}
-            className="composer-textarea"
+            className="composer-textarea w-full p-4 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-blue-100 transition-all text-gray-700 placeholder-gray-400"
             rows="3"
             disabled={isPosting}
           />
         </div>
 
-        <div className="composer-footer">
-          <div className="composer-actions">
+        <div className="composer-footer flex items-center justify-between mt-4">
+          <div className="composer-actions flex gap-2">
             <button
-              className="composer-action-btn"
+              className="composer-action-btn flex items-center gap-1.5 px-3 py-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600"
               title="Thêm ảnh"
               disabled={isPosting}
             >
-              <ImageIcon size={20} />
-              <span>Ảnh</span>
+              <ImageIcon size={20} className="text-green-500" />
+              <span className="text-sm font-medium">Ảnh</span>
             </button>
             <button
               onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-              className="composer-action-btn"
+              className="composer-action-btn flex items-center gap-1.5 px-3 py-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600"
               title="Thêm biểu tượng cảm xúc"
               disabled={isPosting}
             >
-              <Smile size={20} />
-              <span>Cảm xúc</span>
+              <Smile size={20} className="text-yellow-500" />
+              <span className="text-sm font-medium">Cảm xúc</span>
             </button>
           </div>
 
           <button
             onClick={handleCreatePost}
             disabled={!newPost.trim() || isPosting}
-            className="composer-submit-btn"
+            className="composer-submit-btn flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-lg shadow-blue-200 transition-all disabled:opacity-50 disabled:shadow-none"
           >
             {isPosting ? (
               <>
@@ -766,50 +685,47 @@ export default function EventDiscussion() {
         </div>
 
         {showEmojiPicker && (
-          <div className="emoji-picker-wrapper">
+          <div className="emoji-picker-wrapper absolute z-50 mt-2 shadow-2xl">
             <EmojiPicker onEmojiClick={handleEmojiClick} />
           </div>
         )}
       </div>
 
       {/* Feed - Danh sách bài viết */}
-      <div className="feed-container">
+      <div className="feed-container mt-8 pb-20 space-y-6">
         {posts.length === 0 ? (
-          <div className="empty-state">
-            <MessageSquare size={48} className="text-gray-300 mb-4" />
-            <h3 className="text-lg font-semibold text-gray-700 mb-2">
+          <div className="empty-state bg-white py-16 rounded-2xl border-2 border-dashed border-gray-100 flex flex-col items-center">
+            <MessageSquare size={64} className="text-gray-200 mb-4" />
+            <h3 className="text-xl font-bold text-gray-400 mb-2">
               Chưa có bài viết nào
             </h3>
-            <p className="text-gray-500 text-sm">
-              Hãy là người đầu tiên chia sẻ cập nhật cho sự kiện này!
+            <p className="text-gray-400 text-sm">
+              Hãy là người đầu tiên chia sẻ cập nhật!
             </p>
           </div>
         ) : (
           posts.map((post) => {
-            const isLiked = post.likes?.includes(currentUser?._id);
-            const isEventManager =
-              currentUser?.role === "EVENTMANAGER" &&
-              event?.createdBy?._id === currentUser?._id;
+            const isLiked = post.likes?.includes(currentUser?.id); // SỬA: id sạch
             const canDelete =
               currentUser?.role === "ADMIN" ||
-              isEventManager ||
-              post.author._id === currentUser?._id;
+              post.author?.id === currentUser?.id; // SỬA: author.id sạch
 
             return (
-              <div key={post._id} className="post-card">
+              <div key={post.id} className="post-card bg-white p-6 rounded-2xl shadow-sm border border-gray-50 transition-all hover:shadow-md">
                 {/* Post Header */}
-                <div className="post-header">
+                <div className="post-header flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <img
-                      src={post.author.avatar || "/default-avatar.png"}
-                      alt={post.author.name}
-                      className="w-10 h-10 rounded-full object-cover"
+                      src={post.author?.avatar || "/default-avatar.png"}
+                      alt={post.author?.name}
+                      className="w-11 h-11 rounded-full object-cover border-2 border-gray-50"
                     />
                     <div className="flex-1">
-                      <p className="font-semibold text-gray-900 text-sm">
-                        {post.author.name}
+                      <p className="font-bold text-gray-900 text-base leading-none">
+                        {post.author?.name}
                       </p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                        <Clock size={12} />
                         {formatDate(post.createdAt)}
                       </p>
                     </div>
@@ -817,13 +733,13 @@ export default function EventDiscussion() {
 
                   {canDelete && (
                     <div className="relative group">
-                      <button className="p-2 hover:bg-gray-100 rounded-full transition">
-                        <MoreVertical size={18} className="text-gray-600" />
+                      <button className="p-2 hover:bg-gray-50 rounded-full transition-colors">
+                        <MoreVertical size={18} className="text-gray-400" />
                       </button>
-                      <div className="post-menu">
+                      <div className="post-menu absolute right-0 top-full hidden group-hover:block z-20 bg-white shadow-xl rounded-xl border border-gray-100 p-1 min-w-[150px]">
                         <button
-                          onClick={() => handleDeletePost(post._id)}
-                          className="post-menu-item text-red-600"
+                          onClick={() => handleDeletePost(post.id)}
+                          className="post-menu-item flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium"
                         >
                           <Trash2 size={16} />
                           <span>Xóa bài viết</span>
@@ -834,33 +750,35 @@ export default function EventDiscussion() {
                 </div>
 
                 {/* Post Content */}
-                <div className="post-content">
-                  <p className="whitespace-pre-wrap">{post.content}</p>
+                <div className="post-content mb-6">
+                  <p className="whitespace-pre-wrap text-gray-700 leading-relaxed text-[15px]">
+                    {post.content}
+                  </p>
                 </div>
 
                 {/* Post Stats */}
                 {(post.likes?.length > 0 || post.commentCount > 0) && (
-                  <div className="post-stats">
-                    <div className="flex items-center gap-2">
+                  <div className="post-stats flex items-center justify-between py-3 border-y border-gray-50 mb-3">
+                    <div className="flex items-center gap-1.5">
                       {post.likes?.length > 0 && (
                         <>
-                          <div className="reaction-icon">
+                          <div className="reaction-icon bg-red-500 p-1 rounded-full">
                             <Heart
-                              size={14}
+                              size={12}
                               className="text-white fill-white"
                             />
                           </div>
-                          <span className="text-sm text-gray-600 hover:underline cursor-pointer">
+                          <span className="text-sm text-gray-500 font-medium">
                             {post.likes?.length}
                           </span>
                         </>
                       )}
                     </div>
-                    <div className="flex items-center gap-3 text-sm text-gray-600">
+                    <div className="flex items-center gap-3 text-sm text-gray-500 font-medium">
                       {post.commentCount > 0 && (
                         <span
-                          className="hover:underline cursor-pointer"
-                          onClick={() => toggleCommentSection(post._id)}
+                          className="hover:underline cursor-pointer hover:text-blue-600"
+                          onClick={() => toggleCommentSection(post.id)}
                         >
                           {post.commentCount} bình luận
                         </span>
@@ -870,11 +788,13 @@ export default function EventDiscussion() {
                 )}
 
                 {/* Post Actions */}
-                <div className="post-actions">
+                <div className="post-actions flex items-center gap-1">
                   <button
-                    onClick={() => handleToggleLike(post._id)}
-                    className={`action-btn ${
-                      isLiked ? "action-btn-active" : ""
+                    onClick={() => handleToggleLike(post.id)}
+                    className={`action-btn flex-1 flex items-center justify-center gap-2 py-2 rounded-xl transition-all font-semibold text-sm ${
+                      isLiked 
+                        ? "bg-red-50 text-red-600" 
+                        : "text-gray-500 hover:bg-gray-50"
                     }`}
                   >
                     {isLiked ? (
@@ -882,12 +802,14 @@ export default function EventDiscussion() {
                     ) : (
                       <ThumbsUp size={18} />
                     )}
-                    <span>Thích</span>
+                    <span>{isLiked ? "Đã thích" : "Thích"}</span>
                   </button>
 
                   <button
-                    onClick={() => toggleCommentSection(post._id)}
-                    className="action-btn"
+                    onClick={() => toggleCommentSection(post.id)}
+                    className={`action-btn flex-1 flex items-center justify-center gap-2 py-2 rounded-xl transition-all font-semibold text-sm text-gray-500 hover:bg-blue-50 hover:text-blue-600 ${
+                       visibleComments[post.id] ? "bg-blue-50 text-blue-600" : ""
+                    }`}
                   >
                     <MessageSquare size={18} />
                     <span>Bình luận</span>
@@ -906,7 +828,7 @@ export default function EventDiscussion() {
                         showConfirmButton: false,
                       });
                     }}
-                    className="action-btn"
+                    className="action-btn flex-1 flex items-center justify-center gap-2 py-2 rounded-xl transition-all font-semibold text-sm text-gray-500 hover:bg-gray-50"
                   >
                     <Share2 size={18} />
                     <span>Chia sẻ</span>
@@ -914,16 +836,17 @@ export default function EventDiscussion() {
                 </div>
 
                 {/* Comment Section - Show when toggled */}
-                {visibleComments[post._id] && (
-                  <CommentSection
-                    post={post}
-                    currentUser={currentUser}
-                    fetchCommentsForPost={fetchCommentsForPost}
-                    commentsMap={commentsMap}
-                    setCommentsMap={setCommentsMap}
-                    fetchPosts={fetchPosts}
-                    eventCreatedBy={event?.createdBy?._id}
-                  />
+                {visibleComments[post.id] && (
+                  <div className="mt-4 pt-4 border-t border-gray-50">
+                    <CommentSection
+                        post={post}
+                        currentUser={currentUser}
+                        fetchCommentsForPost={fetchCommentsForPost}
+                        commentsMap={commentsMap}
+                        setCommentsMap={setCommentsMap}
+                        fetchPosts={fetchPosts}
+                    />
+                  </div>
                 )}
               </div>
             );

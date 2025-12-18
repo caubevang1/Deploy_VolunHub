@@ -1,4 +1,5 @@
 // src/repositories/PostRepository.js
+import mongoose from "mongoose";
 import BaseRepository from "./BaseRepository.js";
 import Post from "../models/post.js";
 
@@ -8,71 +9,49 @@ class PostRepository extends BaseRepository {
   }
 
   /**
-   * Helper chuẩn hóa dữ liệu trả về cho Controller
-   */
-  #mapToEntity(doc) {
-    if (!doc) return null;
-    if (Array.isArray(doc)) return doc.map(d => this.#mapToEntity(d));
-    
-    const obj = { ...doc, id: doc._id?.toString() || doc.id };
-    delete obj._id;
-    delete obj.__v;
-
-    // Xử lý đệ quy cho các trường đã populate (author, event)
-    if (obj.author && typeof obj.author === 'object') {
-      obj.author.id = obj.author._id?.toString() || obj.author.id;
-      delete obj.author._id;
-    }
-    if (obj.event && typeof obj.event === 'object') {
-      obj.event.id = obj.event._id?.toString() || obj.event.id;
-      delete obj.event._id;
-    }
-    
-    return obj;
-  }
-
-  /**
    * Lấy bài viết kèm thông tin author
    */
   async getPostWithAuthor(postId) {
-    const res = await this.findById(postId, null, "author");
-    return this.#mapToEntity(res);
+    const post = await this.model.findById(postId)
+      .populate({ path: 'author', select: 'name avatar' })
+      .lean();
+
+    return this.transform(post);
   }
 
   /**
    * Kiểm tra xem user đã like bài viết chưa
    */
   async checkUserLiked(postId, userId) {
-    const post = await this.findById(postId);
-    if (!post || !post.likes) return false;
-    // So sánh chuỗi string để đảm bảo tính độc lập
-    return post.likes.some(id => String(id) === String(userId));
+    // Luôn sử dụng _id khi làm việc trực tiếp với Model Driver
+    const count = await this.model.countDocuments({ _id: postId, likes: userId });
+    return count > 0;
   }
 
   /**
    * Lấy danh sách bài đăng của một sự kiện
    */
   async getPostsByEvent(eventId) {
-    const res = await this.find(
-      { event: eventId }, 
-      null, 
-      { sort: { createdAt: -1 } }, 
-      "author"
-    );
-    return this.#mapToEntity(res);
+    const posts = await this.model.find({ event: eventId })
+      .populate({ path: "author", select: "name avatar" })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return this.transform(posts);
   }
 
   /**
-   * Tìm các bài đăng mới nhất (Dùng cho Admin Dashboard)
+   * Tìm các bài đăng mới nhất (Admin Dashboard)
    */
   async findRecent(limit = 10) {
-    const res = await this.find(
-      {}, 
-      null, 
-      { sort: { createdAt: -1 }, limit }, 
-      "event author"
-    );
-    return this.#mapToEntity(res);
+    const posts = await this.model.find({})
+      .populate({ path: "author", select: "name avatar" })
+      .populate({ path: "event", select: "name" })
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean();
+    
+    return this.transform(posts);
   }
 
   /**

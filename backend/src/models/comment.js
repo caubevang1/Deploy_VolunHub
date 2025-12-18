@@ -1,3 +1,4 @@
+// src/models/comment.js
 import mongoose from "mongoose";
 
 const commentSchema = new mongoose.Schema(
@@ -31,13 +32,13 @@ const commentSchema = new mongoose.Schema(
   },
   { 
     timestamps: true,
-    // Cấu hình để tự động map _id -> id khi trả về dữ liệu
     toJSON: {
       virtuals: true,
       versionKey: false,
       transform: (doc, ret) => {
         ret.id = ret._id.toString();
         delete ret._id;
+        return ret;
       },
     },
     toObject: {
@@ -46,12 +47,12 @@ const commentSchema = new mongoose.Schema(
       transform: (doc, ret) => {
         ret.id = ret._id.toString();
         delete ret._id;
+        return ret;
       },
     },
   }
 );
 
-// Tạo virtual field 'id' ánh xạ từ '_id'
 commentSchema.virtual("id").get(function () {
   return this._id.toHexString();
 });

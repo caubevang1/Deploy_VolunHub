@@ -20,8 +20,6 @@ import {
 import {
   ReloadOutlined,
   DownloadOutlined,
-  CalendarOutlined,
-  CloseOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
@@ -29,8 +27,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTrash } from "@fortawesome/free-solid-svg-icons";
 
 const { RangePicker } = DatePicker;
-
-const { Search } = Input;
 
 // Bảng ánh xạ loại tình nguyện
 const categoryMapping = {
@@ -69,7 +65,6 @@ export default function AdminEvents() {
   const [searchOptions, setSearchOptions] = useState([]);
   const [searchValue, setSearchValue] = useState("");
 
-  // Fetch events
   const fetchEvents = async () => {
     setLoading(true);
     try {
@@ -167,15 +162,13 @@ export default function AdminEvents() {
     if (searchKeywordRef.current) searchKeywordRef.current(value);
   };
 
-  // khi chọn 1 suggestion: tìm bản ghi theo tên và điều hướng tới detail bằng _id
   const handleSelectEvent = (value) => {
     const found = originalData.find((e) => (e.name || "") === value);
     if (found) {
-      navigate(`/admin/su-kien/${found._id}`);
+      navigate(`/admin/su-kien/${found.id}`);
     }
   };
 
-  // use ref-based debounced fn to avoid stale deps and eslint warnings
   const searchKeywordRef = useRef(null);
   useEffect(() => {
     const fn = debounce((value) => {
@@ -205,7 +198,6 @@ export default function AdminEvents() {
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
-  // apply filter / search when filters or searchValue change
   useEffect(() => {
     if (searchKeywordRef.current) searchKeywordRef.current(searchValue);
   }, [filters, searchValue, originalData]);
@@ -252,7 +244,7 @@ export default function AdminEvents() {
         <Button
           type="link"
           className="!font-semibold ml-0 pl-0 !text-blue-600 max-w-[380px] transform transition-transform duration-200 hover:scale-105"
-          onClick={() => handleEventDetail(event._id)}
+          onClick={() => handleEventDetail(event.id)}
           style={{ whiteSpace: "normal", padding: 0 }}
         >
           <span className="line-clamp-2 text-left block leading-tight py-10">
@@ -341,7 +333,7 @@ export default function AdminEvents() {
               className="text-red-500 hover:text-red-700 text-lg"
             />
           }
-          onClick={() => handleDeleteEvent(event._id, event.name)}
+          onClick={() => handleDeleteEvent(event.id, event.name)}
         />
       ),
     },
@@ -390,17 +382,7 @@ export default function AdminEvents() {
           allowClear
           value={filters.category || undefined}
           onChange={(value) => handleFilterChange("category", value)}
-          options={[
-            { value: "Community", label: "Cộng đồng" },
-            { value: "Education", label: "Giáo dục" },
-            { value: "Healthcare", label: "Sức khỏe" },
-            { value: "Environment", label: "Môi trường" },
-            { value: "EventSupport", label: "Sự kiện" },
-            { value: "Technical", label: "Kỹ thuật" },
-            { value: "Emergency", label: "Cứu trợ khẩn cấp" },
-            { value: "Online", label: "Trực tuyến" },
-            { value: "Corporate", label: "Doanh nghiệp" },
-          ]}
+          options={Object.entries(categoryMapping).map(([k, v]) => ({ value: k, label: v }))}
         />
 
         <Select
@@ -410,19 +392,14 @@ export default function AdminEvents() {
           allowClear
           value={filters.status || undefined}
           onChange={(value) => handleFilterChange("status", value)}
-          options={[
-            { value: "approved", label: "Đã duyệt" },
-            { value: "rejected", label: "Từ chối" },
-            { value: "completed", label: "Hoàn thành" },
-            { value: "pending", label: "Chờ duyệt" },
-          ]}
+          options={Object.entries(statusMapping).map(([k, v]) => ({ value: k, label: v }))}
         />
       </div>
 
       <Table
         columns={columns}
         dataSource={data}
-        rowKey="_id"
+        rowKey="id"
         loading={loading}
         pagination={{ pageSize: 8 }}
         className="shadow-md rounded-md"
@@ -458,11 +435,7 @@ export default function AdminEvents() {
               placeholder={["Từ ngày", "Đến ngày"]}
               allowClear
             />
-            <p className="text-xs text-gray-500 mt-1">
-              Để trống để xuất toàn bộ dữ liệu
-            </p>
           </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Định dạng file
@@ -473,26 +446,9 @@ export default function AdminEvents() {
               style={{ width: "100%" }}
               size="large"
             >
-              <Select.Option value="csv">
-                <Space>
-                  <DownloadOutlined />
-                  <span>CSV (Excel)</span>
-                </Space>
-              </Select.Option>
-              <Select.Option value="json">
-                <Space>
-                  <DownloadOutlined />
-                  <span>JSON</span>
-                </Space>
-              </Select.Option>
+              <Select.Option value="csv">CSV (Excel)</Select.Option>
+              <Select.Option value="json">JSON</Select.Option>
             </Select>
-          </div>
-
-          <div className="bg-blue-50 border border-blue-200 rounded p-3 mt-4">
-            <p className="text-sm text-blue-800">
-              <strong>Lưu ý:</strong> File sẽ được tải về máy tính của bạn với
-              thông tin tất cả sự kiện trong hệ thống.
-            </p>
           </div>
         </div>
       </Modal>

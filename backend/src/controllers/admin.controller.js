@@ -49,10 +49,11 @@ const deleteEventFiles = (event) => {
 export const getEventDetail = async (req, res) => {
   try {
     const event = await EventRepository.getEventWithStatsById(req.params.id);
-    if (!event) return res.status(404).json({ message: "Không tìm thấy" });
+    if (!event) return res.status(404).json({ message: "Không tìm thấy sự kiện trong CSDL" });
     res.status(200).json(event);
   } catch (error) {
-    res.status(500).json({ message: "Lỗi server", error: error.message });
+    console.error("LỖI CONTROLLER DETAIL:", error);
+    res.status(500).json({ message: "Lỗi server chi tiết", error: error.message });
   }
 };
 
@@ -229,8 +230,14 @@ export const getTrendingEvents = async (req, res) => {
 export const getRecentActivity = async (req, res) => {
   try {
     const recentlyPublished = await EventRepository.getEventsByStatus("approved");
-    const recentPosts = await PostRepository.findRecent(10);
-    const recentComments = await CommentRepository.findRecent(10);
+    
+    // Đảm bảo không lỗi nếu các Repository khác chưa có dữ liệu
+    let recentPosts = [];
+    try { recentPosts = await PostRepository.findRecent(10); } catch(e) {}
+    
+    let recentComments = [];
+    try { recentComments = await CommentRepository.findRecent(10); } catch(e) {}
+
     res.status(200).json({ 
       recentlyPublished: recentlyPublished.slice(0, 5), 
       recentPosts, 
@@ -243,7 +250,6 @@ export const getRecentActivity = async (req, res) => {
 
 export const getVolunteerRanking = async (req, res) => {
   try {
-    // Sử dụng hàm đã có trong RegistrationRepository
     const data = await RegistrationRepository.getVolunteerRankingWithCompletion(10);
     res.status(200).json(data);
   } catch (error) {
@@ -253,7 +259,6 @@ export const getVolunteerRanking = async (req, res) => {
 
 export const getEventManagerRanking = async (req, res) => {
   try {
-    // SỬA: Thay vì gọi EventRepository, gọi trực tiếp logic đã tối ưu trong UserRepository
     const data = await UserRepository.getManagerRankingWithStats(10);
     res.status(200).json(data);
   } catch (error) {

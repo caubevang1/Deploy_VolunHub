@@ -30,6 +30,47 @@ class RegistrationRepository extends BaseRepository {
   }
 
   /**
+   * Lấy thống kê đăng ký cho một loạt sự kiện (batch)
+   */
+  async getRegistrationStatsBatch(eventIds) {
+    if (!eventIds || eventIds.length === 0) {
+      return {};
+    }
+
+    const objectEventIds = eventIds.map(id => new mongoose.Types.ObjectId(id));
+
+    const stats = await this.model.aggregate([
+      {
+        $match: {
+          event: { $in: objectEventIds },
+        },
+      },
+      {
+        $group: {
+          _id: "$event",
+          totalRegistrations: { $sum: 1 },
+          cancelRequests: {
+            $sum: {
+              $cond: ["$cancelRequest", 1, 0],
+            },
+          },
+        },
+      },
+    ]);
+
+    // Chuyển kết quả từ array sang map để dễ tra cứu
+    const statsMap = stats.reduce((acc, item) => {
+      acc[item._id.toString()] = {
+        totalRegistrations: item.totalRegistrations,
+        cancelRequests: item.cancelRequests,
+      };
+      return acc;
+    }, {});
+
+    return statsMap;
+  }
+
+  /**
    * Lấy dữ liệu Dashboard cho Tình nguyện viên (Volunteer)
    */
   async getVolunteerDashboardData(volunteerId) {

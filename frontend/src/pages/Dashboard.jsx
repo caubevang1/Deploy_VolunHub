@@ -340,7 +340,7 @@ export default function Dashboard() {
 
       <Row gutter={[16, 16]}>
         <Col xs={24} lg={12}>
-          <Card title="Hoạt Đòng Mới" className="shadow-sm">
+          <Card title="Hoạt Động Mới" className="shadow-sm">
             <List
               size="small"
               dataSource={eventsWithActivity}

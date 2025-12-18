@@ -51,7 +51,7 @@ export default function EventManagerEvents() {
         const detailedEvents = await Promise.all(
           listEvents.map(async (event) => {
             try {
-              const resDetail = await GetEventDetail(event._id);
+              const resDetail = await GetEventDetail(event.id);
               if (resDetail.status === 200) {
                 return {
                   ...event,
@@ -62,7 +62,7 @@ export default function EventManagerEvents() {
                 };
               }
             } catch (err) {
-              console.error(`Lỗi lấy chi tiết sự kiện ${event._id}:`, err);
+              console.error(`Lỗi lấy chi tiết sự kiện ${event.id}:`, err);
             }
             return {
               ...event,
@@ -156,7 +156,7 @@ export default function EventManagerEvents() {
   const handleSelectEvent = (value) => {
     const found = originalData.find((e) => (e.name || "") === value);
     if (found) {
-      navigate(`/quanlisukien/su-kien/${found._id}`);
+      navigate(`/quanlisukien/su-kien/${found.id}`);
     }
   };
 
@@ -203,7 +203,7 @@ export default function EventManagerEvents() {
         <Button
           type="link"
           className="!font-semibold !text-blue-600 hover:scale-105 transition-transform duration-150 !p-0 !h-auto text-left"
-          onClick={() => navigate(`/quanlisukien/su-kien/${event._id}`)}
+          onClick={() => navigate(`/quanlisukien/su-kien/${event.id}`)}
           style={{ whiteSpace: "normal", textAlign: "left" }}
         >
           {text}
@@ -241,7 +241,7 @@ export default function EventManagerEvents() {
           type="link"
           className="!font-semibold !text-blue-600 hover:scale-110 transition-transform duration-150"
           onClick={() =>
-            navigate(`/quanlisukien/su-kien/${event._id}/participants`)
+            navigate(`/quanlisukien/su-kien/${event.id}/participants`)
           }
         >
           {event.stats?.totalRegistrations ?? 0}
@@ -344,7 +344,7 @@ export default function EventManagerEvents() {
                 type="text"
                 icon={<MessageSquare className="!text-[#DCBA58] !text-lg" />}
                 onClick={() =>
-                  navigate(`/quanlisukien/su-kien/${event._id}/trao-doi`)
+                  navigate(`/quanlisukien/su-kien/${event.id}/trao-doi`)
                 }
                 title="Kênh trao đổi"
               />
@@ -360,7 +360,7 @@ export default function EventManagerEvents() {
                 />
               }
               onClick={() =>
-                !isDisabled && handleDeleteEvent(event._id, event.name)
+                !isDisabled && handleDeleteEvent(event.id, event.name)
               }
               title={
                 isDisabled
@@ -376,7 +376,7 @@ export default function EventManagerEvents() {
               icon={
                 <EditOutlined className="!text-blue-500 hover:!text-blue-700 !text-lg" />
               }
-              onClick={() => !isDisabled && handleEditEvent(event._id)}
+              onClick={() => !isDisabled && handleEditEvent(event.id)}
               title={
                 isDisabled
                   ? "Không thể chỉnh sửa sự kiện đã duyệt hoặc hoàn thành"
@@ -420,7 +420,7 @@ export default function EventManagerEvents() {
       <Table
         columns={columns}
         dataSource={data}
-        rowKey="_id"
+        rowKey="id"
         loading={loading}
         pagination={{ pageSize: 8 }}
         className="shadow shadow-md rounded-md"
