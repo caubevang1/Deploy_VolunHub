@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import dayjs from "dayjs";
 import {
   Table,
   Input,
@@ -13,15 +14,19 @@ import {
 } from "antd";
 import { debounce } from "lodash";
 import {
-  GetEvents,
-  DeleteEvent,
-  ExportEvents,
-} from "../../../services/AdminService";
-import { ReloadOutlined, DownloadOutlined } from "@ant-design/icons";
-import { useNavigate } from "react-router-dom";
-import Swal from "sweetalert2";
+  ReloadOutlined,
+  DownloadOutlined,
+  ArrowLeftOutlined,
+} from "@ant-design/icons";
+import { useNavigate, useLocation } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTrash } from "@fortawesome/free-solid-svg-icons";
+import {
+  GetEvents,
+  ExportEvents,
+  DeleteEvent,
+} from "../../../services/AdminService";
+import Swal from "sweetalert2";
 
 const { RangePicker } = DatePicker;
 
@@ -51,6 +56,7 @@ export default function AdminEvents() {
   const [originalData, setOriginalData] = useState([]);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const [filters, setFilters] = useState({
     category: "",
     status: "",
@@ -62,13 +68,33 @@ export default function AdminEvents() {
   const [searchOptions, setSearchOptions] = useState([]);
   const [searchValue, setSearchValue] = useState("");
 
-  const fetchEvents = async () => {
+  const fetchEvents = useCallback(async () => {
     setLoading(true);
     try {
       const res = await GetEvents();
       if (res.status === 200) {
-        setData(res.data);
-        setOriginalData(res.data);
+        let events = res.data;
+        const searchParams = new URLSearchParams(location.search);
+        const status = searchParams.get("status");
+
+        if (status) {
+          events = events.filter(event => event.status === status);
+          setFilters(prev => ({ ...prev, status }));
+        } else {
+          // Custom sort when no filter is applied
+          const statusOrder = {
+            'approved': 1,
+            'completed': 2,
+            'pending': 3,
+          };
+          events.sort((a, b) => {
+            const orderA = statusOrder[a.status] || 4;
+            const orderB = statusOrder[b.status] || 4;
+            return orderA - orderB;
+          });
+        }
+        setData(events);
+        setOriginalData(events);
       }
     } catch (err) {
       console.error("Lỗi khi lấy danh sách sự kiện:", err);
@@ -76,11 +102,11 @@ export default function AdminEvents() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [location.search]);
 
   useEffect(() => {
     fetchEvents();
-  }, []);
+  }, [fetchEvents]);
 
   const handleExportEvents = async () => {
     setExportLoading(true);
@@ -202,6 +228,10 @@ export default function AdminEvents() {
   }, [originalData, filters]);
 
   const handleFilterChange = (key, value) => {
+    // When clearing the status filter, also clear the URL parameter
+    if (key === 'status' && !value) {
+      navigate('/admin/su-kien');
+    }
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
@@ -264,11 +294,7 @@ export default function AdminEvents() {
       title: "Ngày",
       dataIndex: "date",
       sorter: (a, b) => new Date(a.date) - new Date(b.date),
-      render: (date) => {
-        if (!date) return "--";
-        const d = new Date(date);
-        return isNaN(d.getTime()) ? "--" : d.toLocaleDateString("vi-VN");
-      },
+      render: (date) => (date ? dayjs(date).format("DD/MM/YYYY") : "N/A"),
     },
     {
       title: "Địa điểm",
@@ -355,6 +381,9 @@ export default function AdminEvents() {
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-2xl uppercase font-bold">Quản lý sự kiện</h2>
         <Space>
+          <Button icon={<ArrowLeftOutlined />} onClick={() => navigate("/admin/dashboard")}>
+            Quay lại
+          </Button>
           <Button
             type="primary"
             icon={<DownloadOutlined />}

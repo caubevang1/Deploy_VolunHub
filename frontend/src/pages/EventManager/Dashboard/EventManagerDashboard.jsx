@@ -681,7 +681,7 @@ const EventsTab = ({
   navigate,
   approvalRate,
   completionRate,
-  submittedEvents,
+  //submittedEvents,
   eventColumns,
   topEventColumns,
   upcomingEventColumns,

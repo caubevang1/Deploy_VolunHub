@@ -18,12 +18,14 @@ import {
   ExportUsers,
   ExportVolunteers,
 } from "../../../services/AdminService";
+import { useNavigate } from "react-router-dom";
 import {
   ReloadOutlined,
   LockOutlined,
   UnlockOutlined,
   DownloadOutlined,
   UserOutlined,
+  ArrowLeftOutlined,
 } from "@ant-design/icons";
 import Swal from "sweetalert2";
 import dayjs from "dayjs";
@@ -47,6 +49,7 @@ export default function Users() {
   const [exportUserType, setExportUserType] = useState("all");
   const [searchOptions, setSearchOptions] = useState([]);
   const [searchValue, setSearchValue] = useState("");
+  const navigate = useNavigate();
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -344,6 +347,13 @@ export default function Users() {
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-2xl uppercase font-bold">Quản lý người dùng</h2>
         <Space>
+          <Button
+            icon={<ArrowLeftOutlined />}
+            onClick={() => navigate("/admin/dashboard")}
+            type="default"
+          >
+            Quay lại
+          </Button>
           <Button
             type="primary"
             icon={<DownloadOutlined />}
