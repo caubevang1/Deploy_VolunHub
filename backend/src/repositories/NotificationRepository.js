@@ -8,7 +8,7 @@ class NotificationRepository extends BaseRepository {
   }
 
   /**
-   * Ví dụ: Xóa tất cả thông báo cũ (Nếu cần mở rộng sau này)
+   * Ví dụ: Xóa tất cả thông báo cũ
    */
   async deleteOldNotifications(days = 30) {
     const date = new Date();

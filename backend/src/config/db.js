@@ -7,11 +7,9 @@ export const connectDB = async () => {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     });
-
-    // ✅ In ra thông tin kết nối chi tiết
-    console.log("✅ MongoDB connected");
-    console.log("📍 Host:", conn.connection.host);
-    console.log("📁 Database name:", conn.connection.name); // 👈 tên database thực tế
+    console.log(" MongoDB connected");
+    console.log(" Host:", conn.connection.host);
+    console.log(" Database name:", conn.connection.name);
   } catch (err) {
     console.error("❌ MongoDB connection error:", err.message);
     process.exit(1);

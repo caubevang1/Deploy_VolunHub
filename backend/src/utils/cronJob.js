@@ -7,10 +7,10 @@ export const startCronJobs = () => {
   // Chạy mỗi ngày vào lúc 00:00 (nửa đêm) - "0 0 * * *"
   // Hoặc mỗi 24 giờ - "0 */24 * * *"
   cron.schedule("0 0 * * *", async () => {
-    console.log("🚀 [CRON JOB] Khởi động lúc:", new Date().toISOString());
+    console.log("[CRON JOB] Khởi động lúc:", new Date().toISOString());
     try {
       const now = new Date();
-      console.log("⏳ [CRON JOB] Đang quét các sự kiện hết hạn...");
+      console.log("[CRON JOB] Đang quét các sự kiện hết hạn...");
 
       // Tìm các sự kiện đã approved và đã quá endDate qua repository
       const expiredEvents = await EventRepository.find({
@@ -18,29 +18,31 @@ export const startCronJobs = () => {
         endDate: { $lte: now },
       });
 
-      console.log(`📊 [CRON JOB] Tìm thấy ${expiredEvents.length} sự kiện quá hạn`);
+      console.log(
+        `[CRON JOB] Tìm thấy ${expiredEvents.length} sự kiện quá hạn`
+      );
 
       if (expiredEvents.length > 0) {
-        // Log ra các event sẽ được xử lý
+        // Log ra danh sách các event sẽ được xử lý
         expiredEvents.forEach((event) => {
           console.log(
-            `  - Event ID: ${event._id}, Name: ${event.name}, EndDate: ${event.endDate}`
+            ` - Event ID: ${event._id}, Name: ${event.name}, EndDate: ${event.endDate}`
           );
         });
 
-        // Duyệt qua từng sự kiện và xử lý
+        // Duyệt qua từng sự kiện và thực hiện logic xử lý
         for (const event of expiredEvents) {
-          console.log(`🔄 [CRON JOB] Đang xử lý event: ${event.name}`);
+          console.log(`[CRON JOB] Đang xử lý event: ${event.name}`);
           await processEventCompletion(event);
-          console.log(`✅ [CRON JOB] Hoàn thành xử lý event: ${event.name}`);
+          console.log(`[CRON JOB] Hoàn thành xử lý event: ${event.name}`);
         }
       } else {
-        console.log("✅ [CRON JOB] Không có sự kiện nào cần xử lý.");
+        console.log("[CRON JOB] Không có sự kiện nào cần xử lý.");
       }
     } catch (error) {
-      console.error("❌ [CRON JOB] Lỗi:", error.message);
+      console.error("[CRON JOB] Lỗi:", error.message);
     }
   });
 
-  console.log("⏰ Cron job đã được thiết lập - chạy mỗi ngày lúc 00:00");
+  console.log("Cron job đã được thiết lập - chạy mỗi ngày lúc 21:45");
 };
