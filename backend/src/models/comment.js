@@ -1,4 +1,9 @@
-// src/models/comment.js
+/**
+ * Comment Model
+ * Manages comments on posts within event discussions.
+ * Links to both the parent post and event for context tracking.
+ */
+
 import mongoose from "mongoose";
 
 const commentSchema = new mongoose.Schema(
@@ -13,24 +18,24 @@ const commentSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-    post: { 
+    post: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Post",
       required: true,
     },
-    event: { 
+    event: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Event",
       required: true,
     },
-    likes: [ 
+    likes: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
       },
     ],
   },
-  { 
+  {
     timestamps: true,
     toJSON: {
       virtuals: true,

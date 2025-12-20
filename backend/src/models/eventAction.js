@@ -1,3 +1,9 @@
+/**
+ * EventAction Model
+ * Tracks user engagement actions on events (LIKE, SHARE, VIEW).
+ * Prevents duplicate actions through unique compound index.
+ */
+
 import mongoose from "mongoose";
 
 const eventActionSchema = new mongoose.Schema(
@@ -18,9 +24,8 @@ const eventActionSchema = new mongoose.Schema(
       required: true,
     },
   },
-  { 
+  {
     timestamps: true,
-    // Cấu hình chuyển đổi dữ liệu đầu ra để đảm bảo tính độc lập CSDL
     toJSON: {
       virtuals: true,
       versionKey: false,
@@ -40,10 +45,8 @@ const eventActionSchema = new mongoose.Schema(
   }
 );
 
-// Ràng buộc duy nhất: Một người dùng chỉ có thể thực hiện 1 loại hành động 1 lần trên 1 sự kiện
 eventActionSchema.index({ user: 1, event: 1, type: 1 }, { unique: true });
 
-// Tạo virtual 'id' để thống nhất cách truy cập thuộc tính định danh
 eventActionSchema.virtual("id").get(function () {
   return this._id.toHexString();
 });

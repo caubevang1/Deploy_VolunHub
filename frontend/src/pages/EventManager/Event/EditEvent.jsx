@@ -23,7 +23,7 @@ import dayjs from "dayjs";
 const { Option } = Select;
 
 export default function EditEvent() {
-  const { slug } = useParams();
+  const { eventId } = useParams();
   const [form] = Form.useForm();
   const navigate = useNavigate();
 
@@ -122,7 +122,7 @@ export default function EditEvent() {
   useEffect(() => {
     const fetchEvent = async () => {
       try {
-        const res = await GetEventDetail(slug);
+        const res = await GetEventDetail(eventId);
         if (res.status === 200) {
           const eventData = res.data;
           setEvent(eventData);
@@ -168,7 +168,7 @@ export default function EditEvent() {
     };
 
     fetchEvent();
-  }, [slug]);
+  }, [eventId]);
 
   const handleUpdateEvent = async (values) => {
     try {

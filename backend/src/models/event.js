@@ -1,3 +1,9 @@
+/**
+ * Event Model
+ * Represents volunteer events with approval workflow and engagement metrics.
+ * Tracks likes, shares, views, and participant registrations.
+ */
+
 import mongoose from "mongoose";
 
 const eventSchema = new mongoose.Schema(
@@ -66,7 +72,6 @@ const eventSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-    // --- Cấu hình vô trùng dữ liệu ---
     toJSON: {
       virtuals: true,
       versionKey: false,
@@ -86,7 +91,6 @@ const eventSchema = new mongoose.Schema(
   }
 );
 
-// Tạo virtual field 'id' để thống nhất cách truy cập dữ liệu
 eventSchema.virtual("id").get(function () {
   return this._id.toHexString();
 });

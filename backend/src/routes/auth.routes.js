@@ -6,11 +6,13 @@ import {
   register,
   login,
   sendRegisterOtp,
+  sendResetOtp,
+  resetPassword,
   getMe,
   updateProfile,
   changePassword,
   changeEmail,
-} from "../controllers/auth.controller.js"; // ✅ Import getMe
+} from "../controllers/auth.controller.js";
 
 const router = express.Router();
 
@@ -42,16 +44,13 @@ router.post(
 
 router.post("/login", login);
 
-// ✅ Route lấy thông tin user hiện tại
 router.get("/me", verifyToken, getMe);
-
-// ✅ Route cập nhật thông tin user
 router.put("/me", verifyToken, uploadAvatar, updateProfile);
-
-// Đổi mật khẩu
 router.put("/change-password", verifyToken, changePassword);
-
-// Đổi email (yêu cầu xác thực mật khẩu hiện tại)
 router.put("/change-email", verifyToken, changeEmail);
+
+// Password reset flow
+router.post("/otp/reset/send-otp", sendResetOtp);
+router.post("/otp/reset-password", resetPassword);
 
 export default router;

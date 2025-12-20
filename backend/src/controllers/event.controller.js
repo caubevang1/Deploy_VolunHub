@@ -1,4 +1,9 @@
-// src/controllers/event.controller.js
+/**
+ * Event Controller
+ * Manages event CRUD operations, file uploads, and event lifecycle.
+ * Handles event approval workflow and completion processing.
+ */
+
 import Joi from "joi";
 import fs from "fs";
 import path from "path";
@@ -8,8 +13,9 @@ import UserRepository from "../repositories/UserRepository.js";
 import PostRepository from "../repositories/PostRepository.js";
 import CommentRepository from "../repositories/CommentRepository.js";
 
-// --- HÀM HỖ TRỢ (Helper Functions) ---
-
+/**
+ * Rollback uploaded files on event creation failure.
+ */
 const rollbackEventUploads = (req) => {
   if (!req.files) return;
   const files = [
@@ -26,10 +32,13 @@ const rollbackEventUploads = (req) => {
   });
 };
 
+/**
+ * Delete event-related files from storage.
+ */
 const deleteEventFiles = (event) => {
   const defaultCover = "default-event-image.jpg";
   const files = [event.coverImage, ...(event.galleryImages || [])];
-  
+
   files.forEach((img) => {
     if (img && img !== defaultCover && !img.startsWith("http")) {
       const p = path.join(process.cwd(), img);
@@ -42,6 +51,9 @@ const deleteEventFiles = (event) => {
   });
 };
 
+/**
+ * Joi validation schema for event data.
+ */
 const eventSchema = Joi.object({
   name: Joi.string().min(3).required(),
   description: Joi.string().min(10).required(),
@@ -52,25 +64,19 @@ const eventSchema = Joi.object({
   maxParticipants: Joi.number().integer().min(1).required(),
 });
 
-// =========================================================================
-// CÁC HÀM EXPORT CHÍNH
-// =========================================================================
-
 /**
- * Xử lý hoàn thành sự kiện: Cộng điểm và đổi trạng thái
+ * Process event completion: award points and update status.
  */
 export const processEventCompletion = async (event) => {
   try {
     if (!event || event.status === "completed") return;
 
-    // Tăng điểm cho manager
     await UserRepository.incrementPoints(event.createdBy, event.points || 10);
 
-    // Sử dụng .id sạch sẽ từ Repository mapping
     const eventId = event.id;
-    
+
     return await EventRepository.findByIdAndUpdate(
-      eventId, 
+      eventId,
       { status: "completed", endDate: new Date() }
     );
   } catch (error) {
@@ -79,7 +85,9 @@ export const processEventCompletion = async (event) => {
   }
 };
 
-// [POST] /api/events -> Tạo sự kiện
+/**
+ * Create new event with file uploads.
+ */
 export const createEvent = async (req, res) => {
   try {
     const { error, value } = eventSchema.validate(req.body);
@@ -110,7 +118,7 @@ export const createEvent = async (req, res) => {
       points: eventPoints,
       coverImage: coverImagePath,
       galleryImages: galleryPaths,
-      createdBy: req.user.id, 
+      createdBy: req.user.id,
       status: "pending",
     });
 
@@ -124,20 +132,23 @@ export const createEvent = async (req, res) => {
 };
 
 // [PUT] /api/events/:id -> Cập nhật sự kiện
+/**
+ * Update existing event.
+ * Only pending events can be updated by their creators.
+ */
 export const updateEvent = async (req, res) => {
   try {
     const eventId = req.params.id;
     const event = await EventRepository.findById(eventId);
 
     if (!event) return res.status(404).json({ message: "Không tìm thấy" });
-    
-    // So sánh chuỗi ID sạch
-    if (String(event.createdBy) !== String(req.user.id)) {
+
+    if (String(event.createdBy) !== String(req.user.id) && req.user.role !== "ADMIN") {
       return res.status(403).json({ message: "Không có quyền sửa" });
     }
-    
+
     if (event.status !== "pending") {
-      return res.status(403).json({ message: `Sự kiện đã ở trạng thái '${event.status}'` });
+      return res.status(403).json({ message: `Sự kiện đã ở trạng thái '${event.status}', không thể chỉnh sửa` });
     }
 
     const { error, value } = eventSchema.validate(req.body);
@@ -149,12 +160,22 @@ export const updateEvent = async (req, res) => {
       if (req.files.coverImage?.[0]) {
         updateData.coverImage = `/uploads/events/${req.files.coverImage[0].filename}`;
         if (event.coverImage && event.coverImage !== "default-event-image.jpg") {
-            const oldPath = path.join(process.cwd(), event.coverImage);
-            try { if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath); } catch (e) {}
+          const oldPath = path.join(process.cwd(), event.coverImage);
+          try { if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath); } catch (e) { }
         }
       }
       if (req.files.galleryImages) {
-        updateData.galleryImages = req.files.galleryImages.map(f => `/uploads/events/${f.filename}`);
+        const newGalleryImages = req.files.galleryImages.map(f => `/uploads/events/${f.filename}`);
+        updateData.galleryImages = newGalleryImages;
+
+        if (event.galleryImages && event.galleryImages.length > 0) {
+          event.galleryImages.forEach(img => {
+            if (img && !img.startsWith("http")) {
+              const oldPath = path.join(process.cwd(), img);
+              try { if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath); } catch (e) { }
+            }
+          });
+        }
       }
     }
 
@@ -200,9 +221,11 @@ export const completeEvent = async (req, res) => {
     const eventId = req.params.id;
     const event = await EventRepository.findById(eventId);
     if (!event) return res.status(404).json({ message: "Không tìm thấy" });
-    
-    if (String(event.createdBy) !== String(req.user.id)) return res.status(403).json({ message: "Không có quyền" });
-    
+
+    if (String(event.createdBy) !== String(req.user.id) && req.user.role !== "ADMIN") {
+      return res.status(403).json({ message: "Không có quyền" });
+    }
+
     if (event.status !== "approved") return res.status(400).json({ message: "Sự kiện chưa duyệt" });
     if (event.status === "completed") return res.status(400).json({ message: "Đã hoàn thành trước đó" });
 

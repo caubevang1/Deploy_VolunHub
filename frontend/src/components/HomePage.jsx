@@ -13,32 +13,21 @@ export default function HomePage() {
     const navigate = useNavigate();
     const isLoggedIn = useSelector((state) => state.user.isLoggedIn);
 
-    // ✅ OPTIMIZED: Check if video already shown in session
-    const [showContent, setShowContent] = useState(
-        () => sessionStorage.getItem('videoShown') === 'true'
-    );
+    const [showContent, setShowContent] = useState(false);
 
     useEffect(() => {
-        // Skip video if already shown
-        if (sessionStorage.getItem('videoShown') === 'true') {
-            setShowContent(true);
-            return;
-        }
-
         const video = document.getElementById("intro-video");
         if (video) {
             video.play().catch(() => setShowContent(true)); // Fallback if autoplay blocked
             video.addEventListener("ended", () => {
-                sessionStorage.setItem('videoShown', 'true');
                 setShowContent(true);
             });
         }
 
-        // Shorter fallback for better UX
+        // Fallback timer
         const fallback = setTimeout(() => {
-            sessionStorage.setItem('videoShown', 'true');
             setShowContent(true);
-        }, 8000); // 8s instead of 10s
+        }, 8000);
 
         return () => clearTimeout(fallback);
     }, []);

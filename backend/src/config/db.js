@@ -1,4 +1,8 @@
-// src/config/db.js
+/**
+ * Database Configuration
+ * Handles MongoDB connection with proper error handling and logging.
+ */
+
 import mongoose from "mongoose";
 
 export const connectDB = async () => {
@@ -8,10 +12,9 @@ export const connectDB = async () => {
       useUnifiedTopology: true,
     });
 
-    // ✅ In ra thông tin kết nối chi tiết
     console.log("✅ MongoDB connected");
     console.log("📍 Host:", conn.connection.host);
-    console.log("📁 Database name:", conn.connection.name); // 👈 tên database thực tế
+    console.log("📁 Database name:", conn.connection.name);
   } catch (err) {
     console.error("❌ MongoDB connection error:", err.message);
     process.exit(1);

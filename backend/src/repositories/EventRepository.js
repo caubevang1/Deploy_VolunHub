@@ -1,4 +1,9 @@
-// src/repositories/EventRepository.js
+/**
+ * EventRepository
+ * Manages event data access with complex aggregations and statistics.
+ * Provides filtering, status tracking, and participant counting.
+ */
+
 import mongoose from "mongoose";
 import BaseRepository from "./BaseRepository.js";
 import Event from "../models/event.js";
@@ -9,7 +14,8 @@ class EventRepository extends BaseRepository {
   }
 
   /**
-   * Helper nội bộ: Chuyển đổi các định dạng filter sang MongoDB chuẩn
+   * Prepare filter object for MongoDB queries.
+   * Converts id to ObjectId and handles date range filtering.
    */
   #prepareFilter(filter) {
     const mongoFilter = {};
@@ -53,7 +59,8 @@ class EventRepository extends BaseRepository {
   }
 
   /**
-   * Lấy chi tiết 1 sự kiện kèm thống kê (Dùng cho Admin Detail)
+   * Get event details with registration statistics for admin view.
+   * Includes approved, pending, rejected counts and creator info.
    */
   async getEventWithStatsById(eventId) {
     try {
@@ -143,7 +150,8 @@ class EventRepository extends BaseRepository {
   }
 
   /**
-   * Lấy danh sách sự kiện theo trạng thái (Dùng cho Admin Pending List)
+   * Get events filtered by status for admin approval workflow.
+   * Returns events with creator information sorted by creation date.
    */
   async getEventsByStatus(status) {
     const results = await this.model.aggregate([

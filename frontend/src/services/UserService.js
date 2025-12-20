@@ -9,8 +9,8 @@ export const DangKy = (formData) => {
 export const OTPDangKy = (email) =>
   http.post(`/auth/register/send-otp`, { email });
 export const OTPResetPassword = (email) =>
-  http.post(`/otp/reset/send-otp`, { email });
-export const ResetPassword = (data) => http.post(`/otp/reset/verify`, data);
+  http.post(`/auth/otp/reset/send-otp`, { email });
+export const ResetPassword = (data) => http.post(`/auth/otp/reset-password`, data);
 
 //UserInfo
 export const GetUserInfo = () => http.get(`/auth/me`);

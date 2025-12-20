@@ -1,3 +1,9 @@
+/**
+ * Header Component
+ * Main navigation bar with authentication UI and role-based menu.
+ * Implements auto-hide on scroll, mobile responsive menu, and notification bell.
+ */
+
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
@@ -37,6 +43,9 @@ export default function Header() {
     (state) => state.user.showForgetPassword
   );
 
+  /**
+   * Handle user logout with confirmation dialog.
+   */
   const handleLogout = () => {
     Swal.fire({
       title: "Bạn có muốn đăng xuất không ?",
@@ -95,7 +104,33 @@ export default function Header() {
   const [lastScrollY, setLastScrollY] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // ✅ OPTIMIZED: Throttle scroll event
+  /**
+   * Fetch and update user info on mount if user is logged in.
+   */
+  useEffect(() => {
+    const fetchUserInfo = async () => {
+      if (user && user.id) {
+        try {
+          const res = await GetUserInfo();
+          if (res.status === 200 && res.data) {
+            const updatedUser = { ...user, ...res.data };
+            dispatch(setUser(updatedUser));
+
+            // Update localStorage to persist avatar
+            const storedUser = JSON.parse(localStorage.getItem(LOCALSTORAGE_USER) || '{}');
+            localStorage.setItem(LOCALSTORAGE_USER, JSON.stringify({ ...storedUser, ...updatedUser }));
+          }
+        } catch (error) {
+          console.error("Failed to fetch user info:", error);
+        }
+      }
+    };
+    fetchUserInfo();
+  }, [dispatch]);
+
+  /**
+   * Throttled scroll handler for header auto-hide.
+   */
   useEffect(() => {
     let ticking = false;
     const handleScroll = () => {
@@ -112,9 +147,6 @@ export default function Header() {
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, [lastScrollY]);
-
-  // ✅ OPTIMIZED: User info already in Redux, no need to fetch here
-  // GetUserInfo should be called once in App.js or login flow
 
   return (
     <header
@@ -172,15 +204,17 @@ export default function Header() {
                           ? user.avatar.startsWith("http")
                             ? user.avatar
                             : `http://localhost:5000${user.avatar}`
-                          : "http://localhost:5000/uploads/avatars/avatar-1764958251284-210153801.png"
+                          : "https://ui-avatars.com/api/?name=" +
+                          encodeURIComponent(user?.username || user?.name || "User") +
+                          "&background=DCBA58&color=fff&size=128"
                       }
                       alt="User Avatar"
-                      className="w-12 h-12 md:w-16 md:h-16 rounded-full object-cover"
+                      className="w-12 h-12 md:w-16 md:h-16 rounded-full object-cover border-2 border-[#DCBA58]"
                       onError={(e) => {
                         e.currentTarget.onerror = null;
-                        e.currentTarget.src =
-                          "http://localhost:5000/uploads/avatars/avatar-1764958251284-210153801.png";
-                        ("https://tse4.mm.bing.net/th/id/OIP.sDwEr1D6McBY9MeE3a_NpAHaHa?cb=12&rs=1&pid=ImgDetMain&o=7&rm=3");
+                        e.currentTarget.src = "https://ui-avatars.com/api/?name=" +
+                          encodeURIComponent(user?.username || user?.name || "User") +
+                          "&background=DCBA58&color=fff&size=128";
                       }}
                     />
                     <span

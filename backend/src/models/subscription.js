@@ -1,4 +1,9 @@
-// src/models/subscription.js
+/**
+ * Subscription Model
+ * Manages push notification subscriptions for web push functionality.
+ * Stores endpoint and encryption keys for service worker notifications.
+ */
+
 import mongoose from "mongoose";
 
 const subscriptionSchema = new mongoose.Schema(
@@ -17,9 +22,8 @@ const subscriptionSchema = new mongoose.Schema(
       auth: { type: String, required: true },
     },
   },
-  { 
+  {
     timestamps: true,
-    // --- CẤU HÌNH ĐỘC LẬP CSDL (PHASE 2) ---
     toJSON: {
       virtuals: true,
       versionKey: false,
@@ -39,10 +43,8 @@ const subscriptionSchema = new mongoose.Schema(
   }
 );
 
-// Index để tìm kiếm nhanh theo user
 subscriptionSchema.index({ user: 1 });
 
-// Tạo virtual field 'id' ánh xạ từ '_id'
 subscriptionSchema.virtual("id").get(function () {
   return this._id.toHexString();
 });

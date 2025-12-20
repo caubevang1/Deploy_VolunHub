@@ -1,3 +1,9 @@
+/**
+ * Post Model
+ * Manages discussion posts within event contexts.
+ * Supports likes and comment tracking for community engagement.
+ */
+
 import mongoose from "mongoose";
 
 const postSchema = new mongoose.Schema(
@@ -28,9 +34,8 @@ const postSchema = new mongoose.Schema(
       default: 0,
     },
   },
-  { 
+  {
     timestamps: true,
-    // Cấu hình chốt chặn cuối cùng để dữ liệu luôn trả về 'id' thay vì '_id'
     toJSON: {
       virtuals: true,
       versionKey: false,
@@ -50,7 +55,6 @@ const postSchema = new mongoose.Schema(
   }
 );
 
-// Tạo virtual field 'id' ánh xạ từ '_id' để đồng bộ với logic "Data Independence"
 postSchema.virtual("id").get(function () {
   return this._id.toHexString();
 });

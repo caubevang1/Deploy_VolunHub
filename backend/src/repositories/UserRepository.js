@@ -1,4 +1,9 @@
-// src/repositories/UserRepository.js
+/**
+ * UserRepository
+ * Manages user data access with role-based queries and ranking calculations.
+ * Provides authentication support and user statistics aggregation.
+ */
+
 import mongoose from "mongoose";
 import BaseRepository from "./BaseRepository.js";
 import User from "../models/user.js";
@@ -9,7 +14,7 @@ class UserRepository extends BaseRepository {
   }
 
   /**
-   * Tìm người dùng kèm mật khẩu qua email hoặc username
+   * Find user with password by email or username for authentication.
    */
   async findByIdentifierWithPassword(identifier) {
     const filter = identifier.includes("@") ? { email: identifier } : { username: identifier };
@@ -18,7 +23,7 @@ class UserRepository extends BaseRepository {
   }
 
   /**
-   * Tìm người dùng bằng ID kèm mật khẩu
+   * Find user by ID including password field.
    */
   async findByIdWithPassword(id) {
     const user = await this.model.findById(id).select("+password").lean();
@@ -26,35 +31,35 @@ class UserRepository extends BaseRepository {
   }
 
   /**
-   * Tăng điểm tích lũy cho người dùng
+   * Increment user points for event participation rewards.
    */
   async incrementPoints(userId, points) {
     return await this.findByIdAndUpdate(userId, { $inc: { points } });
   }
 
   /**
-   * Lấy toàn bộ danh sách người dùng (loại bỏ mật khẩu)
+   * Get all users excluding password field for security.
    */
   async findAllExceptPassword() {
     return await this.find({}, "-password");
   }
 
   /**
-   * Cập nhật trạng thái (ACTIVE/LOCKED)
+   * Update user account status (ACTIVE/LOCKED).
    */
   async updateStatus(id, status) {
     return await this.findByIdAndUpdate(id, { status });
   }
 
   /**
-   * Cập nhật quyền hạn (ADMIN/VOLUNTEER/EVENTMANAGER)
+   * Update user role (ADMIN/VOLUNTEER/EVENTMANAGER).
    */
   async updateRole(id, role) {
     return await this.findByIdAndUpdate(id, { role: role.toUpperCase() });
   }
 
   /**
-   * Chuẩn bị dữ liệu để xuất file Excel/CSV
+   * Prepare user data for Excel/CSV export.
    */
   async getUsersForExport() {
     const users = await this.find({}, "-password -__v");
@@ -65,7 +70,7 @@ class UserRepository extends BaseRepository {
   }
 
   /**
-   * Lấy danh sách Top tình nguyện viên theo điểm số
+   * Get top volunteers ranked by points.
    */
   async getTopVolunteers(limit = 10) {
     return await this.find(
@@ -76,7 +81,7 @@ class UserRepository extends BaseRepository {
   }
 
   /**
-   * Cập nhật mật khẩu qua email (Dùng cho Reset Password)
+   * Update password by email for password reset flow.
    */
   async updatePasswordByEmail(email, hashedPassword) {
     return await this.findOneAndUpdate(
@@ -86,16 +91,14 @@ class UserRepository extends BaseRepository {
   }
 
   /**
-   * 🏆 Lấy bảng xếp hạng Quản lý sự kiện (EventManager)
-   * Tính toán dựa trên: Số sự kiện đã tạo + Số lượng tình nguyện viên tham gia
-   * ✅ OPTIMIZED: Dùng Aggregation Pipeline thay vì N+1 queries
+   * Get event manager ranking with aggregated statistics.
+   * Calculates score based on events created and volunteers recruited.
+   * Optimized with aggregation pipeline to avoid N+1 queries.
    */
   async getManagerRankingWithStats(limit = 10) {
     const results = await this.model.aggregate([
-      // Chỉ lấy EventManager đang hoạt động
       { $match: { role: "EVENTMANAGER", status: "ACTIVE" } },
 
-      // Join với Event collection
       {
         $lookup: {
           from: "events",
@@ -105,7 +108,6 @@ class UserRepository extends BaseRepository {
         }
       },
 
-      // Join với Registration collection để đếm volunteers
       {
         $lookup: {
           from: "registrations",
@@ -127,7 +129,6 @@ class UserRepository extends BaseRepository {
         }
       },
 
-      // Tính toán các metrics
       {
         $project: {
           name: 1,
@@ -153,7 +154,6 @@ class UserRepository extends BaseRepository {
         }
       },
 
-      // Tính score: (Mỗi sự kiện * 10) + (Mỗi TNV * 1)
       {
         $addFields: {
           score: {
@@ -165,7 +165,6 @@ class UserRepository extends BaseRepository {
         }
       },
 
-      // Sắp xếp và giới hạn
       { $sort: { score: -1 } },
       { $limit: limit }
     ]);
