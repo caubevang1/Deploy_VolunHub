@@ -17,7 +17,11 @@ class RegistrationRepository extends BaseRepository {
    * Check if user is an approved member of an event.
    */
   async checkMemberStatus(userId, eventId) {
-    const reg = await this.findOne({ event: eventId, volunteer: userId, status: 'approved' });
+    const reg = await this.findOne({
+      event: eventId,
+      volunteer: userId,
+      status: "approved",
+    });
     return !!reg;
   }
 
@@ -26,10 +30,12 @@ class RegistrationRepository extends BaseRepository {
    */
   async findOneUserRegistration(userId, eventId) {
     try {
-      const res = await this.model.findOne({
-        volunteer: new mongoose.Types.ObjectId(userId),
-        event: new mongoose.Types.ObjectId(eventId)
-      }).lean();
+      const res = await this.model
+        .findOne({
+          volunteer: new mongoose.Types.ObjectId(userId),
+          event: new mongoose.Types.ObjectId(eventId),
+        })
+        .lean();
       return this.transform(res);
     } catch (error) {
       return null;
@@ -40,7 +46,12 @@ class RegistrationRepository extends BaseRepository {
    * Get all registrations for an event with volunteer details.
    */
   async getRegistrationsByEvent(eventId) {
-    return await this.find({ event: eventId }, null, { sort: { createdAt: -1 } }, "volunteer");
+    return await this.find(
+      { event: eventId },
+      null,
+      { sort: { createdAt: -1 } },
+      "volunteer"
+    );
   }
 
   /**
@@ -52,7 +63,9 @@ class RegistrationRepository extends BaseRepository {
       return {};
     }
 
-    const objectEventIds = eventIds.map(id => new mongoose.Types.ObjectId(id));
+    const objectEventIds = eventIds.map(
+      (id) => new mongoose.Types.ObjectId(id)
+    );
 
     const stats = await this.model.aggregate([
       {
@@ -99,52 +112,52 @@ class RegistrationRepository extends BaseRepository {
           from: "events",
           localField: "event",
           foreignField: "_id",
-          as: "eventData"
-        }
+          as: "eventData",
+        },
       },
       {
         $unwind: {
           path: "$eventData",
-          preserveNullAndEmptyArrays: false
-        }
+          preserveNullAndEmptyArrays: false,
+        },
       },
       {
         $facet: {
           completedEvents: [
             { $match: { status: "completed" } },
-            { $sort: { createdAt: -1 } }
+            { $sort: { createdAt: -1 } },
           ],
           currentEvents: [
             {
               $match: {
                 status: "approved",
-                "eventData.date": { $lte: now }
-              }
+                "eventData.date": { $lte: now },
+              },
             },
-            { $sort: { createdAt: -1 } }
+            { $sort: { createdAt: -1 } },
           ],
           upcomingEvents: [
             {
               $match: {
                 status: "approved",
-                "eventData.date": { $gt: now }
-              }
+                "eventData.date": { $gt: now },
+              },
             },
-            { $sort: { "eventData.date": 1 } }
+            { $sort: { "eventData.date": 1 } },
           ],
           pendingEvents: [
             { $match: { status: "pending" } },
-            { $sort: { createdAt: -1 } }
-          ]
-        }
-      }
+            { $sort: { createdAt: -1 } },
+          ],
+        },
+      },
     ]);
 
     const data = results[0] || {
       completedEvents: [],
       currentEvents: [],
       upcomingEvents: [],
-      pendingEvents: []
+      pendingEvents: [],
     };
 
     // Transform từng mảng
@@ -152,7 +165,7 @@ class RegistrationRepository extends BaseRepository {
       completedEvents: this.transform(data.completedEvents),
       currentEvents: this.transform(data.currentEvents),
       upcomingEvents: this.transform(data.upcomingEvents),
-      pendingEvents: this.transform(data.pendingEvents)
+      pendingEvents: this.transform(data.pendingEvents),
     };
   }
 
@@ -167,22 +180,36 @@ class RegistrationRepository extends BaseRepository {
         $group: {
           _id: null,
           totalRegistrations: { $sum: 1 },
-          totalCompleted: { $sum: { $cond: [{ $eq: ["$status", "completed"] }, 1, 0] } },
-          totalApproved: { $sum: { $cond: [{ $eq: ["$status", "approved"] }, 1, 0] } },
-          totalPending: { $sum: { $cond: [{ $eq: ["$status", "pending"] }, 1, 0] } },
+          totalCompleted: {
+            $sum: { $cond: [{ $eq: ["$status", "completed"] }, 1, 0] },
+          },
+          totalApproved: {
+            $sum: { $cond: [{ $eq: ["$status", "approved"] }, 1, 0] },
+          },
+          totalPending: {
+            $sum: { $cond: [{ $eq: ["$status", "pending"] }, 1, 0] },
+          },
           totalCancelRequests: { $sum: { $cond: ["$cancelRequest", 1, 0] } },
         },
       },
     ]);
 
     const result = stats[0] || {
-      totalRegistrations: 0, totalCompleted: 0, totalApproved: 0, totalPending: 0, totalCancelRequests: 0,
+      totalRegistrations: 0,
+      totalCompleted: 0,
+      totalApproved: 0,
+      totalPending: 0,
+      totalCancelRequests: 0,
     };
 
     return {
       ...result,
-      completionRate: result.totalRegistrations ? ((result.totalCompleted / result.totalRegistrations) * 100).toFixed(2) : 0,
-      approvalRate: result.totalRegistrations ? ((result.totalApproved / result.totalRegistrations) * 100).toFixed(2) : 0,
+      completionRate: result.totalRegistrations
+        ? ((result.totalCompleted / result.totalRegistrations) * 100).toFixed(2)
+        : 0,
+      approvalRate: result.totalRegistrations
+        ? ((result.totalApproved / result.totalRegistrations) * 100).toFixed(2)
+        : 0,
     };
   }
 
@@ -190,16 +217,22 @@ class RegistrationRepository extends BaseRepository {
    * Thống kê lượt đăng ký theo từng tháng cho Quản lý (Manager)
    */
   async getManagerMonthlyRegistrationStats(eventIds, year) {
-    const ids = eventIds.map(id => new mongoose.Types.ObjectId(id));
+    const ids = eventIds.map((id) => new mongoose.Types.ObjectId(id));
     const start = new Date(`${year}-01-01T00:00:00.000Z`);
     const end = new Date(`${year}-12-31T23:59:59.999Z`);
 
-    const regs = await this.model.find({
-      event: { $in: ids },
-      createdAt: { $gte: start, $lte: end }
-    }).select("createdAt").lean();
+    const regs = await this.model
+      .find({
+        event: { $in: ids },
+        createdAt: { $gte: start, $lte: end },
+      })
+      .select("createdAt")
+      .lean();
 
-    const monthly = Array.from({ length: 12 }, (_, i) => ({ month: i + 1, registrations: 0 }));
+    const monthly = Array.from({ length: 12 }, (_, i) => ({
+      month: i + 1,
+      registrations: 0,
+    }));
     regs.forEach((r) => {
       monthly[new Date(r.createdAt).getMonth()].registrations++;
     });
@@ -225,15 +258,15 @@ class RegistrationRepository extends BaseRepository {
                 $expr: {
                   $and: [
                     { $eq: ["$volunteer", "$$userId"] },
-                    { $eq: ["$status", "completed"] }
-                  ]
-                }
-              }
+                    { $eq: ["$status", "completed"] },
+                  ],
+                },
+              },
             },
-            { $count: "total" }
+            { $count: "total" },
           ],
-          as: "completedStats"
-        }
+          as: "completedStats",
+        },
       },
       {
         $project: {
@@ -244,13 +277,10 @@ class RegistrationRepository extends BaseRepository {
           status: { $ifNull: ["$status", ""] },
           points: { $ifNull: ["$points", 0] },
           completedEventsCount: {
-            $ifNull: [
-              { $arrayElemAt: ["$completedStats.total", 0] },
-              0
-            ]
-          }
-        }
-      }
+            $ifNull: [{ $arrayElemAt: ["$completedStats.total", 0] }, 0],
+          },
+        },
+      },
     ]);
 
     return results;
@@ -275,45 +305,73 @@ class RegistrationRepository extends BaseRepository {
                 $expr: {
                   $and: [
                     { $eq: ["$volunteer", "$$userId"] },
-                    { $eq: ["$status", "completed"] }
-                  ]
-                }
-              }
+                    { $eq: ["$status", "completed"] },
+                  ],
+                },
+              },
             },
-            { $count: "total" }
+            { $count: "total" },
           ],
-          as: "completedStats"
-        }
+          as: "completedStats",
+        },
       },
       {
         $project: {
           password: 0,
-          __v: 0
-        }
+          __v: 0,
+        },
       },
       {
         $addFields: {
           id: { $toString: "$_id" },
           completedEvents: {
-            $ifNull: [
-              { $arrayElemAt: ["$completedStats.total", 0] },
-              0
-            ]
-          }
-        }
+            $ifNull: [{ $arrayElemAt: ["$completedStats.total", 0] }, 0],
+          },
+        },
       },
       { $sort: { points: -1 } },
       { $limit: limit },
       {
         $project: {
           _id: 0,
-          completedStats: 0
-        }
-      }
+          completedStats: 0,
+        },
+      },
     ]);
 
     // Add rank sau khi sort
     return results.map((r, i) => ({ ...r, rank: i + 1 }));
+  }
+
+  /**
+   * Mark registrations that were approved as completed and set performance to GOOD
+   */
+  async markApprovedAsCompletedWithGood(eventId) {
+    try {
+      const filter = { event: eventId, status: "approved" };
+      const update = { $set: { status: "completed", performance: "GOOD" } };
+      return await this.model.updateMany(filter, update);
+    } catch (error) {
+      console.error("Error markApprovedAsCompletedWithGood:", error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Reject pending registrations because the event has been completed
+   */
+  async rejectPendingDueToEventCompleted(
+    eventId,
+    reason = "Sự kiện đã hoàn thành"
+  ) {
+    try {
+      const filter = { event: eventId, status: "pending" };
+      const update = { $set: { status: "rejected", rejectionReason: reason } };
+      return await this.model.updateMany(filter, update);
+    } catch (error) {
+      console.error("Error rejectPendingDueToEventCompleted:", error.message);
+      throw error;
+    }
   }
 
   /**

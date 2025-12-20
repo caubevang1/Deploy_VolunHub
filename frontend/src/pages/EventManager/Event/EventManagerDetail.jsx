@@ -46,7 +46,9 @@ export default function EventManagerDetail() {
       try {
         const res = await GetEventDetail(eventId);
         if (res.status === 200) {
-          setEvent(res.data.event);
+          const payload = res.data || {};
+          const eventObj = payload.event ? payload.event : payload;
+          setEvent(eventObj);
         } else {
           setEvent(null);
         }
@@ -71,7 +73,8 @@ export default function EventManagerDetail() {
   };
 
   const getFullUrl = (path) => {
-    if (!path || path === "default-event-image.jpg") return "/default-event.png";
+    if (!path || path === "default-event-image.jpg")
+      return "/default-event.png";
     if (path.startsWith("http")) return path;
     return `${BASE_URL}${path.startsWith("/") ? "" : "/"}${path}`;
   };
@@ -106,8 +109,13 @@ export default function EventManagerDetail() {
     return (
       <div className="text-center mt-20">
         <AlertTriangle className="mx-auto text-red-500 mb-4" size={48} />
-        <p className="text-xl font-semibold text-red-500">Không tìm thấy sự kiện!</p>
-        <button onClick={() => navigate(-1)} className="mt-4 text-blue-600 hover:underline">
+        <p className="text-xl font-semibold text-red-500">
+          Không tìm thấy sự kiện!
+        </p>
+        <button
+          onClick={() => navigate(-1)}
+          className="mt-4 text-blue-600 hover:underline"
+        >
           Quay lại danh sách
         </button>
       </div>
@@ -117,7 +125,10 @@ export default function EventManagerDetail() {
     <div className="w-full bg-gray-50 min-h-screen pb-10">
       {/* Top Navigation */}
       <div className="bg-white px-6 py-4 shadow-sm flex items-center gap-4">
-        <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-100 rounded-full">
+        <button
+          onClick={() => navigate(-1)}
+          className="p-2 hover:bg-gray-100 rounded-full"
+        >
           <ArrowLeft size={24} />
         </button>
         <h2 className="text-xl font-bold text-gray-800">Chi tiết sự kiện</h2>
@@ -125,23 +136,45 @@ export default function EventManagerDetail() {
 
       <div className="max-w-6xl mx-auto mt-6 bg-white rounded-2xl overflow-hidden shadow-lg">
         <div className="relative h-96 w-full">
-          <img src={getFullUrl(event.coverImage)} alt={event.name} className="w-full h-full object-cover" />
+          <img
+            src={getFullUrl(event.coverImage)}
+            alt={event.name}
+            className="w-full h-full object-cover"
+          />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end">
-            <h1 className="text-white text-4xl font-bold p-8 drop-shadow-md">{event.name}</h1>
+            <h1 className="text-white text-4xl font-bold p-8 drop-shadow-md">
+              {event.name}
+            </h1>
           </div>
         </div>
 
         <div className="px-8 py-6 flex flex-wrap gap-4 items-center bg-white border-b">
-          <span className={`px-4 py-1.5 rounded-full text-sm font-bold uppercase ${event.status === "approved" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>
+          <span
+            className={`px-4 py-1.5 rounded-full text-sm font-bold uppercase ${
+              event.status === "approved"
+                ? "bg-green-100 text-green-700"
+                : "bg-yellow-100 text-yellow-700"
+            }`}
+          >
             Trạng thái: {statusLabels[event.status] || event.status}
           </span>
 
           {event.status === "approved" && (
             <>
-              <button onClick={() => navigate(`/quanlisukien/su-kien/${event.id}/trao-doi`)} className="flex items-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold">
+              <button
+                onClick={() =>
+                  navigate(`/quanlisukien/su-kien/${event.id}/trao-doi`)
+                }
+                className="flex items-center gap-2 px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold"
+              >
                 <MessageSquare size={18} /> Kênh Trao Đổi
               </button>
-              <button onClick={() => navigate(`/quanlisukien/su-kien/${event.id}/participants`)} className="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold">
+              <button
+                onClick={() =>
+                  navigate(`/quanlisukien/su-kien/${event.id}/participants`)
+                }
+                className="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold"
+              >
                 <Users size={18} /> Quản lý Tình nguyện viên
               </button>
             </>
@@ -151,69 +184,151 @@ export default function EventManagerDetail() {
         <div className="p-10 grid grid-cols-1 md:grid-cols-2 gap-12 border-b">
           <div className="space-y-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-blue-50 text-blue-600 rounded-lg"><Calendar size={24} /></div>
+              <div className="p-3 bg-blue-50 text-blue-600 rounded-lg">
+                <Calendar size={24} />
+              </div>
               <div>
-                <p className="text-sm text-gray-500 font-medium">Ngày bắt đầu</p>
-                <p className="text-lg font-bold text-gray-800">{formatDate(event.date)}</p>
+                <p className="text-sm text-gray-500 font-medium">
+                  Ngày bắt đầu
+                </p>
+                <p className="text-lg font-bold text-gray-800">
+                  {formatDate(event.date)}
+                </p>
               </div>
             </div>
 
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-purple-50 text-purple-600 rounded-lg"><Tag size={24} /></div>
+              <div className="p-3 bg-purple-50 text-purple-600 rounded-lg">
+                <Tag size={24} />
+              </div>
               <div>
-                <p className="text-sm text-gray-500 font-medium">Loại sự kiện</p>
-                <p className="text-lg font-bold text-gray-800">{categoryMapping[event.category] || event.category}</p>
+                <p className="text-sm text-gray-500 font-medium">
+                  Loại sự kiện
+                </p>
+                <p className="text-lg font-bold text-gray-800">
+                  {categoryMapping[event.category] || event.category}
+                </p>
               </div>
             </div>
 
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-red-50 text-red-600 rounded-lg"><MapPin size={24} /></div>
+              <div className="p-3 bg-red-50 text-red-600 rounded-lg">
+                <MapPin size={24} />
+              </div>
               <div>
                 <p className="text-sm text-gray-500 font-medium">Địa điểm</p>
-                <p className="text-lg font-bold text-gray-800">{event.location}</p>
+                <p className="text-lg font-bold text-gray-800">
+                  {event.location}
+                </p>
               </div>
             </div>
           </div>
 
           <div className="space-y-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-orange-50 text-orange-600 rounded-lg"><Calendar size={24} /></div>
+              <div className="p-3 bg-orange-50 text-orange-600 rounded-lg">
+                <Calendar size={24} />
+              </div>
               <div>
-                <p className="text-sm text-gray-500 font-medium">Ngày kết thúc</p>
-                <p className="text-lg font-bold text-gray-800">{formatDate(event.endDate)}</p>
+                <p className="text-sm text-gray-500 font-medium">
+                  Ngày kết thúc
+                </p>
+                <p className="text-lg font-bold text-gray-800">
+                  {formatDate(event.endDate)}
+                </p>
               </div>
             </div>
 
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-green-50 text-green-600 rounded-lg"><Users size={24} /></div>
+              <div className="p-3 bg-green-50 text-green-600 rounded-lg">
+                <Users size={24} />
+              </div>
               <div>
-                <p className="text-sm text-gray-500 font-medium">Tình nguyện viên</p>
-                <p className="text-lg font-bold text-gray-800">{event.approvedCount || 0} / {event.maxParticipants || "∞"}</p>
-                <p className="text-sm text-gray-500">Chờ duyệt: {event.pendingCount || 0}</p>
+                <p className="text-sm text-gray-500 font-medium">
+                  Tình nguyện viên
+                </p>
+                <p className="text-lg font-bold text-gray-800">
+                  {event.approvedCount || 0} / {event.maxParticipants || "∞"}
+                </p>
+                <p className="text-sm text-gray-500">
+                  Chờ duyệt: {event.pendingCount || 0}
+                </p>
               </div>
             </div>
 
             <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-xl">
               <Phone className="text-gray-400 mt-1" size={20} />
               <div>
-                <p className="text-sm text-gray-500 font-medium">Liên hệ tổ chức</p>
-                <p className="font-bold text-gray-800">{event.createdBy?.name || "N/A"}</p>
-                <p className="text-blue-600 font-mono">{event.createdBy?.phone || "Chưa cập nhật"}</p>
+                <p className="text-sm text-gray-500 font-medium">
+                  Liên hệ tổ chức
+                </p>
+                <p className="font-bold text-gray-800">
+                  {event.createdBy?.name || "N/A"}
+                </p>
+                <p className="text-blue-600 font-mono">
+                  {event.createdBy?.phone || "Chưa cập nhật"}
+                </p>
               </div>
             </div>
           </div>
         </div>
 
         <div className="p-10">
-          <h3 className="text-2xl font-bold text-gray-800 mb-6">Mô tả sự kiện</h3>
-          <div className="prose prose-lg max-w-none text-gray-700" dangerouslySetInnerHTML={{ __html: renderDescription(event.description, event.galleryImages) }} />
+          <h3 className="text-2xl font-bold text-gray-800 mb-6">
+            Mô tả sự kiện
+          </h3>
+          <div
+            className="prose prose-lg max-w-none text-gray-700"
+            dangerouslySetInnerHTML={{
+              __html: renderDescription(event.description, event.galleryImages),
+            }}
+          />
         </div>
 
-        {event.status === "rejected" && (
-          <div className="m-10 p-6 bg-red-50 border-l-8 border-red-500 rounded-lg">
-            <p className="text-red-800 font-bold text-lg mb-1">Sự kiện đã bị từ chối</p>
-            <p className="text-red-600 italic">Lý do: {event.rejectionReason || "Không có lý do cụ thể."}</p>
-            <button onClick={() => navigate(`/quanlisukien/su-kien/sua/${event.id}`)} className="mt-4 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg">Chỉnh sửa và gửi lại</button>
+        {(event.status === "rejected" || event.status === "pending") && (
+          <div
+            className={`m-10 p-6 ${
+              event.status === "rejected"
+                ? "bg-red-50 border-l-8 border-red-500"
+                : "bg-yellow-50 border-l-8 border-yellow-300"
+            } rounded-lg`}
+          >
+            {event.status === "rejected" ? (
+              <>
+                <p className="text-red-800 font-bold text-lg mb-1">
+                  Sự kiện đã bị từ chối
+                </p>
+                <p className="text-red-600 italic">
+                  Lý do: {event.rejectionReason || "Không có lý do cụ thể."}
+                </p>
+                <button
+                  onClick={() =>
+                    navigate(`/quanlisukien/su-kien/sua/${event.id}`)
+                  }
+                  className="mt-4 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg"
+                >
+                  Chỉnh sửa và gửi lại
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-yellow-800 font-bold text-lg mb-1">
+                  Sự kiện đang chờ duyệt
+                </p>
+                <p className="text-yellow-700">
+                  Bạn có thể chỉnh sửa thông tin và cập nhật lại trước khi được
+                  duyệt.
+                </p>
+                <button
+                  onClick={() =>
+                    navigate(`/quanlisukien/su-kien/sua/${event.id}`)
+                  }
+                  className="mt-4 px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg"
+                >
+                  Chỉnh sửa
+                </button>
+              </>
+            )}
           </div>
         )}
       </div>

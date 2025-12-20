@@ -102,12 +102,12 @@ export default function EventManagerDashboard() {
   const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
   const [selectedParticipant, setSelectedParticipant] = useState(null);
   const [submittingRating, setSubmittingRating] = useState(false);
-  
+
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [selectedForRejection, setSelectedForRejection] = useState(null);
   const [selectedRejectionReason, setSelectedRejectionReason] = useState("");
   const [sortStatus, setSortStatus] = useState("all");
-  
+
   const navigate = useNavigate();
 
   // Mapping được định nghĩa lại chuẩn xác để fix lỗi ESLint
@@ -174,11 +174,11 @@ export default function EventManagerDashboard() {
                 detailRes.status === 200
                   ? detailRes.data.stats
                   : {
-                    totalRegistrations: 0,
-                    approvedCount: 0,
-                    pendingCount: 0,
-                    rejectedCount: 0,
-                  };
+                      totalRegistrations: 0,
+                      approvedCount: 0,
+                      pendingCount: 0,
+                      rejectedCount: 0,
+                    };
 
               return {
                 ...event,
@@ -203,15 +203,35 @@ export default function EventManagerDashboard() {
 
         // Calculate statistics
         const totalEvents = events.length;
-        const pendingEvents = events.filter((e) => e.status === "pending").length;
-        const approvedEvents = events.filter((e) => e.status === "approved").length;
-        const rejectedEvents = events.filter((e) => e.status === "rejected").length;
-        const completedEvents = events.filter((e) => e.status === "completed").length;
+        const pendingEvents = events.filter(
+          (e) => e.status === "pending"
+        ).length;
+        const approvedEvents = events.filter(
+          (e) => e.status === "approved"
+        ).length;
+        const rejectedEvents = events.filter(
+          (e) => e.status === "rejected"
+        ).length;
+        const completedEvents = events.filter(
+          (e) => e.status === "completed"
+        ).length;
 
-        const totalRegistrations = detailedEventsData.reduce((sum, e) => sum + (e.stats?.totalRegistrations || 0), 0);
-        const approvedRegistrations = detailedEventsData.reduce((sum, e) => sum + (e.stats?.approvedCount || 0), 0);
-        const pendingRegistrationsCount = detailedEventsData.reduce((sum, e) => sum + (e.stats?.pendingCount || 0), 0);
-        const rejectedRegistrations = detailedEventsData.reduce((sum, e) => sum + (e.stats?.rejectedCount || 0), 0);
+        const totalRegistrations = detailedEventsData.reduce(
+          (sum, e) => sum + (e.stats?.totalRegistrations || 0),
+          0
+        );
+        const approvedRegistrations = detailedEventsData.reduce(
+          (sum, e) => sum + (e.stats?.approvedCount || 0),
+          0
+        );
+        const pendingRegistrationsCount = detailedEventsData.reduce(
+          (sum, e) => sum + (e.stats?.pendingCount || 0),
+          0
+        );
+        const rejectedRegistrations = detailedEventsData.reduce(
+          (sum, e) => sum + (e.stats?.rejectedCount || 0),
+          0
+        );
 
         setStats({
           totalEvents,
@@ -234,7 +254,11 @@ export default function EventManagerDashboard() {
         // Top events
         const top = detailedEventsData
           .filter((e) => e.status === "approved" || e.status === "completed")
-          .sort((a, b) => (b.stats?.totalRegistrations || 0) - (a.stats?.totalRegistrations || 0))
+          .sort(
+            (a, b) =>
+              (b.stats?.totalRegistrations || 0) -
+              (a.stats?.totalRegistrations || 0)
+          )
           .slice(0, 5);
         setTopEvents(top);
 
@@ -289,7 +313,7 @@ export default function EventManagerDashboard() {
   const handleVolunteerCardClick = (type) => {
     setActiveVolunteerCard(type);
     let filtered = allRegistrations;
-    
+
     if (type === "approved") {
       // Bao gồm cả approved và completed
       filtered = allRegistrations.filter(
@@ -298,14 +322,18 @@ export default function EventManagerDashboard() {
           String(r.status).toLowerCase() === "completed"
       );
     } else if (type === "pending") {
-      filtered = allRegistrations.filter((r) => String(r.status).toLowerCase() === "pending");
+      filtered = allRegistrations.filter(
+        (r) => String(r.status).toLowerCase() === "pending"
+      );
     }
-    
+
     // Apply sort filter
     if (sortStatus !== "all") {
-      filtered = filtered.filter((r) => String(r.status).toLowerCase() === sortStatus);
+      filtered = filtered.filter(
+        (r) => String(r.status).toLowerCase() === sortStatus
+      );
     }
-    
+
     setFilteredRegistrations(filtered);
   };
 
@@ -313,7 +341,7 @@ export default function EventManagerDashboard() {
   const handleSortStatusChange = (value) => {
     setSortStatus(value);
     let filtered = allRegistrations;
-    
+
     // Apply card filter first
     if (activeVolunteerCard === "approved") {
       filtered = allRegistrations.filter(
@@ -322,22 +350,30 @@ export default function EventManagerDashboard() {
           String(r.status).toLowerCase() === "completed"
       );
     } else if (activeVolunteerCard === "pending") {
-      filtered = allRegistrations.filter((r) => String(r.status).toLowerCase() === "pending");
+      filtered = allRegistrations.filter(
+        (r) => String(r.status).toLowerCase() === "pending"
+      );
     }
-    
+
     // Then apply sort filter
     if (value !== "all") {
-      filtered = filtered.filter((r) => String(r.status).toLowerCase() === value);
+      filtered = filtered.filter(
+        (r) => String(r.status).toLowerCase() === value
+      );
     }
-    
+
     setFilteredRegistrations(filtered);
   };
 
   const handleApproveRegistration = async (registrationId) => {
-    const participant = filteredRegistrations.find(r => r.id === registrationId);
+    const participant = filteredRegistrations.find(
+      (r) => r.id === registrationId
+    );
     const result = await Swal.fire({
       title: `Bạn có chắc muốn duyệt?`,
-      html: `Tình nguyện viên: <strong>${participant?.volunteer?.name || participant?.user?.name}</strong>`,
+      html: `Tình nguyện viên: <strong>${
+        participant?.volunteer?.name || participant?.user?.name
+      }</strong>`,
       icon: "warning",
       showCancelButton: true,
       confirmButtonText: "Xác nhận",
@@ -348,7 +384,7 @@ export default function EventManagerDashboard() {
 
     if (!result.isConfirmed) return;
 
-    setActionLoading(prev => ({ ...prev, [registrationId]: true }));
+    setActionLoading((prev) => ({ ...prev, [registrationId]: true }));
     try {
       const res = await UpdateParticipantStatus(registrationId, "approved");
       if (res.status === 200) {
@@ -359,14 +395,16 @@ export default function EventManagerDashboard() {
       console.error(err);
       Swal.fire("Lỗi", "Không thể duyệt đăng ký", "error");
     }
-    setActionLoading(prev => ({ ...prev, [registrationId]: false }));
+    setActionLoading((prev) => ({ ...prev, [registrationId]: false }));
   };
 
   const handleRejectRegistration = async (registrationId) => {
-    const participant = filteredRegistrations.find(r => r.id === registrationId);
-    setSelectedForRejection({ 
-      id: registrationId, 
-      name: participant?.volunteer?.name || participant?.user?.name 
+    const participant = filteredRegistrations.find(
+      (r) => r.id === registrationId
+    );
+    setSelectedForRejection({
+      id: registrationId,
+      name: participant?.volunteer?.name || participant?.user?.name,
     });
     setIsRejectModalOpen(true);
   };
@@ -414,7 +452,11 @@ export default function EventManagerDashboard() {
     );
     const confirmResult = await Swal.fire({
       title: "Xác nhận đánh giá",
-      html: `Bạn có chắc chắn muốn đánh giá: <br/><strong>${selectedParticipant.volunteer?.name || selectedParticipant.user?.name}</strong> <br/> <strong style="color: #DDB958; font-size: 1.2em;">${selectedOption?.label}</strong>?`,
+      html: `Bạn có chắc chắn muốn đánh giá: <br/><strong>${
+        selectedParticipant.volunteer?.name || selectedParticipant.user?.name
+      }</strong> <br/> <strong style="color: #DDB958; font-size: 1.2em;">${
+        selectedOption?.label
+      }</strong>?`,
       icon: "question",
       showCancelButton: true,
       confirmButtonText: "Đồng ý",
@@ -523,12 +565,14 @@ export default function EventManagerDashboard() {
             </div>
           );
         }
-        
+
         if (!perf) return <span className="text-gray-400">—</span>;
         const option = PERFORMANCE_OPTIONS.find((o) => o.key === perf);
         if (!option) return <span className="text-gray-500">{perf}</span>;
         return (
-          <div className={`${option.color} px-3 py-1 rounded-md flex items-center justify-center gap-2 w-[130px] mx-auto whitespace-nowrap`}>
+          <div
+            className={`${option.color} px-3 py-1 rounded-md flex items-center justify-center gap-2 w-[130px] mx-auto whitespace-nowrap`}
+          >
             {option.icon}
             <span className="font-semibold">{option.label}</span>
           </div>
@@ -541,7 +585,7 @@ export default function EventManagerDashboard() {
       width: 200,
       render: (_, record) => {
         const recordStatus = String(record.status).toLowerCase();
-        
+
         // Nếu đang chờ duyệt
         if (recordStatus === "pending") {
           return (
@@ -566,7 +610,7 @@ export default function EventManagerDashboard() {
             </div>
           );
         }
-        
+
         // Nếu đã duyệt, hiển thị nút đánh giá
         if (recordStatus === "approved") {
           return (
@@ -579,7 +623,7 @@ export default function EventManagerDashboard() {
             </Button>
           );
         }
-        
+
         // Nếu hoàn thành hoặc từ chối, không hiển thị gì
         if (recordStatus === "completed") {
           return (
@@ -588,7 +632,7 @@ export default function EventManagerDashboard() {
             </span>
           );
         }
-        
+
         return null;
       },
     },
@@ -669,8 +713,7 @@ export default function EventManagerDashboard() {
                 onClick={() => {
                   import("sweetalert2").then((Swal) => {
                     Swal.default.fire({
-                      title:
-                        "<span class='text-red-600'>Lý do từ chối</span>",
+                      title: "<span class='text-red-600'>Lý do từ chối</span>",
                       html: `
                         <div class="text-left bg-gray-50 p-4 rounded-lg">
                           <p class="font-semibold text-gray-800 mb-3 text-base">Sự kiện: <span class="text-blue-600">${record.name}</span></p>
@@ -828,9 +871,27 @@ export default function EventManagerDashboard() {
     },
   ];
 
-  const approvalRate = stats.totalEvents > 0 ? Math.round(((stats.approvedEvents + stats.completedEvents) / stats.totalEvents) * 100) : 0;
-  const completionRate = (stats.approvedEvents + stats.completedEvents) > 0 ? Math.round((stats.completedEvents / (stats.approvedEvents + stats.completedEvents)) * 100) : 0;
-  const participantApprovalRate = stats.totalRegistrations > 0 ? Math.round((stats.approvedRegistrations / stats.totalRegistrations) * 100) : 0;
+  const approvalRate =
+    stats.totalEvents > 0
+      ? Math.round(
+          ((stats.approvedEvents + stats.completedEvents) / stats.totalEvents) *
+            100
+        )
+      : 0;
+  const completionRate =
+    stats.approvedEvents + stats.completedEvents > 0
+      ? Math.round(
+          (stats.completedEvents /
+            (stats.approvedEvents + stats.completedEvents)) *
+            100
+        )
+      : 0;
+  const participantApprovalRate =
+    stats.totalRegistrations > 0
+      ? Math.round(
+          (stats.approvedRegistrations / stats.totalRegistrations) * 100
+        )
+      : 0;
 
   if (loading) {
     return (
@@ -845,7 +906,9 @@ export default function EventManagerDashboard() {
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
-        <h2 className="text-3xl font-bold text-gray-800">Dashboard Quản Lý Sự Kiện</h2>
+        <h2 className="text-3xl font-bold text-gray-800">
+          Dashboard Quản Lý Sự Kiện
+        </h2>
         <Space>
           <Select
             value={timeFilter}
@@ -868,7 +931,13 @@ export default function EventManagerDashboard() {
               format="DD/MM/YYYY"
             />
           )}
-          <Button icon={<ReloadOutlined />} onClick={fetchDashboardData} size="large">Làm mới</Button>
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={fetchDashboardData}
+            size="large"
+          >
+            Làm mới
+          </Button>
         </Space>
       </div>
 
@@ -997,7 +1066,8 @@ export default function EventManagerDashboard() {
           <p className="text-gray-500 mt-2">
             Chọn mức độ hoàn thành của: <br />
             <span className="text-[#001529] font-bold text-3xl">
-              {selectedParticipant?.volunteer?.name || selectedParticipant?.user?.name}
+              {selectedParticipant?.volunteer?.name ||
+                selectedParticipant?.user?.name}
             </span>
           </p>
         </div>
@@ -1005,8 +1075,12 @@ export default function EventManagerDashboard() {
           {PERFORMANCE_OPTIONS.map((option) => (
             <div
               key={option.key}
-              onClick={() => !submittingRating && handleSubmitRating(option.key)}
-              className={`group relative cursor-pointer rounded-xl border-2 p-6 transition-all ${option.color} ${
+              onClick={() =>
+                !submittingRating && handleSubmitRating(option.key)
+              }
+              className={`group relative cursor-pointer rounded-xl border-2 p-6 transition-all ${
+                option.color
+              } ${
                 submittingRating
                   ? "opacity-50 pointer-events-none"
                   : "hover:-translate-y-1 hover:shadow-lg"
@@ -1015,9 +1089,12 @@ export default function EventManagerDashboard() {
               <div className="text-4xl mb-2 !text-white">{option.icon}</div>
               <div className="font-bold text-lg mb-1">{option.label}</div>
               <div className="text-sm opacity-80">
-                {option.key === "GOOD" && "Hoàn thành tốt nhiệm vụ, thái độ tích cực."}
-                {option.key === "AVERAGE" && "Hoàn thành nhiệm vụ ở mức cơ bản."}
-                {option.key === "BAD" && "Thái độ không tốt hoặc không hoàn thành nhiệm vụ."}
+                {option.key === "GOOD" &&
+                  "Hoàn thành tốt nhiệm vụ, thái độ tích cực."}
+                {option.key === "AVERAGE" &&
+                  "Hoàn thành nhiệm vụ ở mức cơ bản."}
+                {option.key === "BAD" &&
+                  "Thái độ không tốt hoặc không hoàn thành nhiệm vụ."}
                 {option.key === "NO_SHOW" && "Đăng ký nhưng không tham gia."}
               </div>
             </div>
@@ -1047,69 +1124,208 @@ const EventsTab = ({
     <>
       <Row gutter={[16, 16]} className="mb-6">
         <Col xs={24} sm={12} lg={6}>
-          <Card className="shadow-md hover:shadow-lg transition-shadow cursor-pointer" style={{ borderTop: "4px solid #1890ff", borderRadius: 8 }} onClick={() => navigate("/quanlisukien/su-kien")}>
-            <Statistic title={<span className="text-gray-600 font-medium">Tổng Sự Kiện</span>} value={stats.totalEvents} prefix={<CalendarOutlined style={{ color: "#1890ff" }} />} valueStyle={{ color: "#1890ff", fontWeight: "bold" }} />
+          <Card
+            className="shadow-md hover:shadow-lg transition-shadow cursor-pointer"
+            style={{ borderTop: "4px solid #1890ff", borderRadius: 8 }}
+            onClick={() => navigate("/quanlisukien/su-kien")}
+          >
+            <Statistic
+              title={
+                <span className="text-gray-600 font-medium">Tổng Sự Kiện</span>
+              }
+              value={stats.totalEvents}
+              prefix={<CalendarOutlined style={{ color: "#1890ff" }} />}
+              valueStyle={{ color: "#1890ff", fontWeight: "bold" }}
+            />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card className="shadow-md hover:shadow-lg transition-shadow cursor-pointer" style={{ borderTop: "4px solid #faad14", borderRadius: 8 }} onClick={() => navigate("/quanlisukien/su-kien?status=pending")}>
-            <Statistic title={<span className="text-gray-600 font-medium">Chờ Duyệt</span>} value={stats.pendingEvents} prefix={<ClockCircleOutlined style={{ color: "#faad14" }} />} valueStyle={{ color: "#faad14", fontWeight: "bold" }} />
+          <Card
+            className="shadow-md hover:shadow-lg transition-shadow cursor-pointer"
+            style={{ borderTop: "4px solid #faad14", borderRadius: 8 }}
+            onClick={() => navigate("/quanlisukien/su-kien?status=pending")}
+          >
+            <Statistic
+              title={
+                <span className="text-gray-600 font-medium">Chờ Duyệt</span>
+              }
+              value={stats.pendingEvents}
+              prefix={<ClockCircleOutlined style={{ color: "#faad14" }} />}
+              valueStyle={{ color: "#faad14", fontWeight: "bold" }}
+            />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card className="shadow-md hover:shadow-lg transition-shadow cursor-pointer" style={{ borderTop: "4px solid #52c41a", borderRadius: 8 }} onClick={() => navigate("/quanlisukien/su-kien?status=approved")}>
-            <Statistic title={<span className="text-gray-600 font-medium">Đã Duyệt</span>} value={stats.approvedEvents} prefix={<CheckCircleOutlined style={{ color: "#52c41a" }} />} valueStyle={{ color: "#52c41a", fontWeight: "bold" }} />
+          <Card
+            className="shadow-md hover:shadow-lg transition-shadow cursor-pointer"
+            style={{ borderTop: "4px solid #52c41a", borderRadius: 8 }}
+            onClick={() => navigate("/quanlisukien/su-kien?status=approved")}
+          >
+            <Statistic
+              title={
+                <span className="text-gray-600 font-medium">Đã Duyệt</span>
+              }
+              value={stats.approvedEvents}
+              prefix={<CheckCircleOutlined style={{ color: "#52c41a" }} />}
+              valueStyle={{ color: "#52c41a", fontWeight: "bold" }}
+            />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card className="shadow-md hover:shadow-lg transition-shadow cursor-pointer" style={{ borderTop: "4px solid #722ed1", borderRadius: 8 }} onClick={() => navigate("/quanlisukien/su-kien?status=completed")}>
-            <Statistic title={<span className="text-gray-600 font-medium">Hoàn Thành</span>} value={stats.completedEvents} prefix={<TrophyOutlined style={{ color: "#722ed1" }} />} valueStyle={{ color: "#722ed1", fontWeight: "bold" }} />
+          <Card
+            className="shadow-md hover:shadow-lg transition-shadow cursor-pointer"
+            style={{ borderTop: "4px solid #722ed1", borderRadius: 8 }}
+            onClick={() => navigate("/quanlisukien/su-kien?status=completed")}
+          >
+            <Statistic
+              title={
+                <span className="text-gray-600 font-medium">Hoàn Thành</span>
+              }
+              value={stats.completedEvents}
+              prefix={<TrophyOutlined style={{ color: "#722ed1" }} />}
+              valueStyle={{ color: "#722ed1", fontWeight: "bold" }}
+            />
           </Card>
         </Col>
       </Row>
 
       <Row gutter={[16, 16]} className="mb-6">
         <Col xs={24} md={12}>
-          <Card title={<Space><CheckCircleOutlined style={{ color: "#52c41a" }} /><span className="font-semibold">Tỷ Lệ Sự Kiện Được Phê Duyệt</span></Space>} className="shadow-md" style={{ borderRadius: 8 }}>
-            <Progress percent={approvalRate} strokeColor="#52c41a" size={{ strokeWidth: 12 }} />
-            <p className="text-center mt-3 text-gray-500"><span className="font-bold text-green-600">{stats.approvedEvents + stats.completedEvents}</span> / {stats.totalEvents} sự kiện</p>
+          <Card
+            title={
+              <Space>
+                <CheckCircleOutlined style={{ color: "#52c41a" }} />
+                <span className="font-semibold">
+                  Tỷ Lệ Sự Kiện Được Phê Duyệt
+                </span>
+              </Space>
+            }
+            className="shadow-md"
+            style={{ borderRadius: 8 }}
+          >
+            <Progress
+              percent={approvalRate}
+              strokeColor="#52c41a"
+              size={{ strokeWidth: 12 }}
+            />
+            <p className="text-center mt-3 text-gray-500">
+              <span className="font-bold text-green-600">
+                {stats.approvedEvents + stats.completedEvents}
+              </span>{" "}
+              / {stats.totalEvents} sự kiện
+            </p>
           </Card>
         </Col>
         <Col xs={24} md={12}>
-          <Card title={<Space><TrophyOutlined style={{ color: "#1890ff" }} /><span className="font-semibold">Tỷ Lệ Hoàn Thành</span></Space>} className="shadow-md" style={{ borderRadius: 8 }}>
-            <Progress percent={completionRate} strokeColor="#1890ff" size={{ strokeWidth: 12 }} />
-            <p className="text-center mt-3 text-gray-500"><span className="font-bold text-blue-600">{stats.completedEvents}</span> / {stats.approvedEvents + stats.completedEvents} sự kiện</p>
+          <Card
+            title={
+              <Space>
+                <TrophyOutlined style={{ color: "#1890ff" }} />
+                <span className="font-semibold">Tỷ Lệ Hoàn Thành</span>
+              </Space>
+            }
+            className="shadow-md"
+            style={{ borderRadius: 8 }}
+          >
+            <Progress
+              percent={completionRate}
+              strokeColor="#1890ff"
+              size={{ strokeWidth: 12 }}
+            />
+            <p className="text-center mt-3 text-gray-500">
+              <span className="font-bold text-blue-600">
+                {stats.completedEvents}
+              </span>{" "}
+              / {stats.approvedEvents + stats.completedEvents} sự kiện
+            </p>
           </Card>
         </Col>
       </Row>
 
       <div className="mb-6">
-        <Card title={<Space><CalendarOutlined style={{ color: "#1890ff" }} /><span className="font-semibold text-lg">Sự Kiện Sắp Diễn Ra</span></Space>} className="shadow-md" style={{ borderRadius: 8 }}>
+        <Card
+          title={
+            <Space>
+              <CalendarOutlined style={{ color: "#1890ff" }} />
+              <span className="font-semibold text-lg">Sự Kiện Sắp Diễn Ra</span>
+            </Space>
+          }
+          className="shadow-md"
+          style={{ borderRadius: 8 }}
+        >
           {upcomingEvents.length === 0 ? (
-            <Empty description="Không có sự kiện sắp diễn ra" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+            <Empty
+              description="Không có sự kiện sắp diễn ra"
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+            />
           ) : (
-            <Table dataSource={upcomingEvents} columns={upcomingEventColumns} rowKey={(r) => r.id} pagination={false} size="small" />
+            <Table
+              dataSource={upcomingEvents}
+              columns={upcomingEventColumns}
+              rowKey={(r) => r.id}
+              pagination={false}
+              size="small"
+            />
           )}
         </Card>
       </div>
 
       <Row gutter={[16, 16]} className="mb-6">
         <Col xs={24} lg={12}>
-          <Card title={<Space><FolderOpenOutlined style={{ color: "#1890ff" }} /><span className="font-semibold text-lg">Sự kiện gần đây</span></Space>} extra={<Button type="link" onClick={() => navigate("/quanlisukien/su-kien")} className="text-blue-600 hover:text-blue-800">Xem tất cả →</Button>} className="shadow-md" style={{ borderRadius: 8 }}>
+          <Card
+            title={
+              <Space>
+                <FolderOpenOutlined style={{ color: "#1890ff" }} />
+                <span className="font-semibold text-lg">Sự kiện gần đây</span>
+              </Space>
+            }
+            extra={
+              <Button
+                type="link"
+                onClick={() => navigate("/quanlisukien/su-kien")}
+                className="text-blue-600 hover:text-blue-800"
+              >
+                Xem tất cả →
+              </Button>
+            }
+            className="shadow-md"
+            style={{ borderRadius: 8 }}
+          >
             {recentEvents.length === 0 ? (
               <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />
             ) : (
-              <Table dataSource={recentEvents} columns={eventColumns} rowKey={(r) => r.id} pagination={false} size="small" />
+              <Table
+                dataSource={recentEvents}
+                columns={eventColumns}
+                rowKey={(r) => r.id}
+                pagination={false}
+                size="small"
+              />
             )}
           </Card>
         </Col>
 
         <Col xs={24} lg={12}>
-          <Card title={<Space><FireOutlined style={{ color: "#ff4d4f" }} /><span className="font-semibold text-lg">Sự Kiện Hot Nhất</span></Space>} className="shadow-md" style={{ borderRadius: 8 }}>
+          <Card
+            title={
+              <Space>
+                <FireOutlined style={{ color: "#ff4d4f" }} />
+                <span className="font-semibold text-lg">Sự Kiện Hot Nhất</span>
+              </Space>
+            }
+            className="shadow-md"
+            style={{ borderRadius: 8 }}
+          >
             {topEvents.length === 0 ? (
               <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />
             ) : (
-              <Table dataSource={topEvents} columns={topEventColumns} rowKey={(r) => r.id} pagination={false} size="small" />
+              <Table
+                dataSource={topEvents}
+                columns={topEventColumns}
+                rowKey={(r) => r.id}
+                pagination={false}
+                size="small"
+              />
             )}
           </Card>
         </Col>
@@ -1136,44 +1352,86 @@ const VolunteersTab = ({
       <Row gutter={[16, 16]} className="mb-6">
         <Col xs={24} sm={12} lg={8}>
           <Card
-            className={`shadow-md cursor-pointer ${activeVolunteerCard === "all" ? "ring-2 ring-blue-400" : ""}`}
+            className={`shadow-md cursor-pointer ${
+              activeVolunteerCard === "all" ? "ring-2 ring-blue-400" : ""
+            }`}
             style={{ borderTop: "4px solid #1890ff", borderRadius: 8 }}
             onClick={() => handleVolunteerCardClick("all")}
           >
-            <Statistic title={<span className="text-gray-600 font-medium">Tổng Đăng Ký</span>} value={stats.totalRegistrations} prefix={<UserOutlined style={{ color: "#1890ff" }} />} valueStyle={{ color: "#1890ff", fontWeight: "bold" }} />
+            <Statistic
+              title={
+                <span className="text-gray-600 font-medium">Tổng Đăng Ký</span>
+              }
+              value={stats.totalRegistrations}
+              prefix={<UserOutlined style={{ color: "#1890ff" }} />}
+              valueStyle={{ color: "#1890ff", fontWeight: "bold" }}
+            />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={8}>
           <Card
-            className={`shadow-md cursor-pointer ${activeVolunteerCard === "approved" ? "ring-2 ring-green-400" : ""}`}
+            className={`shadow-md cursor-pointer ${
+              activeVolunteerCard === "approved" ? "ring-2 ring-green-400" : ""
+            }`}
             style={{ borderTop: "4px solid #52c41a", borderRadius: 8 }}
             onClick={() => handleVolunteerCardClick("approved")}
           >
-            <Statistic title={<span className="text-gray-600 font-medium">Đã Duyệt</span>} value={stats.approvedRegistrations} prefix={<CheckCircleOutlined style={{ color: "#52c41a" }} />} valueStyle={{ color: "#52c41a", fontWeight: "bold" }} />
+            <Statistic
+              title={
+                <span className="text-gray-600 font-medium">Đã Duyệt</span>
+              }
+              value={stats.approvedRegistrations}
+              prefix={<CheckCircleOutlined style={{ color: "#52c41a" }} />}
+              valueStyle={{ color: "#52c41a", fontWeight: "bold" }}
+            />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={8}>
           <Card
-            className={`shadow-md cursor-pointer ${activeVolunteerCard === "pending" ? "ring-2 ring-yellow-400" : ""}`}
+            className={`shadow-md cursor-pointer ${
+              activeVolunteerCard === "pending" ? "ring-2 ring-yellow-400" : ""
+            }`}
             style={{ borderTop: "4px solid #faad14", borderRadius: 8 }}
             onClick={() => handleVolunteerCardClick("pending")}
           >
-            <Statistic title={<span className="text-gray-600 font-medium">Chờ Duyệt</span>} value={stats.pendingRegistrations} prefix={<ClockCircleOutlined style={{ color: "#faad14" }} />} valueStyle={{ color: "#faad14", fontWeight: "bold" }} />
+            <Statistic
+              title={
+                <span className="text-gray-600 font-medium">Chờ Duyệt</span>
+              }
+              value={stats.pendingRegistrations}
+              prefix={<ClockCircleOutlined style={{ color: "#faad14" }} />}
+              valueStyle={{ color: "#faad14", fontWeight: "bold" }}
+            />
           </Card>
         </Col>
       </Row>
 
-      <Card title={<Space><UserOutlined style={{ color: "#722ed1" }} /><span>Tỷ Lệ Duyệt Người Tham Gia</span></Space>} className="shadow-md mb-6" style={{ borderRadius: 8 }}>
-        <Progress percent={participantApprovalRate} strokeColor="#722ed1" size={{ strokeWidth: 12 }} />
-        <p className="text-center mt-3 text-gray-500 font-medium">{stats.approvedRegistrations} / {stats.totalRegistrations} đăng ký</p>
+      <Card
+        title={
+          <Space>
+            <UserOutlined style={{ color: "#722ed1" }} />
+            <span>Tỷ Lệ Duyệt Người Tham Gia</span>
+          </Space>
+        }
+        className="shadow-md mb-6"
+        style={{ borderRadius: 8 }}
+      >
+        <Progress
+          percent={participantApprovalRate}
+          strokeColor="#722ed1"
+          size={{ strokeWidth: 12 }}
+        />
+        <p className="text-center mt-3 text-gray-500 font-medium">
+          {stats.approvedRegistrations} / {stats.totalRegistrations} đăng ký
+        </p>
       </Card>
 
-      <Card 
+      <Card
         title={
           <div className="flex items-center justify-between">
             <Space>
               <ClockCircleOutlined style={{ color: "#faad14" }} />
-              <span>Danh Sách Tình Nguyện Viên</span>
+              <span>Danh Sách Tình Nguyện Viên Cần Xử Lý</span>
             </Space>
             <Select
               value={sortStatus}
@@ -1185,31 +1443,42 @@ const VolunteersTab = ({
                 <span className="font-medium">Tất cả trạng thái</span>
               </Select.Option>
               <Select.Option value="pending">
-                <Tag color="#DDB958" className="!border-none">Chờ duyệt</Tag>
+                <Tag color="#DDB958" className="!border-none">
+                  Chờ duyệt
+                </Tag>
               </Select.Option>
               <Select.Option value="approved">
-                <Tag color="#00C950" className="!border-none">Đã duyệt</Tag>
+                <Tag color="#00C950" className="!border-none">
+                  Đã duyệt
+                </Tag>
               </Select.Option>
               <Select.Option value="completed">
-                <Tag color="#2B7FFF" className="!border-none">Hoàn thành</Tag>
+                <Tag color="#2B7FFF" className="!border-none">
+                  Hoàn thành
+                </Tag>
               </Select.Option>
               <Select.Option value="rejected">
-                <Tag color="red" className="!border-none">Từ chối</Tag>
+                <Tag color="red" className="!border-none">
+                  Từ chối
+                </Tag>
               </Select.Option>
             </Select>
           </div>
-        } 
-        className="shadow-md" 
+        }
+        className="shadow-md"
         style={{ borderRadius: 8 }}
       >
         {filteredRegistrations.length === 0 ? (
-          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Không có dữ liệu" />
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description="Không có dữ liệu"
+          />
         ) : (
-          <Table 
-            dataSource={filteredRegistrations} 
-            columns={volunteerColumns} 
-            rowKey={(r) => r.id} 
-            pagination={{ pageSize: 10 }} 
+          <Table
+            dataSource={filteredRegistrations}
+            columns={volunteerColumns}
+            rowKey={(r) => r.id}
+            pagination={{ pageSize: 10 }}
             size="small"
             scroll={{ x: 1200 }}
           />

@@ -84,7 +84,10 @@ export default function Dashboard() {
         http.get("/notifications"),
       ]);
 
-      const allEvents = eventsRes.status === "fulfilled" ? (eventsRes.value?.data?.events || []) : [];
+      const allEvents =
+        eventsRes.status === "fulfilled"
+          ? eventsRes.value?.data?.events || []
+          : [];
       const approvedEvents = allEvents.filter(
         (ev) => (ev.status || "").toLowerCase() === "approved"
       );
@@ -144,7 +147,7 @@ export default function Dashboard() {
 
       // Không cần fetch posts nữa, dùng createdAt của registration làm lastActivity
       setEventsWithActivity(
-        myApprovedEvents.map(e => ({
+        myApprovedEvents.map((e) => ({
           ...e,
           recentPosts: 0, // Skip posts count
           lastActivity: new Date(), // Dùng ngày hiện tại
@@ -187,8 +190,9 @@ export default function Dashboard() {
             return (
               <strong
                 key={i}
-                className={`${scoreText.includes("-") ? "text-red-500" : "text-green-500"
-                  } mx-0.5`}
+                className={`${
+                  scoreText.includes("-") ? "text-red-500" : "text-green-500"
+                } mx-0.5`}
               >
                 {scoreText}
               </strong>
@@ -429,7 +433,7 @@ export default function Dashboard() {
 
       <Row gutter={[16, 16]} className="mb-6">
         <Col xs={24} lg={12}>
-          <Card title="Sự Kiện Mới (7 ngày qua)" className="shadow-sm">
+          <Card title="Sự Kiện Mới Được Tạo Gần Đây" className="shadow-sm">
             <Table
               dataSource={newEvents}
               columns={newEventColumns}

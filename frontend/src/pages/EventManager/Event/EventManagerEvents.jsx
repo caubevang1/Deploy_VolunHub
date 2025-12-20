@@ -1,5 +1,14 @@
 import { useState, useEffect, useRef } from "react";
-import { Table, Input, Button, message, Tag, AutoComplete, Space } from "antd";
+import {
+  Table,
+  Input,
+  Button,
+  message,
+  Tag,
+  AutoComplete,
+  Space,
+  Select,
+} from "antd";
 import { debounce } from "lodash";
 import {
   GetManagerEvents,
@@ -31,6 +40,7 @@ const statusMapping = {
 export default function EventManagerEvents() {
   const [data, setData] = useState([]);
   const [originalData, setOriginalData] = useState([]);
+  const [filters, setFilters] = useState({ status: "" });
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const [searchOptions, setSearchOptions] = useState([]);
@@ -83,6 +93,7 @@ export default function EventManagerEvents() {
           detailedEvents = detailedEvents.filter(
             (event) => event.status === status
           );
+          setFilters((prev) => ({ ...prev, status }));
         } else {
           // Custom sort when no filter is applied
           const statusOrder = {
@@ -113,14 +124,20 @@ export default function EventManagerEvents() {
     const fn = debounce((value) => {
       try {
         const keyword = removeVietnameseTones(value.trim().toLowerCase());
-        if (!keyword) {
-          setData(originalData);
-          return;
+        let filtered = [...originalData];
+        // Removed category-based filtering
+        if (filters.status)
+          filtered = filtered.filter(
+            (e) =>
+              (e.status || "").toLowerCase() ===
+              String(filters.status).toLowerCase()
+          );
+        if (keyword) {
+          filtered = filtered.filter((event) => {
+            const name = removeVietnameseTones(event.name || "");
+            return name.includes(keyword);
+          });
         }
-        const filtered = originalData.filter((event) => {
-          const name = removeVietnameseTones(event.name || "");
-          return name.includes(keyword);
-        });
         setData(filtered);
       } catch (err) {
         console.warn("Debounced search error:", err);
@@ -131,7 +148,25 @@ export default function EventManagerEvents() {
     return () => {
       if (fn && typeof fn.cancel === "function") fn.cancel();
     };
-  }, [originalData]);
+  }, [originalData, filters]);
+
+  const handleFilterChange = (key, value) => {
+    // When clearing the status filter, also clear the URL parameter
+    if (key === "status" && !value) {
+      const params = new URLSearchParams(location.search);
+      params.delete("status");
+      const url =
+        window.location.pathname +
+        (params.toString() ? `?${params.toString()}` : "");
+      window.history.replaceState({}, "", url);
+    }
+    setFilters((prev) => ({ ...prev, [key]: value }));
+  };
+
+  // Re-run the debounced filter when filters or searchValue change
+  useEffect(() => {
+    if (searchKeywordRef.current) searchKeywordRef.current(searchValue || "");
+  }, [filters, searchValue, originalData]);
 
   // call fetchEvents on mount (fetchEvents is defined above)
   useEffect(() => {
@@ -438,22 +473,36 @@ export default function EventManagerEvents() {
         </Space>
       </div>
 
-      <AutoComplete
-        value={searchValue}
-        options={searchOptions}
-        onChange={handleSearchChange}
-        onSelect={handleSelectEvent}
-        placeholder="Tìm kiếm theo tên sự kiện"
-        size="large"
-        className="mb-4"
-        allowClear
-        onClear={() => {
-          setSearchValue("");
-          setSearchOptions([]);
-          setData(originalData);
-        }}
-        style={{ width: "100%" }}
-      />
+      <div className="mb-4 flex flex-col md:flex-row gap-3">
+        <AutoComplete
+          value={searchValue}
+          options={searchOptions}
+          onChange={handleSearchChange}
+          onSelect={handleSelectEvent}
+          placeholder="Tìm kiếm theo tên sự kiện"
+          size="large"
+          className="flex-1"
+          allowClear
+          onClear={() => {
+            setSearchValue("");
+            setSearchOptions([]);
+            setData(originalData);
+          }}
+        />
+
+        <Select
+          placeholder="Trạng thái"
+          size="large"
+          style={{ width: 150 }}
+          allowClear
+          value={filters.status || undefined}
+          onChange={(value) => handleFilterChange("status", value)}
+          options={Object.entries(statusMapping).map(([k, v]) => ({
+            value: k,
+            label: v,
+          }))}
+        />
+      </div>
 
       <Table
         columns={columns}

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import Swal from "sweetalert2";
 import {
   Card,
   Row,
@@ -138,7 +139,9 @@ export default function EnhancedDashboard() {
     try {
       const res = await GetUsers();
       if (res.status === 200) {
-        setRecentUsers(res.data.slice(0, 5));
+        const users = Array.isArray(res.data) ? res.data : [];
+        users.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        setRecentUsers(users.slice(0, 5));
       }
     } catch (err) {
       console.error("Lỗi tải người dùng:", err);
@@ -212,15 +215,27 @@ export default function EnhancedDashboard() {
   }, [fetchAllData]);
 
   // --- Actions ---
-  const handleApproveEvent = async (eventId) => {
+  const handleApproveEvent = async (eventId, name) => {
+    const result = await Swal.fire({
+      title: `Duyệt sự kiện?`,
+      text: name || "",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#DDB958",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Xác nhận",
+      cancelButtonText: "Hủy",
+    });
+    if (!result.isConfirmed) return;
+
     try {
       await ApproveEvent(eventId);
-      message.success("Đã phê duyệt sự kiện");
+      Swal.fire("Đã duyệt!", "", "success");
       fetchPendingEvents();
       fetchDashboardStats();
     } catch (err) {
       console.error("Approve error:", err);
-      message.error("Không thể phê duyệt sự kiện");
+      Swal.fire("Lỗi", "Không thể phê duyệt sự kiện", "error");
     }
   };
 
@@ -395,7 +410,7 @@ export default function EnhancedDashboard() {
             type="primary"
             className="!bg-green-500 !hover:bg-green-600 !border-none !font-semibold w-24"
             size="small"
-            onClick={() => handleApproveEvent(record.id)}
+            onClick={() => handleApproveEvent(record.id, record.name)}
           >
             Duyệt
           </Button>

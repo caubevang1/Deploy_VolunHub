@@ -6,7 +6,7 @@ import { processEventCompletion } from "../controllers/event.controller.js";
 export const startCronJobs = () => {
   // Chạy mỗi ngày vào lúc 00:00 (nửa đêm) - "0 0 * * *"
   // Hoặc mỗi 24 giờ - "0 */24 * * *"
-  cron.schedule("0 0 * * *", async () => {
+  cron.schedule("50 1 * * *", async () => {
     console.log("[CRON JOB] Khởi động lúc:", new Date().toISOString());
     try {
       const now = new Date();
@@ -44,5 +44,5 @@ export const startCronJobs = () => {
     }
   });
 
-  console.log("Cron job đã được thiết lập - chạy mỗi ngày lúc 21:45");
+  console.log("Cron job đã được thiết lập - chạy mỗi ngày lúc 00:00.");
 };

@@ -48,14 +48,21 @@ export default function EditEvent() {
 
   const convertImgURLToFile = async (url, filename = null) => {
     try {
-      const res = await fetch(url);
+      // Normalize URL: if it's already absolute, use as-is; otherwise prepend backend host
+      let norm = url;
+      if (!/^https?:\/\//i.test(url)) {
+        const host = "http://localhost:5000";
+        if (url.startsWith("/")) norm = `${host}${url}`;
+        else norm = `${host}/${url}`;
+      }
+      const res = await fetch(norm);
       const blob = await res.blob();
       const name = filename || `pasted_${Date.now()}`;
       return new File([blob], `${name}.${blob.type.split("/")[1]}`, {
         type: blob.type,
       });
     } catch (err) {
-      console.error("Convert failed:", err);
+      console.error("Convert failed:", err, "url:", url);
       return null;
     }
   };
@@ -124,7 +131,9 @@ export default function EditEvent() {
       try {
         const res = await GetEventDetail(eventId);
         if (res.status === 200) {
-          const eventData = res.data;
+          // API may return { event, posts, comments, stats } or return event object directly
+          const payload = res.data || {};
+          const eventData = payload.event ? payload.event : payload;
           setEvent(eventData);
 
           form.setFieldsValue({
@@ -132,31 +141,41 @@ export default function EditEvent() {
             location: eventData.location,
             category: eventData.category,
             maxParticipants: eventData.maxParticipants,
-            date: dayjs(eventData.date),
+            date: eventData.date ? dayjs(eventData.date) : null,
             endDate: eventData.endDate ? dayjs(eventData.endDate) : null,
           });
 
-          const galleryFiles = eventData.galleryImages.map((img, i) => ({
+          const galleryArr = Array.isArray(eventData.galleryImages)
+            ? eventData.galleryImages
+            : [];
+          const galleryFiles = galleryArr.map((img, i) => ({
             uid: `${i}`,
             name: `gallery_${i}.jpg`,
             status: "done",
-            url: `http://localhost:5000${img}`,
+            url: `http://localhost:5000${
+              img && img.startsWith("/") ? "" : "/"
+            }${img}`,
           }));
           setGalleryImages(galleryFiles);
 
           const updatedDescription = renderDescription(
             eventData.description,
-            eventData.galleryImages
+            Array.isArray(eventData.galleryImages)
+              ? eventData.galleryImages
+              : []
           );
           setDescription(updatedDescription);
 
           if (eventData.coverImage) {
+            const coverPath = eventData.coverImage;
             form.setFieldValue("coverImage", [
               {
                 uid: "-1",
                 name: "cover.jpg",
                 status: "done",
-                url: `http://localhost:5000${eventData.coverImage}`,
+                url: `http://localhost:5000${
+                  coverPath && coverPath.startsWith("/") ? "" : "/"
+                }${coverPath}`,
               },
             ]);
           }
@@ -209,10 +228,14 @@ export default function EditEvent() {
       const res = await UpdateEvents(event.id, formData);
 
       if (res.status === 200) {
-        Swal.fire("Thành công", "Cập nhật sự kiện thành công", "success");
+        Swal.fire(
+          "Thành công",
+          res.data?.message || "Cập nhật sự kiện thành công",
+          "success"
+        );
         navigate("/quanlisukien/su-kien");
       } else {
-        Swal.fire("Lỗi", "Cập nhật thất bại", "error");
+        Swal.fire("Lỗi", res.data?.message || "Cập nhật thất bại", "error");
       }
     } catch (err) {
       Swal.fire("Lỗi", "Đã xảy ra lỗi", "error");
