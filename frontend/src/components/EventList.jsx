@@ -57,8 +57,6 @@ export default function EventList() {
 
   const [likedEvents, setLikedEvents] = useState({});
   const [userParticipationMap, setUserParticipationMap] = useState({});
-  const [processingIds, setProcessingIds] = useState(new Set());
-  const likeTimeouts = useRef({}); // Lưu trữ timeout cho từng eventId
 
   const [filters, setFilters] = useState({
     category: "",
@@ -165,27 +163,9 @@ export default function EventList() {
             setEvents(raw);
           }
 
-          // Prefetch like statuses
-          try {
-            const ids = raw.map((r) => r.id);
-            const statusMap = {};
-            await Promise.all(
-              ids.map(async (id) => {
-                try {
-                  const statusRes = await CheckEventStatus(id);
-                  statusMap[id] =
-                    statusRes.status === 200
-                      ? !!statusRes.data.hasLiked
-                      : false;
-                } catch {
-                  statusMap[id] = false;
-                }
-              })
-            );
-            setLikedEvents(statusMap);
-          } catch (e) {
-            console.warn("Failed to prefetch like statuses", e);
-          }
+          // ✅ OPTIMIZED: Lazy load like statuses (chỉ load khi user scroll/interact)
+          // Không cần prefetch tất cả, sẽ load on-demand khi cần
+          setLikedEvents({}); // Reset state, sẽ load khi user interact
         }
       } catch (err) {
         console.error("Fetch events error", err);
@@ -194,7 +174,7 @@ export default function EventList() {
       }
     }
     init();
-  }, [checkLikeStatuses, fetchAllRealtimeStats]);
+  }, []); // ✅ Fix: Remove unnecessary dependencies
 
   useEffect(() => {
     async function fetchMy() {
@@ -263,12 +243,14 @@ export default function EventList() {
     userParticipationMap,
   ]);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (filteredEvents.length > 0) fetchAllRealtimeStats(filteredEvents);
-    }, 30000);
-    return () => clearInterval(interval);
-  }, [filteredEvents, fetchAllRealtimeStats]);
+  // ✅ OPTIMIZED: Remove auto-polling, chỉ update khi user interact
+  // Stats sẽ được update khi user like/share/view
+  // useEffect(() => {
+  //     const interval = setInterval(() => {
+  //         if (filteredEvents.length > 0) fetchAllRealtimeStats(filteredEvents);
+  //     }, 30000);
+  //     return () => clearInterval(interval);
+  // }, [filteredEvents, fetchAllRealtimeStats]);
 
   const applyFilter = () => {
     setAppliedFilters({
@@ -280,96 +262,49 @@ export default function EventList() {
 
   const handleInteraction = async (e, eventId, type) => {
     e.stopPropagation();
-
-    if (type === "LIKE") {
-      const isCurrentlyLiked = !!likedEvents[eventId];
-      const nextLikedState = !isCurrentlyLiked;
-
-      // 1. Cập nhật UI ngay lập tức (Optimistic)
-      setLikedEvents((prev) => ({ ...prev, [eventId]: nextLikedState }));
-      setEvents((prev) =>
-        prev.map((ev) =>
-          ev.id === eventId
-            ? {
-                ...ev,
-                likesCount: Math.max(
-                  0,
-                  (ev.likesCount ?? 0) + (nextLikedState ? 1 : -1)
-                ),
-              }
-            : ev
-        )
-      );
-
-      // 2. Debounce API call
-      if (likeTimeouts.current[eventId]) {
-        clearTimeout(likeTimeouts.current[eventId]);
-      }
-
-      likeTimeouts.current[eventId] = setTimeout(async () => {
-        try {
-          const res = await EventActions(eventId, {
-            type: "LIKE",
-            value: nextLikedState,
-          });
-          if (res.status === 200) {
-            // Đồng bộ lại số lượng chính xác từ server
-            setEvents((prev) =>
-              prev.map((ev) =>
-                ev.id === eventId
-                  ? { ...ev, likesCount: res.data.likesCount }
-                  : ev
-              )
-            );
-            setLikedEvents((prev) => ({ ...prev, [eventId]: res.data.liked }));
+    try {
+      if (type === "LIKE") {
+        // ✅ OPTIMIZED: Lazy load like status nếu chưa có
+        let isLiked = likedEvents[eventId];
+        if (isLiked === undefined) {
+          try {
+            const statusRes = await CheckEventStatus(eventId);
+            isLiked =
+              statusRes.status === 200 ? !!statusRes.data.hasLiked : false;
+          } catch {
+            isLiked = false;
           }
-        } catch (err) {
-          console.error("Lỗi Like:", err);
-        } finally {
-          delete likeTimeouts.current[eventId];
         }
-      }, 500);
-      return;
-    }
 
-    if (type === "SHARE") {
-      if (processingIds.has(`${eventId}-SHARE`)) return;
-      setProcessingIds((prev) => {
-        const next = new Set(prev);
-        next.add(`${eventId}-SHARE`);
-        return next;
-      });
-
-      try {
-        const res = await EventActions(eventId, { type: "SHARE" });
-        if (res.status === 200) {
-          setEvents((prev) =>
-            prev.map((ev) =>
-              ev.id === eventId
-                ? { ...ev, sharesCount: res.data.sharesCount }
-                : ev
-            )
-          );
-          navigator.clipboard.writeText(
-            res.data?.shareLink ||
-              `${window.location.origin}/su-kien/${eventId}`
-          );
-          Swal.fire({
-            icon: "success",
-            title: "Đã sao chép liên kết!",
-            timer: 1500,
-            showConfirmButton: false,
-          });
-        }
-      } catch (err) {
-        console.error("Interaction error:", err);
-      } finally {
-        setProcessingIds((prev) => {
-          const next = new Set(prev);
-          next.delete(`${eventId}-SHARE`);
-          return next;
-        });
+        setLikedEvents((prev) => ({ ...prev, [eventId]: !isLiked }));
+        setEvents((prev) =>
+          prev.map((ev) =>
+            ev.id === eventId
+              ? {
+                  ...ev,
+                  likesCount: (ev.likesCount ?? 0) + (isLiked ? -1 : 1),
+                }
+              : ev
+          )
+        );
+        await EventActions(eventId, { type: "LIKE" });
       }
+      if (type === "SHARE") {
+        setEvents((prev) =>
+          prev.map((ev) =>
+            ev.id === eventId
+              ? { ...ev, sharesCount: (ev.sharesCount ?? 0) + 1 }
+              : ev
+          )
+        );
+        const res = await EventActions(eventId, { type: "SHARE" });
+        navigator.clipboard.writeText(
+          res.data?.link || `${window.location.origin}/su-kien/${eventId}`
+        );
+        Swal.fire({ icon: "success", title: "Đã sao chép link!", timer: 1500 });
+      }
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -469,81 +404,122 @@ export default function EventList() {
           return (
             <div
               key={eventId}
-              className="bg-white rounded-2xl shadow-md overflow-hidden border hover:shadow-lg transition cursor-pointer"
+              className="flex flex-col relative cursor-pointer w-full md:w-auto h-auto md:h-[750px] bg-white rounded-2xl shadow-md hover:shadow-xl transition border-[2px] border-gray-300 mt-2 md:mt-4"
               onClick={() => handleViewDetail(eventId)}
             >
-              <div className="relative">
-                <img
-                  src={
-                    event.coverImage?.startsWith("http")
-                      ? event.coverImage
-                      : `http://localhost:5000${event.coverImage}`
-                  }
-                  alt={event.name}
-                  className="h-60 w-full object-cover"
-                />
-                {userParticipationMap[eventId] && (
-                  <span
-                    className={`absolute top-2 right-2 px-2 py-1 rounded text-xs ${
-                      userParticipationMap[eventId].status === "approved"
-                        ? "bg-green-500 text-white"
-                        : userParticipationMap[eventId].status === "rejected"
-                        ? "bg-red-500 text-white"
-                        : "bg-yellow-500 text-white"
-                    }`}
-                  >
-                    {userParticipationMap[eventId].status === "approved"
-                      ? "Đã tham gia"
+              {/* Badge trạng thái */}
+              {userParticipationMap[eventId] && (
+                <span
+                  className={`absolute top-2 md:top-4 right-2 md:right-4 px-2 md:px-3 py-1 rounded-full text-white text-[10px] md:text-xs font-bold shadow-md z-10 ${
+                    userParticipationMap[eventId].status === "approved"
+                      ? "bg-green-500"
                       : userParticipationMap[eventId].status === "rejected"
-                      ? "Bị từ chối"
-                      : "Đang chờ"}
-                  </span>
-                )}
-              </div>
-              <div className="p-5">
-                <h3 className="font-bold text-lg mb-2 line-clamp-1">
+                      ? "bg-red-500"
+                      : userParticipationMap[eventId].status === "pending"
+                      ? "bg-yellow-500"
+                      : "bg-gray-500"
+                  }`}
+                >
+                  {userParticipationMap[eventId].status === "approved"
+                    ? "Đã tham gia"
+                    : userParticipationMap[eventId].status === "rejected"
+                    ? "Bị từ chối"
+                    : "Đang chờ"}
+                </span>
+              )}
+
+              {/* Ảnh cover */}
+              <img
+                src={
+                  event.coverImage?.startsWith("http")
+                    ? event.coverImage
+                    : `http://localhost:5000${event.coverImage}`
+                }
+                alt={event.name}
+                className="h-[250px] md:h-[420px] w-full object-cover"
+              />
+
+              {/* Thân card */}
+              <div className="px-4 md:px-6 py-3 md:py-5 flex-1 flex flex-col justify-between">
+                {/* Tiêu đề */}
+                <h2 className="font-semibold text-lg md:text-xl leading-5 md:leading-6 mb-3 md:mb-4 line-clamp-2 min-h-[2.5rem] md:h-[3rem]">
                   {event.name}
-                </h3>
-                <div className="text-sm text-gray-600 space-y-2 mb-4">
-                  <div className="flex items-center gap-2">
-                    <Calendar size={14} />{" "}
-                    {new Date(event.date).toLocaleDateString("vi-VN")}
+                </h2>
+
+                {/* Khối thông tin + mô tả */}
+                <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-start flex-1">
+                  {/* Cột trái: thông tin nhanh */}
+                  <div className="flex flex-col text-gray-700 text-sm md:text-[15px] gap-3 md:gap-4 w-full md:w-[140px] md:min-h-[120px]">
+                    <div className="flex gap-2 items-center border-b pb-2">
+                      <Calendar size={16} className="md:w-[18px] md:h-[18px]" />
+                      <span>
+                        {new Date(event.date).toLocaleDateString("vi-VN")}
+                      </span>
+                    </div>
+                    <div className="flex gap-2 items-center border-b pb-2">
+                      <MapPin size={16} className="md:w-[18px] md:h-[18px]" />
+                      <span className="line-clamp-2">{event.location}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <MapPin size={14} /> {event.location}
+
+                  {/* Cột phải: mô tả */}
+                  <div className="text-gray-700 leading-5 md:leading-6 border-t md:border-t-0 md:border-l-[2px] border-[#DDB958] pt-3 md:pt-0 md:pl-2 w-full md:w-[190px] md:min-h-[120px]">
+                    <div
+                      className="prose prose-sm md:prose-lg max-w-none text-sm md:text-[15px] line-clamp-4 md:line-clamp-6"
+                      dangerouslySetInnerHTML={{
+                        __html: event.description || "Không có mô tả",
+                      }}
+                    />
                   </div>
-                  {userParticipationMap[eventId]?.status === "rejected" &&
-                    userParticipationMap[eventId]?.rejectionReason && (
-                      <div className="text-xs text-red-600 bg-red-50 p-2 rounded border border-red-200">
-                        <strong>Lý do từ chối:</strong>{" "}
-                        {userParticipationMap[eventId].rejectionReason}
-                      </div>
-                    )}
                 </div>
-                <div className="flex justify-between items-center">
-                  <div className="flex gap-4">
+
+                {/* Lý do từ chối (nếu có) */}
+                {userParticipationMap[eventId]?.status === "rejected" &&
+                  userParticipationMap[eventId]?.rejectionReason && (
+                    <div className="text-xs text-red-600 bg-red-50 p-2 rounded border border-red-200 mt-3">
+                      <strong>Lý do từ chối:</strong>{" "}
+                      {userParticipationMap[eventId].rejectionReason}
+                    </div>
+                  )}
+
+                {/* Hàng thao tác */}
+                <div className="flex items-center justify-between mt-4 md:mt-6">
+                  {/* Cụm trái: Like/Share */}
+                  <div className="flex items-center gap-4 md:gap-6 text-sm md:text-[15px]">
                     <button
                       onClick={(e) => handleInteraction(e, eventId, "LIKE")}
-                      className="flex items-center gap-1"
+                      className="flex items-center gap-1.5 md:gap-2 hover:scale-110 transition-transform"
                     >
                       <Heart
                         size={20}
-                        className={
+                        strokeWidth={1.5}
+                        className={`md:w-6 md:h-6 ${
                           likedEvents[eventId]
-                            ? "fill-red-500 text-red-500"
-                            : ""
-                        }
+                            ? "text-red-600 fill-red-600"
+                            : "text-gray-600"
+                        }`}
                       />
-                      {event.likesCount ?? 0}
+                      <span className="font-medium text-gray-700">
+                        {event.likesCount ?? 0}
+                      </span>
                     </button>
                     <button
                       onClick={(e) => handleInteraction(e, eventId, "SHARE")}
-                      className="flex items-center gap-1 text-blue-500"
+                      className="flex items-center gap-1.5 md:gap-2 hover:scale-110 transition-transform text-gray-600"
                     >
-                      <Share2 size={20} /> {event.sharesCount ?? 0}
+                      <Share2
+                        size={20}
+                        strokeWidth={1.5}
+                        className="md:w-6 md:h-6"
+                      />
+                      <span className="font-medium text-gray-700">
+                        {event.sharesCount ?? 0}
+                      </span>
                     </button>
                   </div>
-                  <button className="bg-[#DCBA58] text-white px-4 py-1.5 rounded text-sm">
+
+                  {/* Nút Chi Tiết */}
+                  <button className="bg-[#DCBA58] text-white px-4 md:px-6 py-2 md:py-2.5 rounded-lg font-medium text-sm md:text-[15px] hover:bg-[#caa445]">
                     Chi tiết
                   </button>
                 </div>

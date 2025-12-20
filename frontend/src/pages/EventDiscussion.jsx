@@ -20,9 +20,7 @@ import {
   Trash2,
   ArrowLeft,
   MessageSquare,
-  Share2,
   Smile,
-  ThumbsUp,
   Calendar,
   MapPin,
   Users,
@@ -300,34 +298,49 @@ export default function EventDiscussion() {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isPosting, setIsPosting] = useState(false);
   const [visibleComments, setVisibleComments] = useState({});
+  const [openMenuPostId, setOpenMenuPostId] = useState(null);
 
   const [commentsMap, setCommentsMap] = useState({});
   const postInputRef = useRef(null);
 
-  // Fetch user info
+  // ✅ OPTIMIZED: Fetch all data in parallel
   useEffect(() => {
-    async function fetchUser() {
-      try {
-        const res = await GetUserInfo();
-        setCurrentUser(res.data);
-      } catch (err) {
-        console.error("Lỗi lấy thông tin user:", err);
-      }
-    }
-    fetchUser();
-  }, []);
+    let mounted = true;
 
-  // Fetch event detail
-  useEffect(() => {
-    async function fetchEvent() {
+    async function loadData() {
+      setLoading(true);
       try {
-        const res = await GetEventDetail(eventId);
-        if (res.status === 200) {
-          setEvent(res.data);
+        // Parallel fetch user and event
+        const [userRes, eventRes] = await Promise.allSettled([
+          GetUserInfo(),
+          GetEventDetail(eventId),
+        ]);
 
-          // Admin hoặc thành viên sự kiện đã duyệt mới có thể truy cập
-          if (currentUser?.role === "ADMIN" || res.data.status === "approved") {
-             setCanAccess(true);
+        if (!mounted) return;
+
+        // Handle user
+        if (userRes.status === "fulfilled" && userRes.value?.data) {
+          setCurrentUser(userRes.value.data);
+        }
+
+        // Handle event
+        if (eventRes.status === "fulfilled" && eventRes.value?.data) {
+          const eventData = eventRes.value.data;
+          setEvent(eventData);
+
+          const user = userRes.value?.data;
+          // Admin or approved event
+          if (user?.role === "ADMIN" || eventData.status === "approved") {
+            setCanAccess(true);
+            // Fetch posts immediately
+            try {
+              const postsRes = await GetEventPosts(eventId);
+              if (postsRes.status === 200 && mounted) {
+                setPosts(postsRes.data);
+              }
+            } catch (err) {
+              console.error("Lỗi lấy bài viết:", err);
+            }
           } else {
             Swal.fire({
               icon: "warning",
@@ -336,43 +349,46 @@ export default function EventDiscussion() {
               confirmButtonColor: "#DDB958",
             });
             navigate(-1);
-            return;
+          }
+        } else if (eventRes.status === "rejected") {
+          const err = eventRes.reason;
+          if (err?.response?.status === 403) {
+            Swal.fire({
+              icon: "error",
+              title: "Không có quyền",
+              text: "Bạn phải là thành viên đã được duyệt để truy cập kênh này.",
+              confirmButtonColor: "#DDB958",
+            });
+            navigate(-1);
           }
         }
       } catch (err) {
-        console.error("Lỗi lấy thông tin sự kiện:", err);
-        if (err.response?.status === 403 && currentUser?.role !== "ADMIN") {
-          Swal.fire({
-            icon: "error",
-            title: "Không có quyền",
-            text: "Bạn phải là thành viên đã được duyệt để truy cập kênh này.",
-            confirmButtonColor: "#DDB958",
-          });
-          navigate(-1);
-        } else if (currentUser?.role === "ADMIN") {
-          setCanAccess(true);
-        }
+        console.error("Lỗi tải dữ liệu:", err);
+      } finally {
+        if (mounted) setLoading(false);
       }
-      setLoading(false);
     }
-    if (currentUser) fetchEvent();
-  }, [eventId, navigate, currentUser]);
 
-  // Giữ fetchPosts là useCallback để ổn định
-  const fetchPosts = useCallback(async () => {
-    try {
-      const res = await GetEventPosts(eventId);
-      if (res.status === 200) {
-        setPosts(res.data);
-      }
-    } catch (err) {
-      console.error("Lỗi lấy bài viết:", err);
-    }
-  }, [eventId]);
+    loadData();
+    return () => { mounted = false; };
+  }, [eventId, navigate]);
 
+  // Close dropdown when clicking outside
   useEffect(() => {
-    if (canAccess) fetchPosts();
-  }, [canAccess, fetchPosts]);
+    const handleClickOutside = (event) => {
+      if (openMenuPostId && !event.target.closest('.menu-container')) {
+        setOpenMenuPostId(null);
+      }
+    };
+
+    if (openMenuPostId) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [openMenuPostId]);
 
   // Format ngày giờ
   const formatDate = (dateString) => {
@@ -431,6 +447,18 @@ export default function EventDiscussion() {
       }
     } catch (err) {
       console.error("Lỗi lấy comments:", err);
+    }
+  };
+
+  // Fetch Posts để reload data
+  const fetchPosts = async () => {
+    try {
+      const res = await GetEventPosts(eventId);
+      if (res.status === 200) {
+        setPosts(res.data);
+      }
+    } catch (err) {
+      console.error("Lỗi lấy bài viết:", err);
     }
   };
 
@@ -576,12 +604,12 @@ export default function EventDiscussion() {
               className="w-full h-full object-cover"
             />
             <div className="absolute top-4 right-4">
-                {event.status === "approved" && (
-                  <span className="status-badge status-approved bg-green-500 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 shadow-sm">
-                    <CheckCircle2 size={14} />
-                    Đã duyệt
-                  </span>
-                )}
+              {event.status === "approved" && (
+                <span className="status-badge status-approved bg-green-500 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 shadow-sm">
+                  <CheckCircle2 size={14} />
+                  Đã duyệt
+                </span>
+              )}
             </div>
           </div>
 
@@ -635,9 +663,8 @@ export default function EventDiscussion() {
             ref={postInputRef}
             value={newPost}
             onChange={(e) => setNewPost(e.target.value)}
-            placeholder={`${
-              currentUser?.name || "Bạn"
-            } ơi, viết cập nhật cho sự kiện này...`}
+            placeholder={`${currentUser?.name || "Bạn"
+              } ơi, viết cập nhật cho sự kiện này...`}
             className="composer-textarea w-full p-4 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-blue-100 transition-all text-gray-700 placeholder-gray-400"
             rows="3"
             disabled={isPosting}
@@ -706,14 +733,16 @@ export default function EventDiscussion() {
         ) : (
           posts.map((post) => {
             const isLiked = post.likes?.includes(currentUser?.id); // SỬA: id sạch
+            const isEventCreator = event?.createdBy?.id === currentUser?.id || event?.createdBy === currentUser?.id;
             const canDelete =
               currentUser?.role === "ADMIN" ||
+              isEventCreator ||
               post.author?.id === currentUser?.id; // SỬA: author.id sạch
 
             return (
-              <div key={post.id} className="post-card bg-white p-6 rounded-2xl shadow-sm border border-gray-50 transition-all hover:shadow-md">
+              <div key={post.id} className="post-card bg-white p-6 rounded-2xl shadow-sm border border-gray-50 transition-all hover:shadow-md" style={{ overflow: 'visible' }}>
                 {/* Post Header */}
-                <div className="post-header flex items-center justify-between mb-4">
+                <div className="post-header flex items-center justify-between mb-4" style={{ overflow: 'visible' }}>
                   <div className="flex items-center gap-3">
                     <img
                       src={post.author?.avatar || "/default-avatar.png"}
@@ -732,19 +761,30 @@ export default function EventDiscussion() {
                   </div>
 
                   {canDelete && (
-                    <div className="relative group">
-                      <button className="p-2 hover:bg-gray-50 rounded-full transition-colors">
+                    <div className="relative menu-container">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenMenuPostId(openMenuPostId === post.id ? null : post.id);
+                        }}
+                        className="p-2 hover:bg-gray-50 rounded-full transition-colors"
+                      >
                         <MoreVertical size={18} className="text-gray-400" />
                       </button>
-                      <div className="post-menu absolute right-0 top-full hidden group-hover:block z-20 bg-white shadow-xl rounded-xl border border-gray-100 p-1 min-w-[150px]">
-                        <button
-                          onClick={() => handleDeletePost(post.id)}
-                          className="post-menu-item flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium"
-                        >
-                          <Trash2 size={16} />
-                          <span>Xóa bài viết</span>
-                        </button>
-                      </div>
+                      {openMenuPostId === post.id && (
+                        <div className="absolute right-0 top-full mt-1 bg-white shadow-xl rounded-xl border border-gray-100 p-1 min-w-[150px] z-50">
+                          <button
+                            onClick={() => {
+                              setOpenMenuPostId(null);
+                              handleDeletePost(post.id);
+                            }}
+                            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium"
+                          >
+                            <Trash2 size={16} />
+                            <span>Xóa bài viết</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -791,47 +831,22 @@ export default function EventDiscussion() {
                 <div className="post-actions flex items-center gap-1">
                   <button
                     onClick={() => handleToggleLike(post.id)}
-                    className={`action-btn flex-1 flex items-center justify-center gap-2 py-2 rounded-xl transition-all font-semibold text-sm ${
-                      isLiked 
-                        ? "bg-red-50 text-red-600" 
-                        : "text-gray-500 hover:bg-gray-50"
-                    }`}
+                    className={`action-btn flex-1 flex items-center justify-center gap-2 py-2 rounded-xl transition-all font-semibold text-sm ${isLiked
+                      ? "bg-red-50 text-red-600"
+                      : "text-gray-500 hover:bg-red-50 hover:text-red-600"
+                      }`}
                   >
-                    {isLiked ? (
-                      <Heart size={18} className="fill-current" />
-                    ) : (
-                      <ThumbsUp size={18} />
-                    )}
+                    <Heart size={18} className={isLiked ? "fill-red-600" : ""} />
                     <span>{isLiked ? "Đã thích" : "Thích"}</span>
                   </button>
 
                   <button
                     onClick={() => toggleCommentSection(post.id)}
-                    className={`action-btn flex-1 flex items-center justify-center gap-2 py-2 rounded-xl transition-all font-semibold text-sm text-gray-500 hover:bg-blue-50 hover:text-blue-600 ${
-                       visibleComments[post.id] ? "bg-blue-50 text-blue-600" : ""
-                    }`}
+                    className={`action-btn flex-1 flex items-center justify-center gap-2 py-2 rounded-xl transition-all font-semibold text-sm text-gray-500 hover:bg-blue-50 hover:text-blue-600 ${visibleComments[post.id] ? "bg-blue-50 text-blue-600" : ""
+                      }`}
                   >
                     <MessageSquare size={18} />
                     <span>Bình luận</span>
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      Swal.fire({
-                        icon: "info",
-                        title: "Tính năng đang phát triển",
-                        text: "Chức năng chia sẻ sẽ sớm được bổ sung",
-                        confirmButtonColor: "#DDB958",
-                        toast: true,
-                        position: "top-end",
-                        timer: 2000,
-                        showConfirmButton: false,
-                      });
-                    }}
-                    className="action-btn flex-1 flex items-center justify-center gap-2 py-2 rounded-xl transition-all font-semibold text-sm text-gray-500 hover:bg-gray-50"
-                  >
-                    <Share2 size={18} />
-                    <span>Chia sẻ</span>
                   </button>
                 </div>
 
@@ -839,12 +854,12 @@ export default function EventDiscussion() {
                 {visibleComments[post.id] && (
                   <div className="mt-4 pt-4 border-t border-gray-50">
                     <CommentSection
-                        post={post}
-                        currentUser={currentUser}
-                        fetchCommentsForPost={fetchCommentsForPost}
-                        commentsMap={commentsMap}
-                        setCommentsMap={setCommentsMap}
-                        fetchPosts={fetchPosts}
+                      post={post}
+                      currentUser={currentUser}
+                      fetchCommentsForPost={fetchCommentsForPost}
+                      commentsMap={commentsMap}
+                      setCommentsMap={setCommentsMap}
+                      fetchPosts={fetchPosts}
                     />
                   </div>
                 )}

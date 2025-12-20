@@ -32,6 +32,71 @@ export default function Register() {
 
     const [avatarFile, setAvatarFile] = useState(null);
     const [avatarPreview, setAvatarPreview] = useState(null);
+    const [errors, setErrors] = useState({});
+
+    // Validation rules
+    const validateField = (name, value) => {
+        switch (name) {
+            case "username":
+                if (!value.trim()) return "Tên đăng nhập không được để trống";
+                if (value.length < 3) return "Tên đăng nhập phải có ít nhất 3 ký tự";
+                if (!/^[a-zA-Z0-9_]+$/.test(value)) return "Tên đăng nhập chỉ chứa chữ, số và dấu gạch dưới";
+                return "";
+
+            case "phone":
+                if (!value.trim()) return "Số điện thoại không được để trống";
+                if (!/^(0|\+84)[0-9]{9,10}$/.test(value.replace(/\s/g, ""))) return "Số điện thoại không hợp lệ (VD: 0912345678)";
+                return "";
+
+            case "password":
+                if (!value) return "Mật khẩu không được để trống";
+                if (value.length < 6) return "Mật khẩu phải có ít nhất 6 ký tự";
+                if (!/(?=.*[a-z])(?=.*[A-Z])/.test(value)) return "Mật khẩu phải có chữ hoa và chữ thường";
+                if (!/(?=.*[0-9])/.test(value)) return "Mật khẩu phải có ít nhất 1 chữ số";
+                return "";
+
+            case "confirmPassword":
+                if (!value) return "Vui lòng xác nhận mật khẩu";
+                if (value !== form.password) return "Mật khẩu xác nhận không khớp";
+                return "";
+
+            case "name":
+                if (!value.trim()) return "Họ và tên không được để trống";
+                if (value.trim().length < 3) return "Họ và tên phải có ít nhất 3 ký tự";
+                if (!/^[a-zA-ZÀ-ỹ\s]+$/.test(value)) return "Họ và tên chỉ chứa chữ cái";
+                return "";
+
+            case "birthday":
+                if (!value) return "Ngày sinh không được để trống";
+                const birthDate = new Date(value);
+                const today = new Date();
+                const age = today.getFullYear() - birthDate.getFullYear();
+                if (age < 16) return "Bạn phải từ 16 tuổi trở lên";
+                if (age > 100) return "Ngày sinh không hợp lệ";
+                return "";
+
+            case "gender":
+                if (!value) return "Vui lòng chọn giới tính";
+                return "";
+
+            case "email":
+                if (!value.trim()) return "Email không được để trống";
+                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return "Email không đúng định dạng";
+                return "";
+
+            case "otp":
+                if (!value.trim()) return "Vui lòng nhập mã OTP";
+                if (!/^\d{6}$/.test(value)) return "OTP phải gồm 6 chữ số";
+                return "";
+
+            case "role":
+                if (!value) return "Vui lòng chọn vai trò";
+                return "";
+
+            default:
+                return "";
+        }
+    };
 
     // Hàm tiện ích để gọi Swal mà không bị layer Portal che khuất
     const MySwal = (options) => {
@@ -48,6 +113,16 @@ export default function Register() {
     const handleChange = (e) => {
         const { name, value } = e.target;
         setForm((prev) => ({ ...prev, [name]: value }));
+
+        // Validate on change
+        const error = validateField(name, value);
+        setErrors((prev) => ({ ...prev, [name]: error }));
+
+        // Re-validate confirmPassword when password changes
+        if (name === "password" && form.confirmPassword) {
+            const confirmError = validateField("confirmPassword", form.confirmPassword);
+            setErrors((prev) => ({ ...prev, confirmPassword: confirmError }));
+        }
     };
 
     const handleSendOtp = async () => {
@@ -98,17 +173,34 @@ export default function Register() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        // Validate all fields
+        const newErrors = {};
+        Object.keys(form).forEach((key) => {
+            if (key !== "confirmPassword") {
+                const error = validateField(key, form[key]);
+                if (error) newErrors[key] = error;
+            }
+        });
+
+        // Validate confirmPassword separately
+        const confirmError = validateField("confirmPassword", form.confirmPassword);
+        if (confirmError) newErrors.confirmPassword = confirmError;
+
+        setErrors(newErrors);
+
+        // If there are errors, stop submission
+        if (Object.keys(newErrors).length > 0) {
+            MySwal({
+                title: "Lỗi nhập liệu",
+                text: "Vui lòng kiểm tra lại các trường đã nhập.",
+                icon: "error"
+            });
+            return;
+        }
+
         const { gender, confirmPassword, ...restForm } = form;
         const mappedGender = gender === "Nam" ? "Male" : gender === "Nữ" ? "Female" : gender;
-
-        if (!restForm.name || !restForm.birthday || !mappedGender || !restForm.phone || !restForm.email || !restForm.username || !restForm.password || !restForm.otp || !restForm.role) {
-            MySwal({ title: "Không thành công", text: "Vui lòng điền đầy đủ thông tin.", icon: "error" });
-            return;
-        }
-        if (restForm.password !== confirmPassword) {
-            MySwal({ title: "Mật khẩu không khớp", text: "Vui lòng kiểm tra lại.", icon: "error" });
-            return;
-        }
 
         const formData = new FormData();
         formData.append('name', restForm.name);
@@ -159,16 +251,18 @@ export default function Register() {
                 </div>
 
                 <form onSubmit={handleSubmit} className="p-4 md:p-6 space-y-4">
-                    
+
                     {/* 1. Tên đăng nhập + Số điện thoại */}
                     <div className="flex flex-col md:flex-row md:space-x-4 space-y-3 md:space-y-0">
                         <div className="w-full md:w-1/2">
                             <label className="flex items-center gap-2 text-gray-800 font-medium mb-1"><User size={18} /> Tên đăng nhập:</label>
-                            <input type="text" name="username" value={form.username} onChange={handleChange} className="w-full bg-[#f5f5f5] border border-gray-300 rounded-md px-3 py-2 text-black outline-none focus:ring-2 focus:ring-blue-400" required />
+                            <input type="text" name="username" value={form.username} onChange={handleChange} className={`w-full bg-[#f5f5f5] border rounded-md px-3 py-2 text-black outline-none focus:ring-2 ${errors.username ? 'border-red-500 focus:ring-red-400' : 'border-gray-300 focus:ring-blue-400'}`} required />
+                            {errors.username && <p className="text-red-500 text-xs mt-1">{errors.username}</p>}
                         </div>
                         <div className="w-full md:w-1/2">
                             <label className="flex items-center gap-2 text-gray-800 font-medium mb-1"><Phone size={18} /> Số điện thoại:</label>
-                            <input type="tel" name="phone" value={form.phone} onChange={handleChange} className="w-full bg-[#f5f5f5] border border-gray-300 rounded-md px-3 py-2 text-black outline-none focus:ring-2 focus:ring-blue-400" required />
+                            <input type="tel" name="phone" value={form.phone} onChange={handleChange} className={`w-full bg-[#f5f5f5] border rounded-md px-3 py-2 text-black outline-none focus:ring-2 ${errors.phone ? 'border-red-500 focus:ring-red-400' : 'border-gray-300 focus:ring-blue-400'}`} required />
+                            {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
                         </div>
                     </div>
 
@@ -176,11 +270,13 @@ export default function Register() {
                     <div className="flex flex-col md:flex-row md:space-x-4 space-y-3 md:space-y-0">
                         <div className="w-full md:w-1/2">
                             <label className="flex items-center gap-2 text-gray-800 font-medium mb-1"><Lock size={18} /> Mật khẩu:</label>
-                            <input type="password" name="password" value={form.password} onChange={handleChange} className="w-full bg-[#f5f5f5] border border-gray-300 rounded-md px-3 py-2 text-black outline-none focus:ring-2 focus:ring-blue-400" required />
+                            <input type="password" name="password" value={form.password} onChange={handleChange} className={`w-full bg-[#f5f5f5] border rounded-md px-3 py-2 text-black outline-none focus:ring-2 ${errors.password ? 'border-red-500 focus:ring-red-400' : 'border-gray-300 focus:ring-blue-400'}`} required />
+                            {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password}</p>}
                         </div>
                         <div className="w-full md:w-1/2">
                             <label className="flex items-center gap-2 text-gray-800 font-medium mb-1"><Lock size={18} /> Nhập lại mật khẩu:</label>
-                            <input type="password" name="confirmPassword" value={form.confirmPassword} onChange={handleChange} className="w-full bg-[#f5f5f5] border border-gray-300 rounded-md px-3 py-2 text-black outline-none focus:ring-2 focus:ring-blue-400" required />
+                            <input type="password" name="confirmPassword" value={form.confirmPassword} onChange={handleChange} className={`w-full bg-[#f5f5f5] border rounded-md px-3 py-2 text-black outline-none focus:ring-2 ${errors.confirmPassword ? 'border-red-500 focus:ring-red-400' : 'border-gray-300 focus:ring-blue-400'}`} required />
+                            {errors.confirmPassword && <p className="text-red-500 text-xs mt-1">{errors.confirmPassword}</p>}
                         </div>
                     </div>
 
@@ -188,30 +284,34 @@ export default function Register() {
                     <div className="flex flex-col md:flex-row md:space-x-4 space-y-3 md:space-y-0">
                         <div className="w-full md:w-3/5">
                             <label className="flex items-center gap-2 text-gray-800 font-medium mb-1"><User size={18} /> Họ và tên:</label>
-                            <input type="text" name="name" value={form.name} onChange={handleChange} className="w-full bg-[#f5f5f5] border border-gray-300 rounded-md px-3 py-2 text-black outline-none focus:ring-2 focus:ring-blue-400" required />
+                            <input type="text" name="name" value={form.name} onChange={handleChange} className={`w-full bg-[#f5f5f5] border rounded-md px-3 py-2 text-black outline-none focus:ring-2 ${errors.name ? 'border-red-500 focus:ring-red-400' : 'border-gray-300 focus:ring-blue-400'}`} required />
+                            {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
                         </div>
                         <div className="w-full md:w-2/5">
                             <label className="flex items-center gap-2 text-gray-800 font-medium mb-1"><Calendar size={18} /> Ngày sinh:</label>
-                            <input type="date" name="birthday" value={form.birthday} onChange={handleChange} className="w-full bg-[#f5f5f5] border border-gray-300 rounded-md px-3 py-[7px] text-black outline-none focus:ring-2 focus:ring-blue-400" required />
+                            <input type="date" name="birthday" value={form.birthday} onChange={handleChange} className={`w-full bg-[#f5f5f5] border rounded-md px-3 py-[7px] text-black outline-none focus:ring-2 ${errors.birthday ? 'border-red-500 focus:ring-red-400' : 'border-gray-300 focus:ring-blue-400'}`} required />
+                            {errors.birthday && <p className="text-red-500 text-xs mt-1">{errors.birthday}</p>}
                         </div>
                         <div className="w-full md:w-1/5">
                             <label className="flex items-center gap-2 text-gray-800 font-medium mb-1">Giới tính:</label>
-                            <select name="gender" value={form.gender} onChange={handleChange} className="w-full bg-[#f5f5f5] border border-gray-300 rounded-md px-2 py-2 text-black focus:ring-2 focus:ring-blue-400 outline-none" required>
+                            <select name="gender" value={form.gender} onChange={handleChange} className={`w-full bg-[#f5f5f5] border rounded-md px-2 py-2 text-black focus:ring-2 outline-none ${errors.gender ? 'border-red-500 focus:ring-red-400' : 'border-gray-300 focus:ring-blue-400'}`} required>
                                 <option value="">---</option>
                                 <option value="Nam">Nam</option>
                                 <option value="Nữ">Nữ</option>
                                 <option value="Khác">Khác</option>
                             </select>
+                            {errors.gender && <p className="text-red-500 text-xs mt-1">{errors.gender}</p>}
                         </div>
                     </div>
 
                     {/* 4. Vai trò */}
                     <div className="w-full">
                         <label className="flex items-center gap-2 text-gray-800 font-medium mb-1"><UserCog size={18} /> Bạn đăng ký với tư cách:</label>
-                        <select name="role" value={form.role} onChange={handleChange} className="w-full bg-[#f5f5f5] border border-gray-300 rounded-md px-3 py-2 text-black font-medium focus:ring-2 focus:ring-blue-400 outline-none" required>
+                        <select name="role" value={form.role} onChange={handleChange} className={`w-full bg-[#f5f5f5] border rounded-md px-3 py-2 text-black font-medium focus:ring-2 outline-none ${errors.role ? 'border-red-500 focus:ring-red-400' : 'border-gray-300 focus:ring-blue-400'}`} required>
                             <option value="VOLUNTEER">Tình nguyện viên (Volunteer)</option>
                             <option value="EVENTMANAGER">Quản lý sự kiện (Event Manager)</option>
                         </select>
+                        {errors.role && <p className="text-red-500 text-xs mt-1">{errors.role}</p>}
                     </div>
 
                     {/* 5. Avatar Upload */}
@@ -234,14 +334,16 @@ export default function Register() {
                     <div className="flex flex-col md:flex-row gap-4">
                         <div className="w-full md:w-[300px]">
                             <label className="flex items-center gap-2 text-gray-800 font-medium mb-1"><Mail size={18} /> Email:</label>
-                            <input type="email" name="email" value={form.email} onChange={handleChange} className="w-full bg-[#f5f5f5] border border-gray-300 rounded-md px-3 py-2 text-black outline-none focus:ring-2 focus:ring-blue-400" required />
+                            <input type="email" name="email" value={form.email} onChange={handleChange} className={`w-full bg-[#f5f5f5] border rounded-md px-3 py-2 text-black outline-none focus:ring-2 ${errors.email ? 'border-red-500 focus:ring-red-400' : 'border-gray-300 focus:ring-blue-400'}`} required />
+                            {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
                         </div>
                         <div className="flex-1">
                             <label className="flex items-center gap-2 text-gray-800 font-medium mb-1">OTP:</label>
                             <div className="relative">
-                                <input type="text" name="otp" placeholder="Nhập OTP" value={form.otp} onChange={handleChange} className="w-full bg-[#f5f5f5] border border-gray-300 rounded-md px-3 py-2 text-black outline-none focus:ring-2 focus:ring-blue-400" required />
+                                <input type="text" name="otp" placeholder="Nhập OTP" value={form.otp} onChange={handleChange} className={`w-full bg-[#f5f5f5] border rounded-md px-3 py-2 text-black outline-none focus:ring-2 ${errors.otp ? 'border-red-500 focus:ring-red-400' : 'border-gray-300 focus:ring-blue-400'}`} required />
                                 <button type="button" onClick={handleSendOtp} className="absolute right-0 top-0 h-full bg-[#DCBA58] px-2 rounded-r-md border-l border-gray-300 flex items-center transition-colors"><img src={otp} alt="OTP" className="w-8" /></button>
                             </div>
+                            {errors.otp && <p className="text-red-500 text-xs mt-1">{errors.otp}</p>}
                         </div>
                     </div>
 

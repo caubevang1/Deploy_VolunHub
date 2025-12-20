@@ -80,7 +80,7 @@ class UserRepository extends BaseRepository {
    */
   async updatePasswordByEmail(email, hashedPassword) {
     return await this.findOneAndUpdate(
-      { email }, 
+      { email },
       { password: hashedPassword }
     );
   }
@@ -88,42 +88,89 @@ class UserRepository extends BaseRepository {
   /**
    * 🏆 Lấy bảng xếp hạng Quản lý sự kiện (EventManager)
    * Tính toán dựa trên: Số sự kiện đã tạo + Số lượng tình nguyện viên tham gia
+   * ✅ OPTIMIZED: Dùng Aggregation Pipeline thay vì N+1 queries
    */
   async getManagerRankingWithStats(limit = 10) {
-    const Event = mongoose.model("Event");
-    const Registration = mongoose.model("Registration");
+    const results = await this.model.aggregate([
+      // Chỉ lấy EventManager đang hoạt động
+      { $match: { role: "EVENTMANAGER", status: "ACTIVE" } },
 
-    // Lấy danh sách Manager đang hoạt động
-    const managers = await this.model.find({ role: "EVENTMANAGER", status: "ACTIVE" }).lean();
+      // Join với Event collection
+      {
+        $lookup: {
+          from: "events",
+          localField: "_id",
+          foreignField: "createdBy",
+          as: "events"
+        }
+      },
 
-    const results = await Promise.all(managers.map(async (m) => {
-      // Tìm tất cả sự kiện do manager này tạo
-      const events = await Event.find({ createdBy: m._id }).select("_id status").lean();
-      const eventIds = events.map(e => e._id);
+      // Join với Registration collection để đếm volunteers
+      {
+        $lookup: {
+          from: "registrations",
+          let: { eventIds: "$events._id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $in: ["$event", "$$eventIds"] },
+                    { $eq: ["$status", "approved"] }
+                  ]
+                }
+              }
+            },
+            { $count: "total" }
+          ],
+          as: "volunteerStats"
+        }
+      },
 
-      // Đếm tổng số tình nguyện viên đã được duyệt tham gia các sự kiện của manager này
-      const totalVolunteers = await Registration.countDocuments({ 
-        event: { $in: eventIds }, 
-        status: "approved" 
-      });
+      // Tính toán các metrics
+      {
+        $project: {
+          name: 1,
+          email: 1,
+          avatar: 1,
+          points: 1,
+          totalEvents: { $size: "$events" },
+          completedEvents: {
+            $size: {
+              $filter: {
+                input: "$events",
+                as: "evt",
+                cond: { $eq: ["$$evt.status", "completed"] }
+              }
+            }
+          },
+          totalVolunteers: {
+            $ifNull: [
+              { $arrayElemAt: ["$volunteerStats.total", 0] },
+              0
+            ]
+          }
+        }
+      },
 
-      // Đếm số sự kiện đã hoàn thành
-      const completedEventsCount = events.filter(e => e.status === "completed").length;
+      // Tính score: (Mỗi sự kiện * 10) + (Mỗi TNV * 1)
+      {
+        $addFields: {
+          score: {
+            $add: [
+              { $multiply: ["$totalEvents", 10] },
+              "$totalVolunteers"
+            ]
+          }
+        }
+      },
 
-      // Công thức tính score: (Mỗi sự kiện * 10) + (Mỗi TNV đã duyệt * 1)
-      const score = (events.length * 10) + totalVolunteers;
+      // Sắp xếp và giới hạn
+      { $sort: { score: -1 } },
+      { $limit: limit }
+    ]);
 
-      return {
-        ...this.transform(m),
-        totalEvents: events.length,
-        completedEvents: completedEventsCount,
-        totalVolunteers,
-        score
-      };
-    }));
-
-    // Sắp xếp giảm dần theo score và lấy giới hạn
-    return results.sort((a, b) => b.score - a.score).slice(0, limit);
+    return this.transform(results);
   }
 }
 

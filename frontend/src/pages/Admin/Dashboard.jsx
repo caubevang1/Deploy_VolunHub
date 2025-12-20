@@ -14,6 +14,8 @@ import {
   CalendarOutlined,
   ClockCircleOutlined,
   CheckCircleOutlined,
+  TrophyOutlined,
+  CloseCircleOutlined,
 } from "@ant-design/icons";
 import {
   GetDashboardStats,
@@ -39,49 +41,49 @@ export default function Dashboard() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    const fetchDashboardData = async () => {
+      setLoading(true);
+      try {
+        // Fetch dashboard stats
+        const statsRes = await GetDashboardStats();
+        if (statsRes.status === 200) {
+          console.log("Dashboard Stats Response:", statsRes.data);
+          setStats(statsRes.data);
+        }
+
+        // Fetch recent events (top 5)
+        const eventsRes = await GetEvents();
+        if (eventsRes.status === 200) {
+          setRecentEvents(eventsRes.data.slice(0, 5));
+        }
+
+        // Fetch recent users (top 5)
+        const usersRes = await GetUsers();
+        if (usersRes.status === 200) {
+          setRecentUsers(usersRes.data.slice(0, 5));
+        }
+      } catch (error) {
+        console.error("Lỗi khi tải dữ liệu dashboard:", error);
+        const status = error?.response?.status;
+        // If unauthorized or forbidden, redirect to login (likely token missing/expired)
+        if (status === 401 || status === 403) {
+          message.error(
+            "Bạn chưa đăng nhập hoặc không có quyền truy cập. Vui lòng đăng nhập lại."
+          );
+          navigate("/login");
+        } else {
+          const errMsg =
+            error?.response?.data?.message ||
+            error.message ||
+            "Không thể tải dữ liệu dashboard";
+          message.error(errMsg);
+        }
+      }
+      setLoading(false);
+    };
+
     fetchDashboardData();
-  }, []);
-
-  const fetchDashboardData = async () => {
-    setLoading(true);
-    try {
-      // Fetch dashboard stats
-      const statsRes = await GetDashboardStats();
-      if (statsRes.status === 200) {
-        console.log("Dashboard Stats Response:", statsRes.data);
-        setStats(statsRes.data);
-      }
-
-      // Fetch recent events (top 5)
-      const eventsRes = await GetEvents();
-      if (eventsRes.status === 200) {
-        setRecentEvents(eventsRes.data.slice(0, 5));
-      }
-
-      // Fetch recent users (top 5)
-      const usersRes = await GetUsers();
-      if (usersRes.status === 200) {
-        setRecentUsers(usersRes.data.slice(0, 5));
-      }
-    } catch (error) {
-      console.error("Lỗi khi tải dữ liệu dashboard:", error);
-      const status = error?.response?.status;
-      // If unauthorized or forbidden, redirect to login (likely token missing/expired)
-      if (status === 401 || status === 403) {
-        message.error(
-          "Bạn chưa đăng nhập hoặc không có quyền truy cập. Vui lòng đăng nhập lại."
-        );
-        navigate("/login");
-      } else {
-        const errMsg =
-          error?.response?.data?.message ||
-          error.message ||
-          "Không thể tải dữ liệu dashboard";
-        message.error(errMsg);
-      }
-    }
-    setLoading(false);
-  };
+  }, [navigate]);
 
   const categoryMapping = {
     Community: "Cộng đồng",
@@ -166,23 +168,36 @@ export default function Dashboard() {
     },
   ];
 
-  // Tính phần trăm các trạng thái sự kiện
-  // Tỷ lệ phê duyệt = (tổng - từ chối - chờ duyệt) / tổng
-  const approvedCount =
-    stats.totalEvents - stats.rejectedEventsCount - stats.pendingEventsCount;
   const approvalRate =
     stats.totalEvents > 0
-      ? Math.round((approvedCount / stats.totalEvents) * 100)
+      ? Math.round(
+          ((stats.approvedEventsCount + stats.completedEventsCount) /
+            stats.totalEvents) *
+            100
+        )
       : 0;
 
   const completionRate =
-    stats.totalEvents > 0
-      ? Math.round((stats.completedEventsCount / stats.totalEvents) * 100)
+    stats.approvedEventsCount + stats.completedEventsCount > 0
+      ? Math.round(
+          (stats.completedEventsCount /
+            (stats.approvedEventsCount + stats.completedEventsCount)) *
+            100
+        )
       : 0;
 
   const rejectionRate =
-    stats.totalEvents > 0
-      ? Math.round((stats.rejectedEventsCount / stats.totalEvents) * 100)
+    stats.rejectedEventsCount +
+      stats.approvedEventsCount +
+      stats.completedEventsCount >
+    0
+      ? Math.round(
+          (stats.rejectedEventsCount /
+            (stats.rejectedEventsCount +
+              stats.approvedEventsCount +
+              stats.completedEventsCount)) *
+            100
+        )
       : 0;
 
   if (loading) {
@@ -201,10 +216,11 @@ export default function Dashboard() {
 
       {/* Statistics Cards */}
       <Row gutter={[16, 16]} className="mb-6">
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={24} sm={12} lg={12}>
           <Card
-            className="stat-card shadow-md hover:shadow-lg transition-shadow"
+            className="stat-card shadow-md hover:shadow-lg transition-shadow cursor-pointer"
             style={{ borderTop: "4px solid #1890ff", borderRadius: 8 }}
+            onClick={() => navigate("/admin/nguoi-dung")}
           >
             <Statistic
               title={
@@ -219,10 +235,11 @@ export default function Dashboard() {
           </Card>
         </Col>
 
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={24} sm={12} lg={12}>
           <Card
-            className="stat-card shadow-md hover:shadow-lg transition-shadow"
+            className="stat-card shadow-md hover:shadow-lg transition-shadow cursor-pointer"
             style={{ borderTop: "4px solid #52c41a" }}
+            onClick={() => navigate("/admin/su-kien")}
           >
             <Statistic
               title={
@@ -234,11 +251,13 @@ export default function Dashboard() {
             />
           </Card>
         </Col>
-
+      </Row>
+      <Row gutter={[16, 16]} className="mb-6">
         <Col xs={24} sm={12} lg={6}>
           <Card
-            className="stat-card shadow-md hover:shadow-lg transition-shadow"
+            className="stat-card shadow-md hover:shadow-lg transition-shadow cursor-pointer"
             style={{ borderTop: "4px solid #DDB958", borderRadius: 8 }}
+            onClick={() => navigate("/admin/su-kien?status=pending")}
           >
             <Statistic
               title={
@@ -255,8 +274,9 @@ export default function Dashboard() {
 
         <Col xs={24} sm={12} lg={6}>
           <Card
-            className="stat-card shadow-md hover:shadow-lg transition-shadow"
+            className="stat-card shadow-md hover:shadow-lg transition-shadow cursor-pointer"
             style={{ borderTop: "4px solid #52c41a" }}
+            onClick={() => navigate("/admin/su-kien?status=approved")}
           >
             <Statistic
               title={
@@ -267,6 +287,43 @@ export default function Dashboard() {
               value={stats.approvedEventsCount}
               prefix={<CheckCircleOutlined style={{ color: "#52c41a" }} />}
               valueStyle={{ color: "#52c41a", fontWeight: "bold" }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card
+            className="stat-card shadow-md hover:shadow-lg transition-shadow cursor-pointer"
+            style={{ borderTop: "4px solid #ff4d4f", borderRadius: 8 }}
+            onClick={() => navigate("/admin/su-kien?status=rejected")}
+          >
+            <Statistic
+              title={
+                <span className="text-gray-600 font-medium">
+                  Sự Kiện Bị Từ Chối
+                </span>
+              }
+              value={stats.rejectedEventsCount}
+              prefix={<CloseCircleOutlined style={{ color: "#ff4d4f" }} />}
+              valueStyle={{ color: "#ff4d4f", fontWeight: "bold" }}
+            />
+          </Card>
+        </Col>
+
+        <Col xs={24} sm={12} lg={6}>
+          <Card
+            className="stat-card shadow-md hover:shadow-lg transition-shadow cursor-pointer"
+            style={{ borderTop: "4px solid #722ed1", borderRadius: 8 }}
+            onClick={() => navigate("/admin/su-kien?status=completed")}
+          >
+            <Statistic
+              title={
+                <span className="text-gray-600 font-medium">
+                  Sự Kiện Đã Hoàn Thành
+                </span>
+              }
+              value={stats.completedEventsCount}
+              prefix={<TrophyOutlined style={{ color: "#722ed1" }} />}
+              valueStyle={{ color: "#722ed1", fontWeight: "bold" }}
             />
           </Card>
         </Col>
@@ -293,7 +350,8 @@ export default function Dashboard() {
               format={(percent) => `${percent}%`}
             />
             <p className="text-gray-600 mt-2">
-              {approvedCount} / {stats.totalEvents} sự kiện đã được phê duyệt
+              {stats.approvedEventsCount + stats.completedEventsCount} /{" "}
+              {stats.totalEvents} sự kiện đã được phê duyệt hoặc hoàn thành
             </p>
           </Card>
         </Col>
@@ -317,8 +375,9 @@ export default function Dashboard() {
               format={(percent) => `${percent}%`}
             />
             <p className="text-gray-600 mt-2">
-              {stats.completedEventsCount || 0} / {stats.totalEvents} sự kiện đã
-              hoàn thành
+              {stats.completedEventsCount || 0} /{" "}
+              {stats.approvedEventsCount + stats.completedEventsCount} sự kiện
+              đã hoàn thành
             </p>
           </Card>
         </Col>
@@ -342,8 +401,11 @@ export default function Dashboard() {
               format={(percent) => `${percent}%`}
             />
             <p className="text-gray-600 mt-2">
-              {stats.rejectedEventsCount || 0} / {stats.totalEvents} sự kiện bị
-              từ chối
+              {stats.rejectedEventsCount || 0} /{" "}
+              {stats.rejectedEventsCount +
+                stats.approvedEventsCount +
+                stats.completedEventsCount}{" "}
+              sự kiện bị từ chối
             </p>
           </Card>
         </Col>

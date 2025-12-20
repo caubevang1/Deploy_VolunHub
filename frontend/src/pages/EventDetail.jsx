@@ -55,73 +55,59 @@ export default function EventDetail() {
   const [isProcessingShare, setIsProcessingShare] = useState(false);
   const likeTimeout = useRef(null);
 
+  // ✅ OPTIMIZED: Combine all API calls in single useEffect
   useEffect(() => {
-    async function fetchUser() {
-      try {
-        const res = await GetUserInfo();
-        if (res.status === 200) setCurrentUser(res.data);
-      } catch (err) {
-        console.error("Lỗi lấy thông tin user:", err);
-      }
-    }
-    fetchUser();
-  }, []);
-
-  useEffect(() => {
-    async function load() {
+    async function loadEventData() {
       setLoading(true);
       try {
-        const res = await GetEventDetail(eventId);
-        if (res.status === 200 && res.data) {
-          setEvent(res.data);
+        // Parallel fetch all data
+        const [eventRes, userRes, myEventsRes] = await Promise.allSettled([
+          GetEventDetail(eventId),
+          GetUserInfo(),
+          GetMyEvent(),
+        ]);
 
+        // Handle event detail
+        if (eventRes.status === "fulfilled" && eventRes.value?.data) {
+          setEvent(eventRes.value.data);
+
+          // Fetch stats and like status in parallel
           const [statsRes, likeRes] = await Promise.allSettled([
             GetEventActionStats(eventId),
             CheckEventStatus(eventId),
           ]);
 
-          if (
-            statsRes.status === "fulfilled" &&
-            statsRes.value.status === 200
-          ) {
+          if (statsRes.status === "fulfilled" && statsRes.value?.status === 200) {
             setStats(statsRes.value.data);
           }
-          if (likeRes.status === "fulfilled" && likeRes.value.status === 200) {
+          if (likeRes.status === "fulfilled" && likeRes.value?.status === 200) {
             setIsLiked(likeRes.value.data.hasLiked);
           }
 
-          await EventActions(eventId, { type: "VIEW" });
+          // Track view (fire and forget)
+          EventActions(eventId, { type: "VIEW" }).catch(console.error);
+        }
+
+        // Handle user info
+        if (userRes.status === "fulfilled" && userRes.value?.data) {
+          setCurrentUser(userRes.value.data);
+        }
+
+        // Handle registration status
+        if (myEventsRes.status === "fulfilled" && Array.isArray(myEventsRes.value?.data)) {
+          const eventData = myEventsRes.value.data.find(
+            (item) => String(item.event?.id || item.event) === String(eventId)
+          );
+          setRegistrationStatus(eventData?.status || "");
         }
       } catch (err) {
-        console.error("Lỗi khi tải chi tiết sự kiện:", err);
+        console.error("Lỗi khi tải dữ liệu:", err);
       } finally {
         setLoading(false);
       }
     }
-    load();
+    loadEventData();
   }, [eventId]);
-
-  useEffect(() => {
-    async function checkRegistrationStatus() {
-      if (!event || !event.id) return;
-      try {
-        const res = await GetMyEvent();
-        if (res.status === 200 && Array.isArray(res.data)) {
-          const eventData = res.data.find(
-            (item) => String(item.event?.id || item.event) === String(eventId)
-          );
-          if (eventData) {
-            setRegistrationStatus(eventData.status);
-          } else {
-            setRegistrationStatus("");
-          }
-        }
-      } catch (err) {
-        console.error("Lỗi kiểm tra trạng thái đăng ký:", err);
-      }
-    }
-    checkRegistrationStatus();
-  }, [eventId, event]);
 
   const handleRegister = async () => {
     if (registrationStatus) {
@@ -239,131 +225,158 @@ export default function EventDetail() {
   };
 
   const renderDescription = (description, galleryImages) => {
-    if (!description) return "";
+    if (!description || !Array.isArray(galleryImages)) return description;
+
     let html = description;
-    if (Array.isArray(galleryImages)) {
-      galleryImages.forEach((img, index) => {
-        const realUrl = `http://localhost:5000${img}`;
-        const placeholder = `[IMAGE_PLACEHOLDER_${index}]`;
-        const imgTag = `<div style="text-align: center; margin: 20px 0;"><img src="${realUrl}" style="max-width:100%; height:auto; border-radius:8px;" /></div>`;
-        html = html.replaceAll(placeholder, imgTag);
-      });
-    }
+
+    galleryImages.forEach((img, index) => {
+      const realUrl = `http://localhost:5000${img}`;
+      const placeholder = `[IMAGE_PLACEHOLDER_${index}]`;
+
+      // Ảnh căn giữa
+      const imgTag = `
+            <div style="
+                text-align: center; 
+                margin: 20px 0;
+            ">
+                <img 
+                    src="${realUrl}" 
+                    style="
+                        max-width: 100%; 
+                        height: auto; 
+                        border-radius: 8px;
+                    "
+                />
+            </div>
+        `;
+
+      html = html.replaceAll(placeholder, imgTag);
+    });
+
     return html;
   };
 
-  if (loading)
-    return <div className="text-center py-20 animate-pulse">Đang tải...</div>;
+  if (loading) return <p className="text-center mt-10 text-lg">Đang tải...</p>;
   if (!event)
     return (
-      <div className="text-center mt-20 text-red-500">
+      <p className="text-center mt-10 text-lg text-red-500">
         Không tìm thấy sự kiện!
-      </div>
+      </p>
     );
 
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "-";
+    return new Date(dateStr).toLocaleDateString("vi-VN");
+  };
+
   return (
-    <div className="flex flex-col lg:flex-row gap-6 max-w-7xl mx-auto mt-6 px-4 mb-10">
+    <div className="flex flex-col lg:flex-row gap-6 max-w-7xl mx-auto mt-6 lg:mt-10 my-4 px-4">
+      {/* Phần nội dung chính */}
       <div className="flex-1 bg-white shadow-lg rounded-2xl overflow-hidden text-[#111827]">
-        <h1 className="text-2xl md:text-4xl font-bold px-6 pt-8">
+        {/* Tiêu đề */}
+        <h1 className="text-2xl md:text-4xl font-bold px-4 md:px-6 !pt-6 md:!pt-8">
           {event.name}
         </h1>
-        <div className="px-6 py-6">
-          <img
-            src={
-              event.coverImage
-                ? `http://localhost:5000${event.coverImage}`
-                : "/default-event.png"
-            }
-            className="w-full max-h-[500px] object-cover rounded-xl"
-            alt={event.name}
-          />
-        </div>
 
-        <div className="px-6 md:px-12 py-6 text-gray-700 grid grid-cols-1 sm:grid-cols-2 gap-8">
-          <div className="space-y-4">
+        {/* Ảnh */}
+        <img
+          src={
+            event.coverImage
+              ? `http://localhost:5000${event.coverImage}`
+              : "/default-event.png"
+          }
+          alt={event.name}
+          className="w-full max-h-[300px] md:max-h-[500px] object-cover px-4 md:px-6 py-4 md:py-8"
+        />
+
+        {/* Thông tin chi tiết */}
+        <div className="px-4 md:px-12 py-4 md:py-8 text-gray-700 flex flex-col sm:flex-row gap-6 md:gap-10">
+          <div className="flex flex-col gap-4 md:gap-6 flex-1">
             <div className="flex items-center gap-3">
-              <Calendar className="text-blue-500" size={20} />{" "}
+              <Calendar size={20} />
               <span>
-                <strong>Ngày tổ chức:</strong>{" "}
-                {new Date(event.date).toLocaleDateString("vi-VN")}
+                <strong>Ngày tổ chức:</strong> {formatDate(event.date)}
               </span>
             </div>
+
             <div className="flex items-center gap-3">
-              <Tag className="text-orange-500" size={20} />{" "}
+              <Tag size={20} />
               <span>
-                <strong>Loại:</strong>{" "}
-                {categoryMapping[event.category] || event.category}
+                <strong>Loại sự kiện:</strong>{" "}
+                {categoryMapping[event.category] || event.category || "Khác"}
               </span>
             </div>
+
             <div className="flex items-center gap-3">
-              <MapPin className="text-red-500" size={20} />{" "}
+              <MapPin size={20} />
               <span>
                 <strong>Địa điểm:</strong> {event.location}
               </span>
             </div>
           </div>
-          <div className="space-y-4">
+
+          <div className="flex flex-col gap-4 md:gap-6 flex-1">
             <div className="flex items-center gap-3">
-              <Calendar className="text-blue-500" size={20} />{" "}
+              <Calendar size={20} />
               <span>
-                <strong>Ngày kết thúc:</strong>{" "}
-                {new Date(event.endDate).toLocaleDateString("vi-VN")}
+                <strong>Ngày kết thúc:</strong> {formatDate(event.endDate)}
               </span>
             </div>
+
             <div className="flex items-center gap-3">
-              <Users className="text-green-500" size={20} />{" "}
+              <Users size={20} />
               <span>
-                <strong>Tham gia:</strong> {event.currentParticipants || 0}/
-                {event.maxParticipants}
+                <strong>Số người tham gia:</strong>{" "}
+                {event.currentParticipants || 0}/{event.maxParticipants || 50}
               </span>
             </div>
+
             <div className="flex items-start gap-3">
-              <Phone className="text-purple-500 mt-1" size={20} />{" "}
-              <span>
-                <strong>Liên hệ:</strong> {event.createdBy?.phone || "N/A"} (
-                {event.createdBy?.name || "Người quản lý"})
+              <div className="flex-shrink-0">
+                <Phone size={20} />
+              </div>
+              <span className="break-words">
+                <strong>Thắc mắc liên hệ:</strong>{" "}
+                {event.createdBy?.phone || "0123456789"} (
+                {event.createdBy?.name || "Nguyễn Trường Nam"})
               </span>
             </div>
           </div>
         </div>
 
+        {/* Hiển thị trạng thái */}
         {registrationStatus && (
-          <div className="px-6 pb-6 text-center">
-            <div
-              className={`inline-block px-6 py-2 rounded-full font-bold text-sm shadow-sm
-              ${
-                registrationStatus === "pending" ? "bg-gray-500 text-white" : ""
-              }
-              ${
-                registrationStatus === "approved"
-                  ? "bg-green-50 text-green-600"
-                  : ""
-              }
-              ${
-                registrationStatus === "completed"
-                  ? "bg-blue-50 text-blue-600"
-                  : ""
-              }
-              ${
-                registrationStatus === "rejected"
-                  ? "bg-red-50 text-red-600"
-                  : ""
-              }`}
-            >
-              {registrationStatus === "pending" && "Đang chờ duyệt"}
-              {registrationStatus === "approved" && "Đăng ký thành công"}
-              {registrationStatus === "completed" &&
-                "Bạn đã hoàn thành sự kiện này"}
-              {registrationStatus === "rejected" &&
-                "Yêu cầu tham gia bị từ chối"}
-            </div>
+          <div className="flex items-center justify-center mt-4 px-4 md:px-6 pb-6 md:pb-8">
+            {registrationStatus === "pending" && (
+              <span className="text-white bg-gray-500 px-4 py-2 rounded-md font-semibold">
+                Đang chờ duyệt
+              </span>
+            )}
+            {registrationStatus === "approved" && (
+              <span className="text-green-600 bg-green-50 px-4 py-2 rounded-md font-semibold">
+                Đăng ký thành công
+              </span>
+            )}
+            {registrationStatus === "completed" && (
+              <span className="text-blue-600 bg-blue-50 px-4 py-2 rounded-md font-semibold">
+                Bạn đã hoàn thành sự kiện này
+              </span>
+            )}
+            {registrationStatus === "rejected" && (
+              <span className="text-red-600 bg-red-50 px-4 py-2 rounded-md font-semibold">
+                Yêu cầu đăng ký tham gia của bạn bị từ chối
+              </span>
+            )}
           </div>
         )}
 
-        <div className="px-6 md:px-12 pb-12 border-t pt-8">
-          <h2 className="text-2xl font-bold mb-6">Mô tả chi tiết</h2>
+        {/* Mô tả sự kiện */}
+        <div className="px-4 md:px-6 pb-8 md:pb-12">
+          <h2 className="text-2xl md:text-3xl font-semibold mb-3 md:mb-4">
+            Mô tả sự kiện
+          </h2>
           <div
-            className="prose prose-blue max-w-none text-gray-800"
+            className="prose prose-sm md:prose-lg max-w-none"
             dangerouslySetInnerHTML={{
               __html: renderDescription(event.description, event.galleryImages),
             }}
@@ -371,80 +384,95 @@ export default function EventDetail() {
         </div>
       </div>
 
-      <div className="w-full lg:w-80 space-y-4">
-        <div className="bg-white shadow-lg rounded-2xl p-6 sticky top-24 border border-gray-100">
-          <h3 className="text-xl font-bold mb-6">Thao tác</h3>
-          <div className="space-y-3">
+      {/* Sidebar bên phải */}
+      <div className="w-full lg:w-80 flex-shrink-0 space-y-6 lg:sticky lg:top-24 self-start">
+        {/* Box Thao tác */}
+        <div className="bg-white shadow-md rounded-2xl p-6 border-1 border-gray-100">
+          <h3 className="text-xl font-bold mb-6 text-[#111827]">Thao tác</h3>
+          <div className="space-y-4">
             <button
               onClick={() => navigate(-1)}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-blue-500 text-blue-600 rounded-lg hover:bg-blue-50 font-medium"
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-blue-500 text-blue-600 rounded-lg hover:bg-blue-50 transition font-medium"
             >
-              <ArrowLeft size={20} /> <span>Trở về</span>
-            </button>
-            <button
-              onClick={handleLike}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-red-500 text-red-600 rounded-lg hover:bg-red-50 font-medium"
-            >
-              <Heart size={20} className={isLiked ? "fill-red-600" : ""} />{" "}
-              <span>Yêu thích</span>
-            </button>
-            <button
-              onClick={handleShare}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-green-500 text-green-600 rounded-lg hover:bg-green-50 font-medium"
-            >
-              <Share2 size={20} /> <span>Chia sẻ</span>
+              <ArrowLeft size={20} />
+              <span>Trở về</span>
             </button>
 
+            <button
+              onClick={handleLike}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-red-500 text-red-600 rounded-lg hover:bg-red-50 transition font-medium"
+            >
+              <Heart size={20} className={isLiked ? "fill-red-600" : ""} />
+              <span>Yêu thích</span>
+            </button>
+
+            <button
+              onClick={handleShare}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-green-500 text-green-600 rounded-lg hover:bg-green-50 transition font-medium"
+            >
+              <Share2 size={20} />
+              <span>Chia sẻ</span>
+            </button>
+
+            {/* Nút Kênh Trao Đổi - Admin luôn thấy, Volunteer phải approved */}
             {(registrationStatus === "approved" ||
-              currentUser?.role === "ADMIN" ||
-              String(event.createdBy?.id || event.createdBy) ===
-                String(currentUser?.id)) &&
+              currentUser?.role === "ADMIN") &&
               event.status === "approved" && (
                 <button
                   onClick={() => navigate(`/su-kien/${eventId}/trao-doi`)}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-purple-500 text-purple-600 rounded-lg hover:bg-purple-50 font-medium"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-purple-500 text-purple-600 rounded-lg hover:bg-purple-50 transition font-medium"
                 >
-                  <MessageSquare size={20} /> <span>Kênh thảo luận</span>
+                  <MessageSquare size={20} />
+                  <span>Kênh Trao Đổi</span>
                 </button>
               )}
 
-            {!registrationStatus && (
+            {/* Nút Đăng ký tham gia */}
+            {registrationStatus === "" && (
               <button
                 onClick={handleRegister}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-[#DDB958] text-[#DDB958] rounded-lg font-medium"
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-[#DDB958] text-[#DDB958] rounded-lg hover:bg-yellow-50 transition font-medium"
               >
-                <CheckCircle size={20} /> <span>Đăng ký tham gia</span>
+                <CheckCircle size={20} />
+                <span>Đăng ký tham gia</span>
               </button>
             )}
 
+            {/* Nút Hủy đăng ký */}
             {(registrationStatus === "pending" ||
               registrationStatus === "approved") && (
-              <button
-                onClick={handleCancelRegistration}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-gray-500 text-gray-600 rounded-lg font-medium"
-              >
-                <X size={20} /> <span>Hủy đăng ký</span>
-              </button>
-            )}
+                <button
+                  onClick={handleCancelRegistration}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-gray-500 text-gray-600 rounded-lg hover:bg-gray-50 transition font-medium"
+                >
+                  <X size={20} />
+                  <span>Hủy đăng ký</span>
+                </button>
+              )}
           </div>
+        </div>
 
-          <div className="mt-8 pt-6 border-t space-y-4">
-            <h3 className="text-lg font-bold mb-2">Thống kê</h3>
+        {/* Box Thống kê */}
+        <div className="bg-white shadow-md rounded-2xl p-6 border-1 border-gray-100">
+          <h3 className="text-xl font-bold mb-6 text-[#111827]">Thống kê</h3>
+          <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <Heart size={18} className="text-red-500" />{" "}
-              <span>
-                <strong>Yêu thích:</strong> {stats.likesCount}
+              <Heart size={20} className="text-red-500" />
+              <span className="text-gray-700">
+                <strong>Lượt yêu thích:</strong> {stats.likesCount}
               </span>
             </div>
+
             <div className="flex items-center gap-3">
-              <Share2 size={18} className="text-green-500" />{" "}
-              <span>
-                <strong>Chia sẻ:</strong> {stats.sharesCount}
+              <Share2 size={20} className="text-green-500" />
+              <span className="text-gray-700">
+                <strong>Lượt chia sẻ:</strong> {stats.sharesCount}
               </span>
             </div>
+
             <div className="flex items-center gap-3">
-              <Eye size={18} className="text-blue-500" />{" "}
-              <span>
+              <Eye size={20} className="text-blue-500" />
+              <span className="text-gray-700">
                 <strong>Lượt xem:</strong> {stats.viewsCount}
               </span>
             </div>
