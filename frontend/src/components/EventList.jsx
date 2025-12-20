@@ -496,6 +496,13 @@ export default function EventList() {
                 </span>
               )}
 
+              {/* Badge điểm hoàn thành (top-left) */}
+              {event.points > 0 && (
+                <span className="absolute top-2 left-2 md:top-4 md:left-4 px-2 md:px-3 py-1 rounded-full text-white text-[11px] md:text-sm font-bold shadow-md z-10 bg-gradient-to-r from-yellow-400 to-yellow-500">
+                  +{event.points} điểm
+                </span>
+              )}
+
               {/* Ảnh cover */}
               <img
                 src={

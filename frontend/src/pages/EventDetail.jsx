@@ -77,7 +77,10 @@ export default function EventDetail() {
             CheckEventStatus(eventId),
           ]);
 
-          if (statsRes.status === "fulfilled" && statsRes.value?.status === 200) {
+          if (
+            statsRes.status === "fulfilled" &&
+            statsRes.value?.status === 200
+          ) {
             setStats(statsRes.value.data);
           }
           if (likeRes.status === "fulfilled" && likeRes.value?.status === 200) {
@@ -94,7 +97,10 @@ export default function EventDetail() {
         }
 
         // Handle registration status
-        if (myEventsRes.status === "fulfilled" && Array.isArray(myEventsRes.value?.data)) {
+        if (
+          myEventsRes.status === "fulfilled" &&
+          Array.isArray(myEventsRes.value?.data)
+        ) {
           const eventData = myEventsRes.value.data.find(
             (item) => String(item.event?.id || item.event) === String(eventId)
           );
@@ -414,18 +420,25 @@ export default function EventDetail() {
               <span>Chia sẻ</span>
             </button>
 
-            {/* Nút Kênh Trao Đổi - Admin luôn thấy, Volunteer phải approved */}
+            {/* Nút Kênh Trao Đổi - Admin thấy, approved volunteers thấy, và creator (Event Manager) cũng thấy */}
             {(registrationStatus === "approved" ||
-              currentUser?.role === "ADMIN") &&
-              event.status === "approved" && (
-                <button
-                  onClick={() => navigate(`/su-kien/${eventId}/trao-doi`)}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-purple-500 text-purple-600 rounded-lg hover:bg-purple-50 transition font-medium"
-                >
-                  <MessageSquare size={20} />
-                  <span>Kênh Trao Đổi</span>
-                </button>
-              )}
+              currentUser?.role === "ADMIN" ||
+              String(currentUser?.id) === String(event.createdBy?.id)) && (
+              <button
+                onClick={() =>
+                  navigate(
+                    // If current user is the event creator, send them to the EventManager channel path
+                    String(currentUser?.id) === String(event.createdBy?.id)
+                      ? `/quanlisukien/su-kien/${eventId}/trao-doi`
+                      : `/su-kien/${eventId}/trao-doi`
+                  )
+                }
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-purple-500 text-purple-600 rounded-lg hover:bg-purple-50 transition font-medium"
+              >
+                <MessageSquare size={20} />
+                <span>Kênh Trao Đổi</span>
+              </button>
+            )}
 
             {/* Nút Đăng ký tham gia */}
             {registrationStatus === "" && (
@@ -441,14 +454,14 @@ export default function EventDetail() {
             {/* Nút Hủy đăng ký */}
             {(registrationStatus === "pending" ||
               registrationStatus === "approved") && (
-                <button
-                  onClick={handleCancelRegistration}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-gray-500 text-gray-600 rounded-lg hover:bg-gray-50 transition font-medium"
-                >
-                  <X size={20} />
-                  <span>Hủy đăng ký</span>
-                </button>
-              )}
+              <button
+                onClick={handleCancelRegistration}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-gray-500 text-gray-600 rounded-lg hover:bg-gray-50 transition font-medium"
+              >
+                <X size={20} />
+                <span>Hủy đăng ký</span>
+              </button>
+            )}
           </div>
         </div>
 
