@@ -65,23 +65,23 @@ export default function Header() {
     },
     ...(user?.role === "ADMIN"
       ? [
-        {
-          key: "2",
-          icon: <FontAwesomeIcon icon={faUserShield} />,
-          label: "Trang admin",
-          onClick: () => navigate("/admin"),
-        },
-      ]
+          {
+            key: "2",
+            icon: <FontAwesomeIcon icon={faUserShield} />,
+            label: "Trang admin",
+            onClick: () => navigate("/admin"),
+          },
+        ]
       : []),
     ...(user?.role === "EVENTMANAGER"
       ? [
-        {
-          key: "3",
-          icon: <FontAwesomeIcon icon={faUserTie} />,
-          label: "Trang quản lý",
-          onClick: () => navigate("/quanlisukien"),
-        },
-      ]
+          {
+            key: "3",
+            icon: <FontAwesomeIcon icon={faUserTie} />,
+            label: "Trang quản lý",
+            onClick: () => navigate("/quanlisukien"),
+          },
+        ]
       : []),
     {
       key: "4",
@@ -122,8 +122,9 @@ export default function Header() {
 
   return (
     <header
-      className={`${showHeader ? "translate-y-0" : "-translate-y-full"
-        } bg-gray-900 text-white py-4 shadow-md fixed top-0 left-0 w-full transition-transform duration-300 z-50`}
+      className={`${
+        showHeader ? "translate-y-0" : "-translate-y-full"
+      } bg-gray-900 text-white py-4 shadow-md fixed top-0 left-0 w-full transition-transform duration-300 z-50`}
     >
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between">
@@ -149,8 +150,9 @@ export default function Header() {
                 <Link
                   key={to}
                   to={to}
-                  className={`hover:text-white transition ${isActive ? "text-white" : "text-[#A0A0A7]"
-                    }`}
+                  className={`hover:text-white transition ${
+                    isActive ? "text-white" : "text-[#A0A0A7]"
+                  }`}
                 >
                   {label}
                 </Link>
@@ -176,30 +178,32 @@ export default function Header() {
                           ? user.avatar.startsWith("http")
                             ? user.avatar
                             : `http://localhost:5000${user.avatar}`
-                          : "https://tse4.mm.bing.net/th/id/OIP.sDwEr1D6McBY9MeE3a_NpAHaHa?cb=12&rs=1&pid=ImgDetMain&o=7&rm=3"
+                          : "http://localhost:5000/uploads/avatars/avatar-1764958251284-210153801.png"
                       }
                       alt="User Avatar"
                       className="w-12 h-12 md:w-16 md:h-16 rounded-full object-cover"
                       onError={(e) => {
                         e.currentTarget.onerror = null;
                         e.currentTarget.src =
-                          "https://tse4.mm.bing.net/th/id/OIP.sDwEr1D6McBY9MeE3a_NpAHaHa?cb=12&rs=1&pid=ImgDetMain&o=7&rm=3";
+                          "http://localhost:5000/uploads/avatars/avatar-1764958251284-210153801.png";
+                        ("https://tse4.mm.bing.net/th/id/OIP.sDwEr1D6McBY9MeE3a_NpAHaHa?cb=12&rs=1&pid=ImgDetMain&o=7&rm=3");
                       }}
                     />
                     <span
                       className={`absolute bottom-0 right-0 w-3 h-3 md:w-4 md:h-4 rounded-full border-2 border-[#111827] 
-                      ${user?.status === "ACTIVE"
+                      ${
+                        user?.status === "ACTIVE"
                           ? "bg-green-500"
                           : user?.status === "LOCKED"
-                            ? "bg-red-500"
-                            : "bg-red-400"
-                        }`}
+                          ? "bg-red-500"
+                          : "bg-red-400"
+                      }`}
                       title={
                         user?.status === "ACTIVE"
                           ? "Đang hoạt động"
                           : user?.status === "LOCKED"
-                            ? "Bị khóa"
-                            : "Không rõ"
+                          ? "Bị khóa"
+                          : "Không rõ"
                       }
                     ></span>
                   </div>
@@ -240,8 +244,9 @@ export default function Header() {
                   key={to}
                   to={to}
                   onClick={() => setMobileMenuOpen(false)}
-                  className={`text-lg font-semibold hover:text-white transition ${isActive ? "text-white" : "text-[#A0A0A7]"
-                    }`}
+                  className={`text-lg font-semibold hover:text-white transition ${
+                    isActive ? "text-white" : "text-[#A0A0A7]"
+                  }`}
                 >
                   {label}
                 </Link>

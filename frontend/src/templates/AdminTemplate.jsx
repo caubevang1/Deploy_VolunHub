@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 // ✅ Thêm AppstoreOutlined cho icon Dashboard
 import {
     MenuFoldOutlined,
@@ -88,6 +88,26 @@ export default function AdminTemplate() {
         },
     ];
 
+    const location = useLocation();
+
+    const getMenuKeys = () => {
+        const path = location.pathname;
+
+        if (path.startsWith('/admin/su-kien')) {
+            return {
+                selected: path.includes('/cho-duyet') ? 'pending-events' : 'all-events',
+                open: ['event-manager']
+            };
+        }
+        if (path.startsWith('/admin/nguoi-dung')) {
+            return { selected: 'user-manager', open: [] };
+        }
+        // Default case for dashboard or other routes
+        return { selected: 'dashboard', open: [] };
+    };
+
+    const { selected: selectedKey, open: defaultOpenKey } = getMenuKeys();
+
     return (
         <Layout className="!min-h-screen ">
             <Sider trigger={null} collapsible collapsed={collapsed} width={250}>
@@ -105,9 +125,11 @@ export default function AdminTemplate() {
 
                         {/* ✅ Sử dụng menuItems đã định nghĩa ở trên */}
                         <Menu
+                            key={selectedKey} // Force re-mount with new defaults when selection changes
                             theme="dark"
                             mode="inline"
-                            defaultSelectedKeys={['dashboard']}
+                            defaultSelectedKeys={[selectedKey]}
+                            defaultOpenKeys={defaultOpenKey}
                             items={menuItems}
                             className="mt-4"
                         />

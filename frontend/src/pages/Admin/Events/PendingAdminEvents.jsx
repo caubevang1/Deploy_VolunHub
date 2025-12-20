@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import dayjs from "dayjs";
 import {
   Table,
   Input,
@@ -20,6 +21,7 @@ import {
   ReloadOutlined,
   CheckOutlined,
   CloseOutlined,
+  ArrowLeftOutlined,
 } from "@ant-design/icons";
 import Swal from "sweetalert2";
 import { useNavigate } from "react-router-dom";
@@ -262,16 +264,13 @@ export default function PendingAdminEvents() {
     {
       title: "Ngày",
       dataIndex: "date",
-      render: (date) => {
-        if (!date) return "--";
-        const d = new Date(date);
-        return isNaN(d.getTime()) ? "--" : d.toLocaleDateString("vi-VN");
-      },
+      render: (date) => (date ? dayjs(date).format("DD/MM/YYYY") : "N/A"),
       sorter: (a, b) => new Date(a.date) - new Date(b.date),
     },
     {
       title: "Địa điểm",
       dataIndex: "location",
+      render: (location) => location || "N/A",
     },
     {
       title: "Loại sự kiện",
@@ -308,13 +307,22 @@ export default function PendingAdminEvents() {
     <div className="pendingEvents">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-2xl uppercase font-bold">Duyệt sự kiện</h2>
-        <Button
-          icon={<ReloadOutlined />}
-          onClick={fetchPendingEvents}
-          type="default"
-        >
-          Tải lại
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            icon={<ArrowLeftOutlined />}
+            onClick={() => navigate("/admin/dashboard")}
+            type="default"
+          >
+            Quay lại
+          </Button>
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={fetchPendingEvents}
+            type="default"
+          >
+            Tải lại
+          </Button>
+        </div>
       </div>
 
       <div className="flex items-center gap-4 mb-4">

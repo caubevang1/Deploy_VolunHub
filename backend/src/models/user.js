@@ -18,17 +18,17 @@ const userSchema = new mongoose.Schema(
     },
     phone: {
       type: String,
-      trim: true, 
+      trim: true,
       default: null,
     },
     avatar: {
       type: String,
-      default: "https://cdn-icons-png.flaticon.com/512/149/149071.png", 
+      default: "/uploads/avatars/avatar-1764958251284-210153801.png",
     },
     points: {
       type: Number,
-      default: 0, 
-      min: 0, 
+      default: 0,
+      min: 0,
     },
     email: {
       type: String,
@@ -59,7 +59,7 @@ const userSchema = new mongoose.Schema(
       default: "ACTIVE",
     },
   },
-  { 
+  {
     timestamps: true,
     // --- CẤU HÌNH ĐỘC LẬP CSDL (PHASE 2) ---
     toJSON: {

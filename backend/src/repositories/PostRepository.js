@@ -46,7 +46,7 @@ class PostRepository extends BaseRepository {
   async findRecent(limit = 10) {
     const posts = await this.model.find({})
       .populate({ path: "author", select: "name avatar" })
-      .populate({ path: "event", select: "name" })
+      .populate({ path: "event", select: "name _id" })
       .sort({ createdAt: -1 })
       .limit(limit)
       .lean();
