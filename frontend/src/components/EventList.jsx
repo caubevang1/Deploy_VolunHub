@@ -165,7 +165,16 @@ export default function EventList() {
 
           // ✅ OPTIMIZED: Lazy load like statuses (chỉ load khi user scroll/interact)
           // Không cần prefetch tất cả, sẽ load on-demand khi cần
-          setLikedEvents({}); // Reset state, sẽ load khi user interact
+          // setLikedEvents({}); // Reset state, sẽ load khi user interact
+
+          // Restore checking like statuses for visible events
+          if (merged.length > 0) {
+            // Check status for the first batch of events
+            const initialIds = merged.slice(0, 10).map((e) => e.id);
+            // We can't call checkLikeStatuses directly here easily because it depends on state
+            // But we can trigger it via a side effect or just let the user interact
+            // For now, let's just let it be lazy, but ensure the interaction logic is robust.
+          }
         }
       } catch (err) {
         console.error("Fetch events error", err);
@@ -174,7 +183,15 @@ export default function EventList() {
       }
     }
     init();
-  }, []); // ✅ Fix: Remove unnecessary dependencies
+  }, []);
+
+  // Restore checkLikeStatuses usage if needed, or rely on lazy loading.
+  // If we want to show likes immediately, we should call it.
+  useEffect(() => {
+    if (events.length > 0) {
+      checkLikeStatuses(events);
+    }
+  }, [events, checkLikeStatuses]);
 
   useEffect(() => {
     async function fetchMy() {
@@ -264,32 +281,32 @@ export default function EventList() {
     e.stopPropagation();
     try {
       if (type === "LIKE") {
-        // ✅ OPTIMIZED: Lazy load like status nếu chưa có
-        let isLiked = likedEvents[eventId];
-        if (isLiked === undefined) {
-          try {
-            const statusRes = await CheckEventStatus(eventId);
-            isLiked =
-              statusRes.status === 200 ? !!statusRes.data.hasLiked : false;
-          } catch {
-            isLiked = false;
-          }
-        }
+        // ✅ FIX: Logic like/unlike với trạng thái giả định (nếu chưa load)
+        // Nếu chưa có trạng thái (undefined), coi như là chưa like (false) -> User muốn Like
+        const currentLikedState = !!likedEvents[eventId];
+        const nextLikedState = !currentLikedState;
 
-        setLikedEvents((prev) => ({ ...prev, [eventId]: !isLiked }));
+        // Optimistic Update
+        setLikedEvents((prev) => ({ ...prev, [eventId]: nextLikedState }));
         setEvents((prev) =>
           prev.map((ev) =>
             ev.id === eventId
               ? {
                   ...ev,
-                  likesCount: (ev.likesCount ?? 0) + (isLiked ? -1 : 1),
+                  likesCount: Math.max(
+                    0,
+                    (ev.likesCount ?? 0) + (nextLikedState ? 1 : -1)
+                  ),
                 }
               : ev
           )
         );
-        await EventActions(eventId, { type: "LIKE" });
+
+        // Gọi API với value cụ thể để đảm bảo đồng bộ
+        await EventActions(eventId, { type: "LIKE", value: nextLikedState });
       }
       if (type === "SHARE") {
+        // Optimistic update
         setEvents((prev) =>
           prev.map((ev) =>
             ev.id === eventId
@@ -298,13 +315,64 @@ export default function EventList() {
           )
         );
         const res = await EventActions(eventId, { type: "SHARE" });
+
+        // Cập nhật lại số lượng thực tế từ server
+        if (res.data?.sharesCount !== undefined) {
+          setEvents((prev) =>
+            prev.map((ev) =>
+              ev.id === eventId
+                ? { ...ev, sharesCount: res.data.sharesCount }
+                : ev
+            )
+          );
+        }
+
         navigator.clipboard.writeText(
-          res.data?.link || `${window.location.origin}/su-kien/${eventId}`
+          res.data?.shareLink ||
+            res.data?.link ||
+            `${window.location.origin}/su-kien/${eventId}`
         );
         Swal.fire({ icon: "success", title: "Đã sao chép link!", timer: 1500 });
       }
     } catch (err) {
       console.error(err);
+      // Rollback optimistic update if failed
+      if (type === "LIKE") {
+        const currentLikedState = !!likedEvents[eventId]; // This is the state BEFORE the optimistic update? No, this is from closure.
+        // Actually, we need to revert to the opposite of what we just set.
+        // But wait, likedEvents is state.
+        // We can't easily revert state inside catch without knowing the previous state.
+        // However, we can just re-fetch the status or toggle back.
+
+        // Simple revert:
+        setLikedEvents((prev) => ({
+          ...prev,
+          [eventId]: !likedEvents[eventId],
+        })); // This might be wrong if state updated.
+
+        // Better: Re-fetch status
+        try {
+          const statusRes = await CheckEventStatus(eventId);
+          const serverLiked =
+            statusRes.status === 200 ? !!statusRes.data.hasLiked : false;
+          setLikedEvents((prev) => ({ ...prev, [eventId]: serverLiked }));
+
+          // Also revert count
+          // This is hard because we don't know the exact count.
+          // Let's just re-fetch stats
+          const statsRes = await GetEventsActionStatsBatch([eventId]);
+          if (statsRes.data?.stats?.[eventId]) {
+            const realStats = statsRes.data.stats[eventId];
+            setEvents((prev) =>
+              prev.map((ev) =>
+                ev.id === eventId ? { ...ev, ...realStats } : ev
+              )
+            );
+          }
+        } catch (e) {
+          console.error("Rollback failed", e);
+        }
+      }
     }
   };
 
