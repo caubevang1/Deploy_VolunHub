@@ -47,9 +47,11 @@ const ThongTinNguoiDung = ({ user, onUserUpdated }) => {
       points: user.points || 0,
     });
     setAvatarPreview(
-      user.avatar?.startsWith("http")
-        ? user.avatar
-        : `http://localhost:5000${user.avatar}`
+      user.avatar
+        ? user.avatar.startsWith("http")
+          ? user.avatar
+          : `http://localhost:5000${user.avatar}`
+        : "http://localhost:5000/uploads/avatars/avatar-1764958251284-210153801.png"
     );
     setEditMode(true);
   };
@@ -241,10 +243,11 @@ const ThongTinNguoiDung = ({ user, onUserUpdated }) => {
             style={{
               backgroundImage: `url(${
                 avatarPreview ||
-                (user?.avatar?.startsWith("http")
-                  ? user.avatar
-                  : `http://localhost:5000${user?.avatar}`) ||
-                "https://cdn-icons-png.flaticon.com/512/149/149071.png"
+                (user?.avatar
+                  ? user.avatar.startsWith("http")
+                    ? user.avatar
+                    : `http://localhost:5000${user.avatar}`
+                  : "http://localhost:5000/uploads/avatars/avatar-1764958251284-210153801.png")
               })`,
             }}
           >
