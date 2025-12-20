@@ -10,7 +10,7 @@ import { ReloadOutlined, EditOutlined, CloseOutlined } from "@ant-design/icons";
 import Swal from "sweetalert2";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTrash } from "@fortawesome/free-solid-svg-icons";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { MessageSquare } from "lucide-react"; // ✅ Import icon
 
 const { Search } = Input;
@@ -31,6 +31,7 @@ export default function EventManagerEvents() {
   const [searchOptions, setSearchOptions] = useState([]);
   const [searchValue, setSearchValue] = useState("");
   const searchKeywordRef = useRef(null);
+  const location = useLocation();
 
   const removeVietnameseTones = (str = "") => {
     return String(str)
@@ -48,7 +49,7 @@ export default function EventManagerEvents() {
       if (resList.status === 200) {
         const listEvents = resList.data;
 
-        const detailedEvents = await Promise.all(
+        let detailedEvents = await Promise.all(
           listEvents.map(async (event) => {
             try {
               const resDetail = await GetEventDetail(event.id);
@@ -70,6 +71,24 @@ export default function EventManagerEvents() {
             };
           })
         );
+        
+        const searchParams = new URLSearchParams(location.search);
+        const status = searchParams.get("status");
+        if (status) {
+          detailedEvents = detailedEvents.filter(event => event.status === status);
+        } else {
+          // Custom sort when no filter is applied
+          const statusOrder = {
+            'approved': 1,
+            'completed': 2,
+            'pending': 3,
+          };
+          detailedEvents.sort((a, b) => {
+            const orderA = statusOrder[a.status] || 4;
+            const orderB = statusOrder[b.status] || 4;
+            return orderA - orderB;
+          });
+        }
 
         setData(detailedEvents);
         setOriginalData(detailedEvents);
@@ -110,7 +129,7 @@ export default function EventManagerEvents() {
   // call fetchEvents on mount (fetchEvents is defined above)
   useEffect(() => {
     fetchEvents();
-  }, []);
+  }, [location.search]);
 
   const handleSearchChange = (value) => {
     setSearchValue(value);

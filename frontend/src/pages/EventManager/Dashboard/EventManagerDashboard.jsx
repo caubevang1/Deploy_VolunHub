@@ -162,7 +162,7 @@ export default function EventManagerDashboard() {
         // Calculate statistics
         const totalEvents = events.length;
         const pendingEvents = events.filter((e) => e.status === "pending").length;
-        const approvedEvents = events.filter((e) => e.status === "approved" || e.status === "completed").length;
+        const approvedEvents = events.filter((e) => e.status === "approved").length;
         const rejectedEvents = events.filter((e) => e.status === "rejected").length;
         const completedEvents = events.filter((e) => e.status === "completed").length;
 
@@ -697,17 +697,17 @@ const EventsTab = ({
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card className="shadow-md hover:shadow-lg transition-shadow cursor-pointer" style={{ borderTop: "4px solid #faad14", borderRadius: 8 }} onClick={() => navigate("/quanlisukien/su-kien")}>
+          <Card className="shadow-md hover:shadow-lg transition-shadow cursor-pointer" style={{ borderTop: "4px solid #faad14", borderRadius: 8 }} onClick={() => navigate("/quanlisukien/su-kien?status=pending")}>
             <Statistic title={<span className="text-gray-600 font-medium">Chờ Duyệt</span>} value={stats.pendingEvents} prefix={<ClockCircleOutlined style={{ color: "#faad14" }} />} valueStyle={{ color: "#faad14", fontWeight: "bold" }} />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card className="shadow-md hover:shadow-lg transition-shadow cursor-pointer" style={{ borderTop: "4px solid #52c41a", borderRadius: 8 }} onClick={() => navigate("/quanlisukien/su-kien")}>
+          <Card className="shadow-md hover:shadow-lg transition-shadow cursor-pointer" style={{ borderTop: "4px solid #52c41a", borderRadius: 8 }} onClick={() => navigate("/quanlisukien/su-kien?status=approved")}>
             <Statistic title={<span className="text-gray-600 font-medium">Đã Duyệt</span>} value={stats.approvedEvents} prefix={<CheckCircleOutlined style={{ color: "#52c41a" }} />} valueStyle={{ color: "#52c41a", fontWeight: "bold" }} />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card className="shadow-md hover:shadow-lg transition-shadow" style={{ borderTop: "4px solid #722ed1", borderRadius: 8 }}>
+          <Card className="shadow-md hover:shadow-lg transition-shadow cursor-pointer" style={{ borderTop: "4px solid #722ed1", borderRadius: 8 }} onClick={() => navigate("/quanlisukien/su-kien?status=completed")}>
             <Statistic title={<span className="text-gray-600 font-medium">Hoàn Thành</span>} value={stats.completedEvents} prefix={<TrophyOutlined style={{ color: "#722ed1" }} />} valueStyle={{ color: "#722ed1", fontWeight: "bold" }} />
           </Card>
         </Col>
