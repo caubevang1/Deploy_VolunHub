@@ -146,7 +146,8 @@ function CommentSection({
     setCommentsMap((prev) => ({
       ...prev,
       [postId]: comments.map((c) => {
-        if (c.id === commentId) { // SỬA: id sạch
+        if (c.id === commentId) {
+          // SỬA: id sạch
           const currentlyLiked = c.likes?.includes(currentUser.id); // SỬA: dùng .id
           return {
             ...c,
@@ -165,7 +166,7 @@ function CommentSection({
       console.error("Lỗi like comment:", err);
       // Tải lại dữ liệu chuẩn nếu lỗi
       const refreshRes = await GetPostComments(postId);
-      setCommentsMap(prev => ({ ...prev, [postId]: refreshRes.data }));
+      setCommentsMap((prev) => ({ ...prev, [postId]: refreshRes.data }));
     }
   };
 
@@ -232,7 +233,9 @@ function CommentSection({
               comment.author?.id === currentUser?.id; // SỬA: author.id sạch
 
             return (
-              <div key={comment.id} className="text-sm"> {/* SỬA: Dùng id làm key */}
+              <div key={comment.id} className="text-sm">
+                {" "}
+                {/* SỬA: Dùng id làm key */}
                 <div className="flex items-start gap-2">
                   <img
                     src={comment.author?.avatar || "/default-avatar.png"}
@@ -370,23 +373,25 @@ export default function EventDiscussion() {
     }
 
     loadData();
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, [eventId, navigate]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (openMenuPostId && !event.target.closest('.menu-container')) {
+      if (openMenuPostId && !event.target.closest(".menu-container")) {
         setOpenMenuPostId(null);
       }
     };
 
     if (openMenuPostId) {
-      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside);
     }
 
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [openMenuPostId]);
 
@@ -406,6 +411,18 @@ export default function EventDiscussion() {
     if (diffHours < 24) return `${diffHours} giờ trước`;
     if (diffDays < 7) return `${diffDays} ngày trước`;
 
+    return date.toLocaleDateString("vi-VN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+  };
+
+  // Format ngày sự kiện (hiển thị ngày đầy đủ thay vì relative)
+  const formatEventDate = (dateString) => {
+    if (!dateString) return "Chưa cập nhật";
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "";
     return date.toLocaleDateString("vi-VN", {
       day: "2-digit",
       month: "2-digit",
@@ -508,7 +525,8 @@ export default function EventDiscussion() {
     // Optimistic Update
     setPosts((prevPosts) =>
       prevPosts.map((post) => {
-        if (post.id === postId) { // SỬA: id sạch
+        if (post.id === postId) {
+          // SỬA: id sạch
           const currentlyLiked = post.likes?.includes(currentUser.id); // SỬA: dùng .id
           return {
             ...post,
@@ -624,12 +642,15 @@ export default function EventDiscussion() {
               <div className="flex items-center gap-1.5 bg-blue-50 px-3 py-1 rounded-lg">
                 <Calendar size={14} className="text-blue-500" />
                 <span className="text-xs text-blue-700 font-medium">
-                  {formatDate(event.date)} - {formatDate(event.endDate)}
+                  {formatEventDate(event.date)} -{" "}
+                  {formatEventDate(event.endDate)}
                 </span>
               </div>
               <div className="flex items-center gap-1.5 bg-red-50 px-3 py-1 rounded-lg">
                 <MapPin size={14} className="text-red-500" />
-                <span className="text-xs text-red-700 font-medium">{event.location}</span>
+                <span className="text-xs text-red-700 font-medium">
+                  {event.location}
+                </span>
               </div>
               <div className="flex items-center gap-1.5 bg-green-50 px-3 py-1 rounded-lg">
                 <Users size={14} className="text-green-500" />
@@ -663,8 +684,9 @@ export default function EventDiscussion() {
             ref={postInputRef}
             value={newPost}
             onChange={(e) => setNewPost(e.target.value)}
-            placeholder={`${currentUser?.name || "Bạn"
-              } ơi, viết cập nhật cho sự kiện này...`}
+            placeholder={`${
+              currentUser?.name || "Bạn"
+            } ơi, viết cập nhật cho sự kiện này...`}
             className="composer-textarea w-full p-4 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-blue-100 transition-all text-gray-700 placeholder-gray-400"
             rows="3"
             disabled={isPosting}
@@ -733,16 +755,25 @@ export default function EventDiscussion() {
         ) : (
           posts.map((post) => {
             const isLiked = post.likes?.includes(currentUser?.id); // SỬA: id sạch
-            const isEventCreator = event?.createdBy?.id === currentUser?.id || event?.createdBy === currentUser?.id;
+            const isEventCreator =
+              event?.createdBy?.id === currentUser?.id ||
+              event?.createdBy === currentUser?.id;
             const canDelete =
               currentUser?.role === "ADMIN" ||
               isEventCreator ||
               post.author?.id === currentUser?.id; // SỬA: author.id sạch
 
             return (
-              <div key={post.id} className="post-card bg-white p-6 rounded-2xl shadow-sm border border-gray-50 transition-all hover:shadow-md" style={{ overflow: 'visible' }}>
+              <div
+                key={post.id}
+                className="post-card bg-white p-6 rounded-2xl shadow-sm border border-gray-50 transition-all hover:shadow-md"
+                style={{ overflow: "visible" }}
+              >
                 {/* Post Header */}
-                <div className="post-header flex items-center justify-between mb-4" style={{ overflow: 'visible' }}>
+                <div
+                  className="post-header flex items-center justify-between mb-4"
+                  style={{ overflow: "visible" }}
+                >
                   <div className="flex items-center gap-3">
                     <img
                       src={post.author?.avatar || "/default-avatar.png"}
@@ -765,7 +796,9 @@ export default function EventDiscussion() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          setOpenMenuPostId(openMenuPostId === post.id ? null : post.id);
+                          setOpenMenuPostId(
+                            openMenuPostId === post.id ? null : post.id
+                          );
                         }}
                         className="p-2 hover:bg-gray-50 rounded-full transition-colors"
                       >
@@ -831,19 +864,24 @@ export default function EventDiscussion() {
                 <div className="post-actions flex items-center gap-1">
                   <button
                     onClick={() => handleToggleLike(post.id)}
-                    className={`action-btn flex-1 flex items-center justify-center gap-2 py-2 rounded-xl transition-all font-semibold text-sm ${isLiked
-                      ? "bg-red-50 text-red-600"
-                      : "text-gray-500 hover:bg-red-50 hover:text-red-600"
-                      }`}
+                    className={`action-btn flex-1 flex items-center justify-center gap-2 py-2 rounded-xl transition-all font-semibold text-sm ${
+                      isLiked
+                        ? "bg-red-50 text-red-600"
+                        : "text-gray-500 hover:bg-red-50 hover:text-red-600"
+                    }`}
                   >
-                    <Heart size={18} className={isLiked ? "fill-red-600" : ""} />
+                    <Heart
+                      size={18}
+                      className={isLiked ? "fill-red-600" : ""}
+                    />
                     <span>{isLiked ? "Đã thích" : "Thích"}</span>
                   </button>
 
                   <button
                     onClick={() => toggleCommentSection(post.id)}
-                    className={`action-btn flex-1 flex items-center justify-center gap-2 py-2 rounded-xl transition-all font-semibold text-sm text-gray-500 hover:bg-blue-50 hover:text-blue-600 ${visibleComments[post.id] ? "bg-blue-50 text-blue-600" : ""
-                      }`}
+                    className={`action-btn flex-1 flex items-center justify-center gap-2 py-2 rounded-xl transition-all font-semibold text-sm text-gray-500 hover:bg-blue-50 hover:text-blue-600 ${
+                      visibleComments[post.id] ? "bg-blue-50 text-blue-600" : ""
+                    }`}
                   >
                     <MessageSquare size={18} />
                     <span>Bình luận</span>

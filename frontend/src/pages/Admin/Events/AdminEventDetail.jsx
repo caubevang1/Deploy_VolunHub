@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { GetEventDetail } from "../../../services/AdminService";
+import {
+  GetEventDetail,
+  ApproveEvent,
+  RejectEvent,
+} from "../../../services/AdminService";
+import { message, Modal, Radio, Space, Input } from "antd";
 import {
   Calendar,
   Users,
@@ -30,6 +35,10 @@ export default function AdminEventDetail() {
 
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  const [rejectModalVisible, setRejectModalVisible] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
+  const [customReason, setCustomReason] = useState("");
 
   const BASE_URL = "http://localhost:5000";
 
@@ -107,6 +116,55 @@ export default function AdminEventDetail() {
     return html;
   };
 
+  const rejectReasons = [
+    "Nội dung sự kiện không phù hợp với chính sách cộng đồng",
+    "Thông tin sự kiện không đầy đủ hoặc không rõ ràng",
+    "Thời gian tổ chức không hợp lý hoặc trùng lặp",
+    "Địa điểm tổ chức không phù hợp hoặc không an toàn",
+    "Mục tiêu sự kiện không mang tính tình nguyện",
+    "Sự kiện có dấu hiệu lừa đảo hoặc vi phạm pháp luật",
+  ];
+
+  const openApproveConfirm = () => {
+    Modal.confirm({
+      title: "Xác nhận duyệt sự kiện",
+      content: "Bạn có chắc muốn duyệt sự kiện này không?",
+      okText: "Duyệt",
+      cancelText: "Hủy",
+      onOk: async () => {
+        try {
+          const res = await ApproveEvent(event.id);
+          message.success(res.data?.message || "Duyệt sự kiện thành công");
+          if (res.data?.event) setEvent(res.data.event);
+        } catch (err) {
+          console.error(err);
+          message.error(
+            err.response?.data?.message || "Không thể duyệt sự kiện"
+          );
+        }
+      },
+    });
+  };
+
+  const confirmRejectEvent = async () => {
+    const finalReason = rejectReason === "custom" ? customReason : rejectReason;
+    if (rejectReason === "custom" && (!finalReason || !finalReason.trim())) {
+      message.warning("Vui lòng nhập lý do từ chối hoặc chọn lý do khác.");
+      return;
+    }
+    try {
+      const res = await RejectEvent(event.id, finalReason || "");
+      message.success(res.data?.message || "Từ chối sự kiện thành công");
+      if (res.data?.event) setEvent(res.data.event);
+      setRejectModalVisible(false);
+      setRejectReason("");
+      setCustomReason("");
+    } catch (err) {
+      console.error(err);
+      message.error(err.response?.data?.message || "Không thể từ chối sự kiện");
+    }
+  };
+
   return (
     <div className="w-full bg-gray-50 min-h-screen pb-10">
       {/* Top Navigation */}
@@ -157,6 +215,24 @@ export default function AdminEventDetail() {
               <MessageSquare size={20} />
               Kênh Trao Đổi
             </button>
+          )}
+
+          {event.status === "pending" && (
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => openApproveConfirm()}
+                className="px-6 py-2 bg-green-500 hover:bg-green-600 text-white rounded-xl font-semibold shadow-md"
+              >
+                Duyệt
+              </button>
+
+              <button
+                onClick={() => setRejectModalVisible(true)}
+                className="px-6 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl font-semibold shadow-md"
+              >
+                Từ chối
+              </button>
+            </div>
           )}
         </div>
 
@@ -228,8 +304,7 @@ export default function AdminEventDetail() {
                   Tình nguyện viên
                 </p>
                 <p className="text-lg font-bold text-gray-800">
-                  {event.currentParticipants || 0} / {event.maxParticipants} (Đã
-                  đăng ký)
+                  {event.currentParticipants || 0} / {event.maxParticipants}
                 </p>
               </div>
             </div>
@@ -264,6 +339,52 @@ export default function AdminEventDetail() {
             }}
           />
         </div>
+
+        <Modal
+          title={<span className="text-lg font-semibold">Từ chối sự kiện</span>}
+          open={rejectModalVisible}
+          onOk={confirmRejectEvent}
+          onCancel={() => setRejectModalVisible(false)}
+          okText="Xác nhận từ chối"
+          cancelText="Hủy"
+          okButtonProps={{ danger: true }}
+          width={600}
+        >
+          {event && (
+            <div className="mb-4">
+              <p className="font-medium text-gray-700">Sự kiện: {event.name}</p>
+            </div>
+          )}
+          <p className="mb-3 font-medium">Vui lòng chọn lý do từ chối:</p>
+          <Radio.Group
+            onChange={(e) => {
+              setRejectReason(e.target.value);
+              if (e.target.value !== "custom") setCustomReason("");
+            }}
+            value={rejectReason}
+            className="w-full"
+          >
+            <Space direction="vertical" className="w-full">
+              {rejectReasons.map((reason, index) => (
+                <Radio key={index} value={reason} className="text-sm">
+                  {reason}
+                </Radio>
+              ))}
+              <Radio value="custom">Lý do khác (nhập bên dưới)</Radio>
+            </Space>
+          </Radio.Group>
+          {rejectReason === "custom" && (
+            <Input.TextArea
+              className="mt-3"
+              rows={3}
+              placeholder="Nhập lý do từ chối..."
+              value={customReason}
+              onChange={(e) => setCustomReason(e.target.value)}
+              maxLength={200}
+              showCount
+            />
+          )}
+        </Modal>
 
         {/* Rejection Notification */}
         {event.status === "rejected" && (

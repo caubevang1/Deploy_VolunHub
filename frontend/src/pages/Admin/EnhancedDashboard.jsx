@@ -424,7 +424,10 @@ export default function EnhancedDashboard() {
       dataIndex: "name",
       key: "name",
       render: (text, record) => (
-        <a onClick={() => navigate(`/admin/su-kien/${record.id}`)} className="font-semibold">
+        <a
+          onClick={() => navigate(`/admin/su-kien/${record.id}`)}
+          className="font-semibold"
+        >
           {text}
         </a>
       ),
@@ -468,7 +471,15 @@ export default function EnhancedDashboard() {
       dataIndex: "role",
       key: "role",
       render: (role) => (
-        <Tag color={role === "ADMIN" ? "red" : role === "EVENTMANAGER" ? "blue" : "default"}>
+        <Tag
+          color={
+            role === "ADMIN"
+              ? "red"
+              : role === "EVENTMANAGER"
+              ? "blue"
+              : "default"
+          }
+        >
           {roleMapping[role] || role}
         </Tag>
       ),
@@ -490,7 +501,9 @@ export default function EnhancedDashboard() {
       render: (_, record) => (
         <Tooltip title={record.status === "ACTIVE" ? "Khóa" : "Mở khóa"}>
           <Button
-            icon={record.status === "ACTIVE" ? <LockOutlined /> : <UnlockOutlined />}
+            icon={
+              record.status === "ACTIVE" ? <LockOutlined /> : <UnlockOutlined />
+            }
             size="small"
             onClick={() => handleToggleUserStatus(record.id, record.status)}
           />
@@ -801,7 +814,9 @@ export default function EnhancedDashboard() {
           title={
             <Space>
               <FireOutlined style={{ color: "#ff4d4f" }} />
-              <span className="font-semibold text-lg">Sự Kiện Đang Trending</span>
+              <span className="font-semibold text-lg">
+                Sự Kiện Đang Trending
+              </span>
             </Space>
           }
           className="shadow-md hover:shadow-lg transition-shadow"
@@ -880,12 +895,16 @@ export default function EnhancedDashboard() {
                       <a
                         onClick={() => {
                           if (post.event?.id) {
-                            navigate(`/admin/su-kien/${post.event.id}/trao-doi#${post.id}`);
+                            navigate(
+                              `/admin/su-kien/${post.event.id}/trao-doi#${post.id}`
+                            );
                           }
                         }}
                         className="cursor-pointer hover:text-blue-600"
                       >
-                        <span className="font-medium">{post.event?.name || "Sự kiện không xác định"}</span>
+                        <span className="font-medium">
+                          {post.event?.name || "Sự kiện không xác định"}
+                        </span>
                         <br />
                         <span className="text-gray-500 text-sm">
                           {post.author?.name} -{" "}
@@ -1017,7 +1036,9 @@ export default function EnhancedDashboard() {
       >
         {selectedEvent && (
           <div className="mb-4">
-            <p className="font-medium text-gray-700">Sự kiện: {selectedEvent.name}</p>
+            <p className="font-medium text-gray-700">
+              Sự kiện: {selectedEvent.name}
+            </p>
           </div>
         )}
         <p className="mb-3 font-medium">Vui lòng chọn lý do từ chối:</p>
