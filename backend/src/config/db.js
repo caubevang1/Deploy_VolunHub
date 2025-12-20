@@ -1,4 +1,8 @@
-// src/config/db.js
+/**
+ * Database Configuration
+ * Handles MongoDB connection with proper error handling and logging.
+ */
+
 import mongoose from "mongoose";
 
 export const connectDB = async () => {

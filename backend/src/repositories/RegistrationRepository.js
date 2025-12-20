@@ -1,4 +1,9 @@
-// src/repositories/RegistrationRepository.js
+/**
+ * RegistrationRepository
+ * Manages volunteer event registrations with status tracking and analytics.
+ * Provides batch statistics and dashboard data aggregation.
+ */
+
 import mongoose from "mongoose";
 import BaseRepository from "./BaseRepository.js";
 import Registration from "../models/registration.js";
@@ -8,11 +13,17 @@ class RegistrationRepository extends BaseRepository {
     super(Registration);
   }
 
+  /**
+   * Check if user is an approved member of an event.
+   */
   async checkMemberStatus(userId, eventId) {
     const reg = await this.findOne({ event: eventId, volunteer: userId, status: 'approved' });
     return !!reg;
   }
 
+  /**
+   * Find registration record for specific user and event.
+   */
   async findOneUserRegistration(userId, eventId) {
     try {
       const res = await this.model.findOne({
@@ -25,12 +36,16 @@ class RegistrationRepository extends BaseRepository {
     }
   }
 
+  /**
+   * Get all registrations for an event with volunteer details.
+   */
   async getRegistrationsByEvent(eventId) {
     return await this.find({ event: eventId }, null, { sort: { createdAt: -1 } }, "volunteer");
   }
 
   /**
-   * Lấy thống kê đăng ký cho một loạt sự kiện (batch)
+   * Get registration statistics for multiple events in batch.
+   * Returns map of event IDs to their registration counts.
    */
   async getRegistrationStatsBatch(eventIds) {
     if (!eventIds || eventIds.length === 0) {
@@ -58,7 +73,6 @@ class RegistrationRepository extends BaseRepository {
       },
     ]);
 
-    // Chuyển kết quả từ array sang map để dễ tra cứu
     const statsMap = stats.reduce((acc, item) => {
       acc[item._id.toString()] = {
         totalRegistrations: item.totalRegistrations,
@@ -71,8 +85,8 @@ class RegistrationRepository extends BaseRepository {
   }
 
   /**
-   * Lấy dữ liệu Dashboard cho Tình nguyện viên (Volunteer)
-   * ✅ OPTIMIZED: Dùng Aggregation để filter ngay trong DB
+   * Get volunteer dashboard data with event statistics.
+   * Uses aggregation pipeline for optimized database queries.
    */
   async getVolunteerDashboardData(volunteerId) {
     const vId = new mongoose.Types.ObjectId(volunteerId);
@@ -300,6 +314,14 @@ class RegistrationRepository extends BaseRepository {
 
     // Add rank sau khi sort
     return results.map((r, i) => ({ ...r, rank: i + 1 }));
+  }
+
+  /**
+   * Delete all registrations for a specific event.
+   * Used when deleting an event.
+   */
+  async deleteByEvent(eventId) {
+    return await this.deleteMany({ event: eventId });
   }
 }
 export default new RegistrationRepository();

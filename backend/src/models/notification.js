@@ -1,4 +1,9 @@
-// backend/src/models/notification.js
+/**
+ * Notification Model
+ * Handles user notifications with flexible message types.
+ * Supports read/unread status tracking for notification center.
+ */
+
 import mongoose from "mongoose";
 
 const notificationSchema = new mongoose.Schema(
@@ -8,7 +13,6 @@ const notificationSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-    // Tiêu đề/Loại thông báo (Đã bỏ enum để linh hoạt nội dung)
     type: {
       type: String,
       required: true,
@@ -22,9 +26,8 @@ const notificationSchema = new mongoose.Schema(
       default: false,
     },
   },
-  { 
+  {
     timestamps: true,
-    // Cấu hình vô trùng dữ liệu đầu ra cho toàn bộ hệ thống
     toJSON: {
       virtuals: true,
       versionKey: false,
@@ -44,7 +47,6 @@ const notificationSchema = new mongoose.Schema(
   }
 );
 
-// Tạo virtual field 'id' ánh xạ từ '_id' để Frontend (như Header.jsx) dễ dàng sử dụng
 notificationSchema.virtual("id").get(function () {
   return this._id.toHexString();
 });

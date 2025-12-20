@@ -1,3 +1,9 @@
+/**
+ * App Component
+ * Main application router defining route structure for all user roles.
+ * Implements role-based access with separate templates for User, Admin, and EventManager.
+ */
+
 import React, { Component } from "react";
 import {
   BrowserRouter as Router,
@@ -34,7 +40,6 @@ class App extends Component {
     return (
       <Router>
         <Routes>
-          {/* User routes */}
           <Route path="/" element={<UserTemplate />}>
             <Route path="/" element={<HomePage />} />
             <Route path="*" element={<NotFound />} />
@@ -47,9 +52,8 @@ class App extends Component {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="su-kien/:eventId" element={<EventDetail />} />
           </Route>
-          {/* Admin routes */}
+
           <Route path="/admin" element={<AdminTemplate />}>
-            {/* Redirect /admin to /admin/dashboard */}
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard" element={<EnhancedDashboard />} />
             <Route path="nguoi-dung" element={<Users />} />
@@ -64,7 +68,7 @@ class App extends Component {
               element={<EventDiscussion />}
             />
           </Route>
-          {/* Manager routes */}
+
           <Route path="/quanlisukien" element={<EventManagerTemplate />}>
             <Route index element={<EventManagerDashboard />} />
             <Route path="dashboard" element={<EventManagerDashboard />} />
@@ -81,7 +85,7 @@ class App extends Component {
               element={<EventDiscussion />}
             />
           </Route>
-          {/* Volunteer routes */}
+
           <Route
             path="/su-kien/:eventId/trao-doi"
             element={<EventDiscussion />}

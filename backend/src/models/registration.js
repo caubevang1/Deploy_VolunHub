@@ -1,21 +1,24 @@
+/**
+ * Registration Model
+ * Manages volunteer event registrations with approval workflow.
+ * Includes performance tracking and cancellation request handling.
+ * Enforces one registration per user per event through unique index.
+ */
+
 import mongoose from "mongoose";
 
-// Định nghĩa schema cho việc đăng ký sự kiện
 const registrationSchema = new mongoose.Schema(
   {
-    // ID của sự kiện mà tình nguyện viên đăng ký
     event: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Event",
       required: true,
     },
-    // ID của tình nguyện viên đăng ký
     volunteer: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
-    // Trạng thái của đơn đăng ký
     status: {
       type: String,
       enum: ["pending", "approved", "rejected", "completed", "cancelled"],
@@ -26,12 +29,10 @@ const registrationSchema = new mongoose.Schema(
       enum: ["GOOD", "AVERAGE", "BAD", "NO_SHOW", null],
       default: null,
     },
-    // Yêu cầu hủy đăng ký
     cancelRequest: {
       type: Boolean,
       default: false,
     },
-    // Lý do từ chối đăng ký
     rejectionReason: {
       type: String,
       default: null,
@@ -39,7 +40,6 @@ const registrationSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-    // --- CẤU HÌNH ĐỘC LẬP CSDL (PHASE 2) ---
     toJSON: {
       virtuals: true,
       versionKey: false,
@@ -59,10 +59,8 @@ const registrationSchema = new mongoose.Schema(
   }
 );
 
-// Ngăn một người đăng ký cùng một sự kiện nhiều lần
 registrationSchema.index({ event: 1, volunteer: 1 }, { unique: true });
 
-// Tạo virtual field 'id' ánh xạ từ '_id'
 registrationSchema.virtual("id").get(function () {
   return this._id.toHexString();
 });

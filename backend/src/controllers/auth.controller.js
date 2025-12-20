@@ -1,3 +1,9 @@
+/**
+ * Authentication Controller
+ * Handles user registration, login, and password reset flows.
+ * Implements OTP verification for secure account operations.
+ */
+
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import UserRepository from "../repositories/UserRepository.js";
@@ -10,6 +16,9 @@ import path from "path";
 const NAME_REGEX = /^(\p{Lu}\p{Ll}*)(\s\p{Lu}\p{Ll}*)+$/u;
 const PHONE_REGEX = /^0[0-9]{9,10}$/;
 
+/**
+ * Capitalize each word in a name string.
+ */
 const capitalizeName = (name) => {
   if (!name) return "";
   return name
@@ -19,6 +28,9 @@ const capitalizeName = (name) => {
     .join(" ");
 };
 
+/**
+ * Validate user input data for registration.
+ */
 const validateUserEntry = (name, birthday, phone) => {
   const cleanName = capitalizeName(name);
   if (cleanName.split(" ").length < 2 || !NAME_REGEX.test(cleanName)) {
@@ -47,15 +59,21 @@ const validateUserEntry = (name, birthday, phone) => {
   return { cleanName, cleanPhone };
 };
 
+/**
+ * Remove uploaded file on registration failure.
+ */
 const rollbackUpload = (req) => {
   if (req.file) {
     const filePath = path.join(process.cwd(), req.file.path);
     try {
       if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-    } catch (e) {}
+    } catch (e) { }
   }
 };
 
+/**
+ * Send OTP for user registration.
+ */
 export const sendRegisterOtp = async (req, res) => {
   try {
     const { email } = req.body;
@@ -72,6 +90,9 @@ export const sendRegisterOtp = async (req, res) => {
   }
 };
 
+/**
+ * Verify OTP and complete user registration.
+ */
 export const verifyAndRegister = async (req, res) => {
   try {
     const {
@@ -182,6 +203,9 @@ export const updateProfile = async (req, res) => {
   }
 };
 
+/**
+ * Send OTP for password reset.
+ */
 export const sendResetOtp = async (req, res) => {
   try {
     const { email } = req.body;
@@ -198,6 +222,9 @@ export const sendResetOtp = async (req, res) => {
   }
 };
 
+/**
+ * Reset password using OTP verification.
+ */
 export const resetPassword = async (req, res) => {
   try {
     const { email, otp, newPassword } = req.body;
@@ -215,6 +242,9 @@ export const resetPassword = async (req, res) => {
   }
 };
 
+/**
+ * Change password for authenticated user.
+ */
 export const changePassword = async (req, res) => {
   try {
     const { oldPassword, newPassword } = req.body;

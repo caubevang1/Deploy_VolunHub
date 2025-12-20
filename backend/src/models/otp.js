@@ -1,3 +1,9 @@
+/**
+ * OTP Model
+ * Manages one-time passwords for user registration and password reset.
+ * Includes expiration time for security.
+ */
+
 import mongoose from "mongoose";
 
 const otpSchema = new mongoose.Schema(
@@ -9,7 +15,6 @@ const otpSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-    // Cấu hình vô trùng dữ liệu đầu ra
     toJSON: {
       virtuals: true,
       versionKey: false,
@@ -29,7 +34,6 @@ const otpSchema = new mongoose.Schema(
   }
 );
 
-// Tạo virtual field 'id' ánh xạ từ '_id'
 otpSchema.virtual("id").get(function () {
   return this._id.toHexString();
 });

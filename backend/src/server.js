@@ -1,4 +1,9 @@
-// server.js
+/**
+ * VolunteerHub Backend Server
+ * Express application with MongoDB integration and REST API routes.
+ * Implements authentication, event management, and notification systems.
+ */
+
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
@@ -7,7 +12,6 @@ import { fileURLToPath } from "url";
 import { connectDB } from "./config/db.js";
 import { startCronJobs } from "./utils/cronJob.js";
 
-// Routes
 import authRoutes from "./routes/auth.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
 import userRoutes from "./routes/user.routes.js";
@@ -25,17 +29,14 @@ const app = express();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Middlewares
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use("/uploads", express.static("uploads"));
 
-// DB Connection & Cron
 await connectDB();
 startCronJobs();
 
-// Route Definitions
 app.get("/", (req, res) => res.send("✅ VolunteerHub Backend API is running..."));
 
 app.use("/api/auth", authRoutes);
@@ -50,7 +51,6 @@ app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/statistics", statisticsRoutes);
 app.use("/api/notifications", notificationRoutes);
 
-// Catch-all 404
 app.use((req, res) => {
   res.status(404).json({ message: "API route not found", path: req.originalUrl });
 });
