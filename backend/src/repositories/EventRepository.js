@@ -318,15 +318,15 @@ class EventRepository extends BaseRepository {
                 $expr: {
                   $and: [
                     { $eq: ["$event", "$$eventId"] },
-                    { $gte: ["$createdAt", cutoffDate] }
-                  ]
-                }
-              }
+                    { $gte: ["$createdAt", cutoffDate] },
+                  ],
+                },
+              },
             },
-            { $count: "total" }
+            { $count: "total" },
           ],
-          as: "recentRegs"
-        }
+          as: "recentRegsArr",
+        },
       },
 
       // Join với eventactions để đếm likes gần đây
@@ -341,15 +341,15 @@ class EventRepository extends BaseRepository {
                   $and: [
                     { $eq: ["$event", "$$eventId"] },
                     { $eq: ["$type", "LIKE"] },
-                    { $gte: ["$createdAt", cutoffDate] }
-                  ]
-                }
-              }
+                    { $gte: ["$createdAt", cutoffDate] },
+                  ],
+                },
+              },
             },
-            { $count: "total" }
+            { $count: "total" },
           ],
-          as: "recentLikes"
-        }
+          as: "recentLikesArr",
+        },
       },
 
       // Join với eventactions để đếm shares gần đây
@@ -364,15 +364,15 @@ class EventRepository extends BaseRepository {
                   $and: [
                     { $eq: ["$event", "$$eventId"] },
                     { $eq: ["$type", "SHARE"] },
-                    { $gte: ["$createdAt", cutoffDate] }
-                  ]
-                }
-              }
+                    { $gte: ["$createdAt", cutoffDate] },
+                  ],
+                },
+              },
             },
-            { $count: "total" }
+            { $count: "total" },
           ],
-          as: "recentShares"
-        }
+          as: "recentSharesArr",
+        },
       },
 
       // Join với registrations để đếm currentParticipants
@@ -381,8 +381,8 @@ class EventRepository extends BaseRepository {
           from: "registrations",
           localField: "_id",
           foreignField: "event",
-          as: "registrations"
-        }
+          as: "registrations",
+        },
       },
 
       // Join với users để lấy thông tin creator
@@ -391,33 +391,33 @@ class EventRepository extends BaseRepository {
           from: "users",
           localField: "createdBy",
           foreignField: "_id",
-          as: "creator"
-        }
+          as: "creator",
+        },
       },
 
       // Tính toán các metrics
       {
         $addFields: {
           recentRegistrations: {
-            $ifNull: [{ $arrayElemAt: ["$recentRegs.total", 0] }, 0]
+            $ifNull: [{ $arrayElemAt: ["$recentRegsArr.total", 0] }, 0],
           },
           recentLikes: {
-            $ifNull: [{ $arrayElemAt: ["$recentLikes.total", 0] }, 0]
+            $ifNull: [{ $arrayElemAt: ["$recentLikesArr.total", 0] }, 0],
           },
           recentShares: {
-            $ifNull: [{ $arrayElemAt: ["$recentShares.total", 0] }, 0]
+            $ifNull: [{ $arrayElemAt: ["$recentSharesArr.total", 0] }, 0],
           },
           currentParticipants: {
             $size: {
               $filter: {
                 input: "$registrations",
                 as: "reg",
-                cond: { $eq: ["$$reg.status", "approved"] }
-              }
-            }
+                cond: { $eq: ["$$reg.status", "approved"] },
+              },
+            },
           },
-          createdBy: { $arrayElemAt: ["$creator", 0] }
-        }
+          createdBy: { $arrayElemAt: ["$creator", 0] },
+        },
       },
 
       // Tính trending score
@@ -427,10 +427,10 @@ class EventRepository extends BaseRepository {
             $add: [
               { $multiply: ["$recentRegistrations", 3] },
               { $multiply: ["$recentLikes", 2] },
-              { $multiply: ["$recentShares", 5] }
-            ]
-          }
-        }
+              { $multiply: ["$recentShares", 5] },
+            ],
+          },
+        },
       },
 
       // Sắp xếp và giới hạn
@@ -440,13 +440,13 @@ class EventRepository extends BaseRepository {
       // Cleanup
       {
         $project: {
-          recentRegs: 0,
-          recentLikes: 0,
-          recentShares: 0,
+          recentRegsArr: 0,
+          recentLikesArr: 0,
+          recentSharesArr: 0,
           registrations: 0,
-          creator: 0
-        }
-      }
+          creator: 0,
+        },
+      },
     ]);
 
     return this.transform(results);

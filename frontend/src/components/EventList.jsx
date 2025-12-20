@@ -5,7 +5,7 @@ import React, {
   useCallback,
   useRef,
 } from "react";
-import { Calendar, MapPin, Heart, Share2, Search } from "lucide-react";
+import { Calendar, MapPin, Heart, Share2, Search, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { GetEvents, GetEventsActionStatsBatch } from "../services/EventService";
 import {
@@ -472,7 +472,7 @@ export default function EventList() {
           return (
             <div
               key={eventId}
-              className="flex flex-col relative cursor-pointer w-full md:w-auto h-auto md:h-[750px] bg-white rounded-2xl shadow-md hover:shadow-xl transition border-[2px] border-gray-300 mt-2 md:mt-4"
+              className="flex flex-col relative cursor-pointer w-full md:w-auto h-auto md:h-[780px] bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100"
               onClick={() => handleViewDetail(eventId)}
             >
               {/* Badge trạng thái */}
@@ -504,7 +504,7 @@ export default function EventList() {
                     : `http://localhost:5000${event.coverImage}`
                 }
                 alt={event.name}
-                className="h-[250px] md:h-[420px] w-full object-cover"
+                className="h-[250px] md:h-[400px] w-full object-cover"
               />
 
               {/* Thân card */}
@@ -517,23 +517,41 @@ export default function EventList() {
                 {/* Khối thông tin + mô tả */}
                 <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-start flex-1">
                   {/* Cột trái: thông tin nhanh */}
-                  <div className="flex flex-col text-gray-700 text-sm md:text-[15px] gap-3 md:gap-4 w-full md:w-[140px] md:min-h-[120px]">
-                    <div className="flex gap-2 items-center border-b pb-2">
-                      <Calendar size={16} className="md:w-[18px] md:h-[18px]" />
-                      <span>
+                  <div className="flex flex-col text-gray-700 text-sm md:text-[15px] gap-3 md:gap-3 w-full md:w-[140px] md:min-h-[120px]">
+                    <div className="flex gap-2 items-center pb-2">
+                      <Calendar
+                        size={16}
+                        className="md:w-[18px] md:h-[18px] text-[#DDB958]"
+                      />
+                      <span className="text-xs md:text-sm">
                         {new Date(event.date).toLocaleDateString("vi-VN")}
                       </span>
                     </div>
-                    <div className="flex gap-2 items-center border-b pb-2">
-                      <MapPin size={16} className="md:w-[18px] md:h-[18px]" />
-                      <span className="line-clamp-2">{event.location}</span>
+                    <div className="flex gap-2 items-center pb-2">
+                      <MapPin
+                        size={16}
+                        className="md:w-[18px] md:h-[18px] text-[#DDB958]"
+                      />
+                      <span className="line-clamp-2 text-xs md:text-sm">
+                        {event.location}
+                      </span>
+                    </div>
+                    <div className="flex gap-2 items-center pb-2">
+                      <Users
+                        size={16}
+                        className="md:w-[18px] md:h-[18px] text-[#DDB958]"
+                      />
+                      <span className="text-xs md:text-sm font-medium">
+                        {event.currentParticipants || 0}/
+                        {event.maxParticipants || 0}
+                      </span>
                     </div>
                   </div>
 
                   {/* Cột phải: mô tả */}
-                  <div className="text-gray-700 leading-5 md:leading-6 border-t md:border-t-0 md:border-l-[2px] border-[#DDB958] pt-3 md:pt-0 md:pl-2 w-full md:w-[190px] md:min-h-[120px]">
+                  <div className="text-gray-700 leading-5 md:leading-6 border-t md:border-t-0 md:border-l border-gray-200 pt-3 md:pt-0 md:pl-4 w-full md:w-[190px] md:min-h-[120px]">
                     <div
-                      className="prose prose-sm md:prose-lg max-w-none text-sm md:text-[15px] line-clamp-4 md:line-clamp-6"
+                      className="prose prose-sm md:prose-lg max-w-none text-xs md:text-sm line-clamp-4 md:line-clamp-6 text-gray-600"
                       dangerouslySetInnerHTML={{
                         __html: event.description || "Không có mô tả",
                       }}
@@ -587,7 +605,7 @@ export default function EventList() {
                   </div>
 
                   {/* Nút Chi Tiết */}
-                  <button className="bg-[#DCBA58] text-white px-4 md:px-6 py-2 md:py-2.5 rounded-lg font-medium text-sm md:text-[15px] hover:bg-[#caa445]">
+                  <button className="bg-gradient-to-r from-[#DCBA58] to-[#CDA550] text-white px-4 md:px-6 py-2 md:py-2.5 rounded-lg font-semibold text-sm md:text-[15px] hover:shadow-lg hover:scale-105 transition-all duration-200">
                     Chi tiết
                   </button>
                 </div>

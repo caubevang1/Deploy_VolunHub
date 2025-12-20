@@ -638,7 +638,7 @@ const PasswordForm = ({ onSuccess }) => {
           <div className="pt-4">
             <button
               type="submit"
-              className={sharedBtnPrimary + " w-full"}
+              className={sharedBtnAccent + " w-full"}
               disabled={loading}
             >
               {loading ? "Đang xử lý..." : "Đổi mật khẩu"}

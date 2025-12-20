@@ -2,6 +2,7 @@
 import CommentRepository from "../repositories/CommentRepository.js";
 import PostRepository from "../repositories/PostRepository.js";
 import RegistrationRepository from "../repositories/RegistrationRepository.js";
+import EventRepository from "../repositories/EventRepository.js";
 
 /**
  * [POST] /api/comments/post/:postId
