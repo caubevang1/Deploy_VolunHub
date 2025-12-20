@@ -137,9 +137,14 @@ export default function PendingAdminEvents() {
   useEffect(() => {
     const fn = debounce((value) => {
       try {
-        const keyword = removeVietnameseTones(String(value || "").trim().toLowerCase());
+        const keyword = removeVietnameseTones(
+          String(value || "")
+            .trim()
+            .toLowerCase()
+        );
         let filtered = [...originalData];
-        if (filters.category) filtered = filtered.filter((e) => e.category === filters.category);
+        if (filters.category)
+          filtered = filtered.filter((e) => e.category === filters.category);
         if (keyword) {
           filtered = filtered.filter((event) => {
             const name = removeVietnameseTones(event.name || "");
@@ -152,7 +157,9 @@ export default function PendingAdminEvents() {
       }
     }, 300);
     searchKeywordRef.current = fn;
-    return () => { if (fn && typeof fn.cancel === "function") fn.cancel(); };
+    return () => {
+      if (fn && typeof fn.cancel === "function") fn.cancel();
+    };
   }, [originalData, filters]);
 
   const handleFilterChange = (key, value) => {
@@ -255,7 +262,11 @@ export default function PendingAdminEvents() {
     {
       title: "Ngày",
       dataIndex: "date",
-      render: (date) => new Date(date).toLocaleDateString(),
+      render: (date) => {
+        if (!date) return "--";
+        const d = new Date(date);
+        return isNaN(d.getTime()) ? "--" : d.toLocaleDateString("vi-VN");
+      },
       sorter: (a, b) => new Date(a.date) - new Date(b.date),
     },
     {

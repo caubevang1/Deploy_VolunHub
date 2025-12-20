@@ -6,7 +6,12 @@ import {
   DeleteEvents,
   GetEventDetail,
 } from "../../../services/EventManagerService";
-import { ReloadOutlined, EditOutlined, CloseOutlined, ArrowLeftOutlined } from "@ant-design/icons";
+import {
+  ReloadOutlined,
+  EditOutlined,
+  CloseOutlined,
+  ArrowLeftOutlined,
+} from "@ant-design/icons";
 import Swal from "sweetalert2";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTrash } from "@fortawesome/free-solid-svg-icons";
@@ -71,17 +76,19 @@ export default function EventManagerEvents() {
             };
           })
         );
-        
+
         const searchParams = new URLSearchParams(location.search);
         const status = searchParams.get("status");
         if (status) {
-          detailedEvents = detailedEvents.filter(event => event.status === status);
+          detailedEvents = detailedEvents.filter(
+            (event) => event.status === status
+          );
         } else {
           // Custom sort when no filter is applied
           const statusOrder = {
-            'approved': 1,
-            'completed': 2,
-            'pending': 3,
+            approved: 1,
+            completed: 2,
+            pending: 3,
           };
           detailedEvents.sort((a, b) => {
             const orderA = statusOrder[a.status] || 4;
@@ -157,8 +164,8 @@ export default function EventManagerEvents() {
                 event.status === "approved"
                   ? "green"
                   : event.status === "pending"
-                    ? "orange"
-                    : "red"
+                  ? "orange"
+                  : "red"
               }
             >
               {statusMapping[event.status]}
@@ -235,7 +242,11 @@ export default function EventManagerEvents() {
       key: "date",
       width: 120,
       sorter: (a, b) => new Date(a.date) - new Date(b.date),
-      render: (date) => new Date(date).toLocaleDateString(),
+      render: (date) => {
+        if (!date) return "--";
+        const d = new Date(date);
+        return isNaN(d.getTime()) ? "--" : d.toLocaleDateString("vi-VN");
+      },
       align: "center",
     },
     {
@@ -415,7 +426,10 @@ export default function EventManagerEvents() {
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-2xl uppercase font-bold">Quản lý sự kiện</h2>
         <Space>
-          <Button icon={<ArrowLeftOutlined />} onClick={() => navigate("/quanlisukien/dashboard")}>
+          <Button
+            icon={<ArrowLeftOutlined />}
+            onClick={() => navigate("/quanlisukien/dashboard")}
+          >
             Quay lại
           </Button>
           <Button icon={<ReloadOutlined />} onClick={fetchEvents}>

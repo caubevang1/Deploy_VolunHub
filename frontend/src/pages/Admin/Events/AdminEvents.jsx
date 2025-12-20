@@ -17,10 +17,7 @@ import {
   DeleteEvent,
   ExportEvents,
 } from "../../../services/AdminService";
-import {
-  ReloadOutlined,
-  DownloadOutlined,
-} from "@ant-design/icons";
+import { ReloadOutlined, DownloadOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -173,10 +170,20 @@ export default function AdminEvents() {
   useEffect(() => {
     const fn = debounce((value) => {
       try {
-        const keyword = removeVietnameseTones(String(value || "").trim().toLowerCase());
+        const keyword = removeVietnameseTones(
+          String(value || "")
+            .trim()
+            .toLowerCase()
+        );
         let filtered = [...originalData];
-        if (filters.category) filtered = filtered.filter((e) => e.category === filters.category);
-        if (filters.status) filtered = filtered.filter((e) => (e.status || "").toLowerCase() === String(filters.status).toLowerCase());
+        if (filters.category)
+          filtered = filtered.filter((e) => e.category === filters.category);
+        if (filters.status)
+          filtered = filtered.filter(
+            (e) =>
+              (e.status || "").toLowerCase() ===
+              String(filters.status).toLowerCase()
+          );
         if (keyword) {
           filtered = filtered.filter((event) => {
             const name = removeVietnameseTones(event.name || "");
@@ -257,7 +264,11 @@ export default function AdminEvents() {
       title: "Ngày",
       dataIndex: "date",
       sorter: (a, b) => new Date(a.date) - new Date(b.date),
-      render: (date) => new Date(date).toLocaleDateString(),
+      render: (date) => {
+        if (!date) return "--";
+        const d = new Date(date);
+        return isNaN(d.getTime()) ? "--" : d.toLocaleDateString("vi-VN");
+      },
     },
     {
       title: "Địa điểm",
@@ -382,7 +393,10 @@ export default function AdminEvents() {
           allowClear
           value={filters.category || undefined}
           onChange={(value) => handleFilterChange("category", value)}
-          options={Object.entries(categoryMapping).map(([k, v]) => ({ value: k, label: v }))}
+          options={Object.entries(categoryMapping).map(([k, v]) => ({
+            value: k,
+            label: v,
+          }))}
         />
 
         <Select
@@ -392,7 +406,10 @@ export default function AdminEvents() {
           allowClear
           value={filters.status || undefined}
           onChange={(value) => handleFilterChange("status", value)}
-          options={Object.entries(statusMapping).map(([k, v]) => ({ value: k, label: v }))}
+          options={Object.entries(statusMapping).map(([k, v]) => ({
+            value: k,
+            label: v,
+          }))}
         />
       </div>
 
