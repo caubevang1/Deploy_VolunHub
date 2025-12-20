@@ -43,10 +43,28 @@ export default function Register() {
                 if (!/^[a-zA-Z0-9_]+$/.test(value)) return "Tên đăng nhập chỉ chứa chữ, số và dấu gạch dưới";
                 return "";
 
-            case "phone":
-                if (!value.trim()) return "Số điện thoại không được để trống";
-                if (!/^(0|\+84)[0-9]{9,10}$/.test(value.replace(/\s/g, ""))) return "Số điện thoại không hợp lệ (VD: 0912345678)";
+            case "phone": {
+                const phone = value.replace(/\s/g, "");
+                if (!phone) return "Số điện thoại không được để trống";
+                if (!/^0\d{9}$/.test(phone)) return "Số điện thoại phải bắt đầu bằng số 0 và gồm 10 chữ số";
+                if (/^0{10}$/.test(phone)) return "Số điện thoại không hợp lệ";
+                // Đầu số di động hợp lệ ở VN (tham khảo từ các nhà mạng)
+                const validPrefixes = [
+                    // Viettel
+                    "086", "096", "097", "098", "032", "033", "034", "035", "036", "037", "038", "039",
+                    // Mobifone
+                    "089", "090", "093", "070", "079", "077", "076", "078",
+                    // Vinaphone
+                    "088", "091", "094", "083", "084", "085", "081", "082",
+                    // Vietnamobile
+                    "092", "056", "058",
+                    // Gmobile
+                    "099", "059"
+                ];
+                const prefix = phone.substring(0, 3);
+                if (!validPrefixes.includes(prefix)) return "Đầu số điện thoại không hợp lệ ở Việt Nam";
                 return "";
+            }
 
             case "password":
                 if (!value) return "Mật khẩu không được để trống";
@@ -68,11 +86,13 @@ export default function Register() {
 
             case "birthday":
                 if (!value) return "Ngày sinh không được để trống";
-                const birthDate = new Date(value);
-                const today = new Date();
-                const age = today.getFullYear() - birthDate.getFullYear();
-                if (age < 16) return "Bạn phải từ 16 tuổi trở lên";
-                if (age > 100) return "Ngày sinh không hợp lệ";
+                {
+                    const birthDate = new Date(value);
+                    const today = new Date();
+                    const age = today.getFullYear() - birthDate.getFullYear();
+                    if (age < 16) return "Bạn phải từ 16 tuổi trở lên";
+                    if (age > 100) return "Ngày sinh không hợp lệ";
+                }
                 return "";
 
             case "gender":
@@ -126,6 +146,34 @@ export default function Register() {
     };
 
     const handleSendOtp = async () => {
+        // Kiểm tra hợp lệ các trường trước khi gửi OTP
+        const requiredFields = [
+            "email",
+            "username",
+            "phone",
+            "password",
+            "confirmPassword",
+            "name",
+            "birthday",
+            "gender",
+            "role"
+        ];
+        const newErrors = {};
+        requiredFields.forEach((field) => {
+            const error = validateField(field, form[field]);
+            if (error) newErrors[field] = error;
+        });
+
+        if (Object.keys(newErrors).length > 0) {
+            setErrors((prev) => ({ ...prev, ...newErrors }));
+            MySwal({
+                title: "Không thể gửi OTP",
+                text: "Vui lòng kiểm tra lại các trường thông tin trước khi yêu cầu OTP.",
+                icon: "error"
+            });
+            return;
+        }
+
         const { email } = form;
         if (!email) {
             MySwal({ title: "Không thành công", text: "Vui lòng nhập email trước khi yêu cầu OTP.", icon: "error" });
@@ -199,7 +247,8 @@ export default function Register() {
             return;
         }
 
-        const { gender, confirmPassword, ...restForm } = form;
+        // Remove unused variable warning for confirmPassword
+        const { gender, ...restForm } = form;
         const mappedGender = gender === "Nam" ? "Male" : gender === "Nữ" ? "Female" : gender;
 
         const formData = new FormData();
