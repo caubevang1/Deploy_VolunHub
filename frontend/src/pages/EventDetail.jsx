@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { GetEventDetail, GetEventActionStats } from "../services/EventService";
 import {
@@ -51,6 +51,9 @@ export default function EventDetail() {
   });
   const [isLiked, setIsLiked] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
+  const [isProcessingLike, setIsProcessingLike] = useState(false);
+  const [isProcessingShare, setIsProcessingShare] = useState(false);
+  const likeTimeout = useRef(null);
 
   useEffect(() => {
     async function fetchUser() {
@@ -177,36 +180,61 @@ export default function EventDetail() {
   };
 
   const handleLike = async () => {
-    try {
-      const prevLiked = isLiked;
-      setIsLiked(!prevLiked);
-      setStats((p) => ({
-        ...p,
-        likesCount: p.likesCount + (!prevLiked ? 1 : -1),
-      }));
-      await EventActions(eventId, { type: "LIKE" });
-    } catch (error) {
-      // FIX LỖI ESLINT: Sử dụng error để log
-      console.error("Lỗi Like:", error);
-      setIsLiked(isLiked);
+    const nextLikedState = !isLiked;
+
+    // 1. Optimistic update
+    setIsLiked(nextLikedState);
+    setStats((p) => ({
+      ...p,
+      likesCount: Math.max(0, p.likesCount + (nextLikedState ? 1 : -1)),
+    }));
+
+    // 2. Debounce API call
+    if (likeTimeout.current) {
+      clearTimeout(likeTimeout.current);
     }
+
+    likeTimeout.current = setTimeout(async () => {
+      try {
+        const res = await EventActions(eventId, {
+          type: "LIKE",
+          value: nextLikedState,
+        });
+        if (res.status === 200) {
+          setIsLiked(res.data.liked);
+          setStats((p) => ({ ...p, likesCount: res.data.likesCount }));
+        }
+      } catch (error) {
+        console.error("Lỗi Like:", error);
+      } finally {
+        likeTimeout.current = null;
+      }
+    }, 500);
   };
 
   const handleShare = async () => {
+    if (isProcessingShare) return;
+    setIsProcessingShare(true);
     try {
       const res = await EventActions(eventId, { type: "SHARE" });
-      const shareLink =
-        res.data?.link || `${window.location.origin}/su-kien/${eventId}`;
-      await navigator.clipboard.writeText(shareLink);
-      Swal.fire({
-        icon: "success",
-        title: "Đã sao chép liên kết!",
-        timer: 1500,
-        showConfirmButton: false,
-      });
-      setStats((p) => ({ ...p, sharesCount: p.sharesCount + 1 }));
+      if (res.status === 200) {
+        const shareLink =
+          res.data?.shareLink ||
+          res.data?.link ||
+          `${window.location.origin}/su-kien/${eventId}`;
+        await navigator.clipboard.writeText(shareLink);
+        Swal.fire({
+          icon: "success",
+          title: "Đã sao chép liên kết!",
+          timer: 1500,
+          showConfirmButton: false,
+        });
+        setStats((p) => ({ ...p, sharesCount: res.data.sharesCount }));
+      }
     } catch (error) {
       console.error("Lỗi khi chia sẻ:", error);
+    } finally {
+      setIsProcessingShare(false);
     }
   };
 

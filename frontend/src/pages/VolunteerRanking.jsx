@@ -256,23 +256,6 @@ export default function VolunteerRanking() {
       ),
     },
     /* 'Hoàn thành' column removed for managers */
-    {
-      title: (
-        <div className="flex items-center gap-2">
-          <Users size={16} />
-          <span>Tình nguyện viên</span>
-        </div>
-      ),
-      dataIndex: "totalVolunteers",
-      key: "totalVolunteers",
-      width: 160,
-      align: "center",
-      render: (count) => (
-        <Tag color="purple" className="font-semibold">
-          {count || 0} người
-        </Tag>
-      ),
-    },
   ];
 
   if (loading) {

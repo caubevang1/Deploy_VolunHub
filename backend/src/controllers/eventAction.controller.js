@@ -7,7 +7,7 @@ export const handleEventAction = async (req, res) => {
   try {
     const { type } = req.body;
     const { eventId } = req.params;
-    
+
     // Đã sửa: Chỉ dùng .id (Tầng Middleware/Repository đã đảm bảo trường này)
     const userId = req.user.id;
 
@@ -16,28 +16,61 @@ export const handleEventAction = async (req, res) => {
     }
 
     const event = await EventRepository.findById(eventId);
-    if (!event) return res.status(404).json({ message: "Sự kiện không tồn tại" });
+    if (!event)
+      return res.status(404).json({ message: "Sự kiện không tồn tại" });
 
     if (type === "LIKE") {
-      const existingLike = await EventActionRepository.findUserLike(userId, eventId);
+      const { value } = req.body; // value: true (like), false (unlike), undefined (toggle)
+      const existingLike = await EventActionRepository.findUserLike(
+        userId,
+        eventId
+      );
 
-      if (existingLike) {
-        // Đã sửa: Dùng .id sạch sẽ
+      // Xác định hành động thực tế cần làm
+      let shouldLike = value !== undefined ? value : !existingLike;
+
+      if (existingLike && !shouldLike) {
+        // Thực hiện UNLIKE
         await EventActionRepository.findByIdAndDelete(existingLike.id);
-        
         const updatedEvent = await EventRepository.updateLikeCount(eventId, -1);
         return res.status(200).json({
           message: "Đã bỏ thích",
           liked: false,
           likesCount: updatedEvent?.likesCount || 0,
         });
+      } else if (!existingLike && shouldLike) {
+        // Thực hiện LIKE
+        try {
+          await EventActionRepository.create({
+            user: userId,
+            event: eventId,
+            type: "LIKE",
+          });
+          const updatedEvent = await EventRepository.updateLikeCount(
+            eventId,
+            1
+          );
+          return res.status(200).json({
+            message: "Đã thích",
+            liked: true,
+            likesCount: updatedEvent?.likesCount || 0,
+          });
+        } catch (err) {
+          // Race condition: đã được tạo bởi request khác
+          const currentEvent = await EventRepository.findById(eventId);
+          return res.status(200).json({
+            message: "Đã thích",
+            liked: true,
+            likesCount: currentEvent?.likesCount || 0,
+          });
+        }
       } else {
-        await EventActionRepository.create({ user: userId, event: eventId, type: "LIKE" });
-        const updatedEvent = await EventRepository.updateLikeCount(eventId, 1);
+        // Trạng thái đã khớp, không làm gì cả nhưng vẫn trả về data mới nhất
+        const currentEvent = await EventRepository.findById(eventId);
         return res.status(200).json({
-          message: "Đã thích",
-          liked: true,
-          likesCount: updatedEvent?.likesCount || 0,
+          message: shouldLike ? "Đã thích" : "Đã bỏ thích",
+          liked: shouldLike,
+          likesCount: currentEvent?.likesCount || 0,
         });
       }
     }
@@ -45,14 +78,31 @@ export const handleEventAction = async (req, res) => {
     if (type === "SHARE") {
       const clientUrl = process.env.CLIENT_URL || "http://localhost:3000";
       const shareLink = `${clientUrl}/su-kien/${eventId}`;
-      
-      await EventActionRepository.create({ user: userId, event: eventId, type: "SHARE" });
-      const updatedEvent = await EventRepository.incrementShareCount(eventId);
-      
+
+      // Kiểm tra xem user đã share chưa
+      const existingShare = await EventActionRepository.findOne({
+        user: userId,
+        event: eventId,
+        type: "SHARE",
+      });
+
+      let updatedEvent;
+      if (!existingShare) {
+        await EventActionRepository.create({
+          user: userId,
+          event: eventId,
+          type: "SHARE",
+        });
+        updatedEvent = await EventRepository.incrementShareCount(eventId);
+      } else {
+        updatedEvent = await EventRepository.findById(eventId);
+      }
+
       return res.status(200).json({
         message: "Đã ghi nhận chia sẻ",
         shareLink,
         sharesCount: updatedEvent?.sharesCount || 0,
+        isNewShare: !existingShare,
       });
     }
 
@@ -74,7 +124,10 @@ export const getUserActionStatus = async (req, res) => {
     const { eventId } = req.params;
     const userId = req.user.id;
 
-    const hasLiked = await EventActionRepository.checkUserLiked(userId, eventId);
+    const hasLiked = await EventActionRepository.checkUserLiked(
+      userId,
+      eventId
+    );
     res.status(200).json({ hasLiked });
   } catch (error) {
     res.status(200).json({ hasLiked: false });
@@ -86,7 +139,7 @@ export const getEventStats = async (req, res) => {
   try {
     const { eventId } = req.params;
     const event = await EventRepository.findById(eventId);
-    
+
     if (!event) return res.status(404).json({ message: "Không tồn tại" });
 
     res.status(200).json({

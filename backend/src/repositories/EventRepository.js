@@ -349,6 +349,13 @@ class EventRepository extends BaseRepository {
   }
 
   async updateLikeCount(eventId, inc = 1) {
+    if (inc < 0) {
+      return await this.model.findOneAndUpdate(
+        { _id: eventId, likesCount: { $gt: 0 } },
+        { $inc: { likesCount: inc } },
+        { new: true }
+      );
+    }
     return await this.findByIdAndUpdate(eventId, { $inc: { likesCount: inc } });
   }
 

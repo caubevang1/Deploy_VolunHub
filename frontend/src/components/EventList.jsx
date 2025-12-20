@@ -1,4 +1,10 @@
-import React, { useEffect, useState, useMemo, useCallback } from "react";
+import React, {
+  useEffect,
+  useState,
+  useMemo,
+  useCallback,
+  useRef,
+} from "react";
 import { Calendar, MapPin, Heart, Share2, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { GetEvents, GetEventsActionStatsBatch } from "../services/EventService";
@@ -51,6 +57,8 @@ export default function EventList() {
 
   const [likedEvents, setLikedEvents] = useState({});
   const [userParticipationMap, setUserParticipationMap] = useState({});
+  const [processingIds, setProcessingIds] = useState(new Set());
+  const likeTimeouts = useRef({}); // Lưu trữ timeout cho từng eventId
 
   const [filters, setFilters] = useState({
     category: "",
@@ -272,38 +280,96 @@ export default function EventList() {
 
   const handleInteraction = async (e, eventId, type) => {
     e.stopPropagation();
-    try {
-      if (type === "LIKE") {
-        const isLiked = !!likedEvents[eventId];
-        setLikedEvents((prev) => ({ ...prev, [eventId]: !isLiked }));
-        setEvents((prev) =>
-          prev.map((ev) =>
-            ev.id === eventId
-              ? {
-                  ...ev,
-                  likesCount: (ev.likesCount ?? 0) + (isLiked ? -1 : 1),
-                }
-              : ev
-          )
-        );
-        await EventActions(eventId, { type: "LIKE" });
+
+    if (type === "LIKE") {
+      const isCurrentlyLiked = !!likedEvents[eventId];
+      const nextLikedState = !isCurrentlyLiked;
+
+      // 1. Cập nhật UI ngay lập tức (Optimistic)
+      setLikedEvents((prev) => ({ ...prev, [eventId]: nextLikedState }));
+      setEvents((prev) =>
+        prev.map((ev) =>
+          ev.id === eventId
+            ? {
+                ...ev,
+                likesCount: Math.max(
+                  0,
+                  (ev.likesCount ?? 0) + (nextLikedState ? 1 : -1)
+                ),
+              }
+            : ev
+        )
+      );
+
+      // 2. Debounce API call
+      if (likeTimeouts.current[eventId]) {
+        clearTimeout(likeTimeouts.current[eventId]);
       }
-      if (type === "SHARE") {
-        setEvents((prev) =>
-          prev.map((ev) =>
-            ev.id === eventId
-              ? { ...ev, sharesCount: (ev.sharesCount ?? 0) + 1 }
-              : ev
-          )
-        );
+
+      likeTimeouts.current[eventId] = setTimeout(async () => {
+        try {
+          const res = await EventActions(eventId, {
+            type: "LIKE",
+            value: nextLikedState,
+          });
+          if (res.status === 200) {
+            // Đồng bộ lại số lượng chính xác từ server
+            setEvents((prev) =>
+              prev.map((ev) =>
+                ev.id === eventId
+                  ? { ...ev, likesCount: res.data.likesCount }
+                  : ev
+              )
+            );
+            setLikedEvents((prev) => ({ ...prev, [eventId]: res.data.liked }));
+          }
+        } catch (err) {
+          console.error("Lỗi Like:", err);
+        } finally {
+          delete likeTimeouts.current[eventId];
+        }
+      }, 500);
+      return;
+    }
+
+    if (type === "SHARE") {
+      if (processingIds.has(`${eventId}-SHARE`)) return;
+      setProcessingIds((prev) => {
+        const next = new Set(prev);
+        next.add(`${eventId}-SHARE`);
+        return next;
+      });
+
+      try {
         const res = await EventActions(eventId, { type: "SHARE" });
-        navigator.clipboard.writeText(
-          res.data?.link || `${window.location.origin}/su-kien/${eventId}`
-        );
-        Swal.fire({ icon: "success", title: "Đã sao chép link!", timer: 1500 });
+        if (res.status === 200) {
+          setEvents((prev) =>
+            prev.map((ev) =>
+              ev.id === eventId
+                ? { ...ev, sharesCount: res.data.sharesCount }
+                : ev
+            )
+          );
+          navigator.clipboard.writeText(
+            res.data?.shareLink ||
+              `${window.location.origin}/su-kien/${eventId}`
+          );
+          Swal.fire({
+            icon: "success",
+            title: "Đã sao chép liên kết!",
+            timer: 1500,
+            showConfirmButton: false,
+          });
+        }
+      } catch (err) {
+        console.error("Interaction error:", err);
+      } finally {
+        setProcessingIds((prev) => {
+          const next = new Set(prev);
+          next.delete(`${eventId}-SHARE`);
+          return next;
+        });
       }
-    } catch (err) {
-      console.error(err);
     }
   };
 
