@@ -18,7 +18,9 @@ const router = express.Router();
 // - Trả về: Danh sách sự kiện (có phân trang, lọc).
 router.get("/public", (req, res, next) => {
   if (typeof EventController.getApprovedEvents !== "function")
-    return res.status(500).json({ message: "Controller handler missing: getApprovedEvents" });
+    return res
+      .status(500)
+      .json({ message: "Controller handler missing: getApprovedEvents" });
   return EventController.getApprovedEvents(req, res, next);
 });
 
@@ -28,7 +30,9 @@ router.get("/public", (req, res, next) => {
 // - Trả về: Object Event chi tiết.
 router.get("/public/:id", (req, res, next) => {
   if (typeof EventController.getEventDetails !== "function")
-    return res.status(500).json({ message: "Controller handler missing: getEventDetails" });
+    return res
+      .status(500)
+      .json({ message: "Controller handler missing: getEventDetails" });
   return EventController.getEventDetails(req, res, next);
 });
 
@@ -38,16 +42,72 @@ router.get("/public/:id", (req, res, next) => {
 // - Trả về: Danh sách user (tên, avatar).
 router.get("/public/:id/participants", (req, res, next) => {
   if (typeof EventController.getEventParticipants !== "function")
-    return res.status(500).json({ message: "Controller handler missing: getEventParticipants" });
+    return res
+      .status(500)
+      .json({ message: "Controller handler missing: getEventParticipants" });
   return EventController.getEventParticipants(req, res, next);
 });
 
 // --- MANAGER ROUTES (Yêu cầu quyền Event Manager) ---
 
-router.post("/", verifyToken, eventManager, uploadEventImages, (req, res, next) => {
-  if (typeof EventController.createEvent !== "function")
-    return res.status(500).json({ message: "Controller handler missing: createEvent" });
-  return EventController.createEvent(req, res, next);
+// [POST] /api/events/
+// ➕ Tạo sự kiện mới
+// - Chức năng: Event Manager tạo sự kiện mới (trạng thái pending).
+// - Trả về: Object sự kiện vừa tạo.
+router.post(
+  "/",
+  verifyToken,
+  eventManager,
+  uploadEventImages,
+  (req, res, next) => {
+    if (typeof EventController.createEvent !== "function")
+      return res
+        .status(500)
+        .json({ message: "Controller handler missing: createEvent" });
+    return EventController.createEvent(req, res, next);
+  }
+);
+
+// [PUT] /api/events/:id
+// ✏️ Cập nhật sự kiện
+// - Chức năng: Event Manager cập nhật sự kiện của mình (chỉ khi còn pending).
+// - Trả về: Object sự kiện đã cập nhật.
+router.put(
+  "/:id",
+  verifyToken,
+  eventManager,
+  uploadEventImages,
+  (req, res, next) => {
+    if (typeof EventController.updateEvent !== "function")
+      return res
+        .status(500)
+        .json({ message: "Controller handler missing: updateEvent" });
+    return EventController.updateEvent(req, res, next);
+  }
+);
+
+// [DELETE] /api/events/:id
+// 🗑️ Xóa sự kiện
+// - Chức năng: Event Manager xóa sự kiện của mình (hoặc Admin xóa bất kỳ).
+// - Trả về: Thông báo xóa thành công.
+router.delete("/:id", verifyToken, eventManager, (req, res, next) => {
+  if (typeof EventController.deleteEvent !== "function")
+    return res
+      .status(500)
+      .json({ message: "Controller handler missing: deleteEvent" });
+  return EventController.deleteEvent(req, res, next);
+});
+
+// [PUT] /api/events/:id/complete
+// ✅ Đánh dấu sự kiện hoàn thành
+// - Chức năng: Event Manager đánh dấu sự kiện đã hoàn thành.
+// - Trả về: Object sự kiện đã cập nhật.
+router.put("/:id/complete", verifyToken, eventManager, (req, res, next) => {
+  if (typeof EventController.completeEvent !== "function")
+    return res
+      .status(500)
+      .json({ message: "Controller handler missing: completeEvent" });
+  return EventController.completeEvent(req, res, next);
 });
 
 // [GET] /api/events/my-events
@@ -56,7 +116,9 @@ router.post("/", verifyToken, eventManager, uploadEventImages, (req, res, next) 
 // - Trả về: Danh sách sự kiện của manager.
 router.get("/my-events", verifyToken, (req, res, next) => {
   if (typeof EventController.getMyEvents !== "function")
-    return res.status(500).json({ message: "Controller handler missing: getMyEvents" });
+    return res
+      .status(500)
+      .json({ message: "Controller handler missing: getMyEvents" });
   return EventController.getMyEvents(req, res, next);
 });
 
@@ -66,7 +128,11 @@ router.get("/my-events", verifyToken, (req, res, next) => {
 // - Trả về: Object Event đầy đủ.
 router.get("/management/:id", verifyToken, (req, res, next) => {
   if (typeof EventController.getEventDetailsForManagement !== "function")
-    return res.status(500).json({ message: "Controller handler missing: getEventDetailsForManagement" });
+    return res
+      .status(500)
+      .json({
+        message: "Controller handler missing: getEventDetailsForManagement",
+      });
   return EventController.getEventDetailsForManagement(req, res, next);
 });
 
