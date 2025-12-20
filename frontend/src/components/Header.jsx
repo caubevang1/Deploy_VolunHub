@@ -65,23 +65,23 @@ export default function Header() {
     },
     ...(user?.role === "ADMIN"
       ? [
-          {
-            key: "2",
-            icon: <FontAwesomeIcon icon={faUserShield} />,
-            label: "Trang admin",
-            onClick: () => navigate("/admin"),
-          },
-        ]
+        {
+          key: "2",
+          icon: <FontAwesomeIcon icon={faUserShield} />,
+          label: "Trang admin",
+          onClick: () => navigate("/admin"),
+        },
+      ]
       : []),
     ...(user?.role === "EVENTMANAGER"
       ? [
-          {
-            key: "3",
-            icon: <FontAwesomeIcon icon={faUserTie} />,
-            label: "Trang quản lý",
-            onClick: () => navigate("/quanlisukien"),
-          },
-        ]
+        {
+          key: "3",
+          icon: <FontAwesomeIcon icon={faUserTie} />,
+          label: "Trang quản lý",
+          onClick: () => navigate("/quanlisukien"),
+        },
+      ]
       : []),
     {
       key: "4",
@@ -95,36 +95,31 @@ export default function Header() {
   const [lastScrollY, setLastScrollY] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  // ✅ OPTIMIZED: Throttle scroll event
   useEffect(() => {
+    let ticking = false;
     const handleScroll = () => {
-      setShowHeader(window.scrollY < lastScrollY);
-      setLastScrollY(window.scrollY);
-    };
-
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, [lastScrollY]);
-
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const res = await GetUserInfo();
-        if (res?.data) {
-          dispatch(setUser(res.data));
-        }
-      } catch (err) {
-        console.error("Không thể lấy thông tin người dùng:", err);
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          setShowHeader(window.scrollY < lastScrollY);
+          setLastScrollY(window.scrollY);
+          ticking = false;
+        });
+        ticking = true;
       }
     };
 
-    fetchUser();
-  }, [dispatch]);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [lastScrollY]);
+
+  // ✅ OPTIMIZED: User info already in Redux, no need to fetch here
+  // GetUserInfo should be called once in App.js or login flow
 
   return (
     <header
-      className={`${
-        showHeader ? "translate-y-0" : "-translate-y-full"
-      } bg-gray-900 text-white py-4 shadow-md fixed top-0 left-0 w-full transition-transform duration-300 z-50`}
+      className={`${showHeader ? "translate-y-0" : "-translate-y-full"
+        } bg-gray-900 text-white py-4 shadow-md fixed top-0 left-0 w-full transition-transform duration-300 z-50`}
     >
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between">
@@ -150,9 +145,8 @@ export default function Header() {
                 <Link
                   key={to}
                   to={to}
-                  className={`hover:text-white transition ${
-                    isActive ? "text-white" : "text-[#A0A0A7]"
-                  }`}
+                  className={`hover:text-white transition ${isActive ? "text-white" : "text-[#A0A0A7]"
+                    }`}
                 >
                   {label}
                 </Link>
@@ -191,19 +185,18 @@ export default function Header() {
                     />
                     <span
                       className={`absolute bottom-0 right-0 w-3 h-3 md:w-4 md:h-4 rounded-full border-2 border-[#111827] 
-                      ${
-                        user?.status === "ACTIVE"
+                      ${user?.status === "ACTIVE"
                           ? "bg-green-500"
                           : user?.status === "LOCKED"
-                          ? "bg-red-500"
-                          : "bg-red-400"
-                      }`}
+                            ? "bg-red-500"
+                            : "bg-red-400"
+                        }`}
                       title={
                         user?.status === "ACTIVE"
                           ? "Đang hoạt động"
                           : user?.status === "LOCKED"
-                          ? "Bị khóa"
-                          : "Không rõ"
+                            ? "Bị khóa"
+                            : "Không rõ"
                       }
                     ></span>
                   </div>
@@ -244,9 +237,8 @@ export default function Header() {
                   key={to}
                   to={to}
                   onClick={() => setMobileMenuOpen(false)}
-                  className={`text-lg font-semibold hover:text-white transition ${
-                    isActive ? "text-white" : "text-[#A0A0A7]"
-                  }`}
+                  className={`text-lg font-semibold hover:text-white transition ${isActive ? "text-white" : "text-[#A0A0A7]"
+                    }`}
                 >
                   {label}
                 </Link>

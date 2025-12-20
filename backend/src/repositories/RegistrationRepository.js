@@ -72,22 +72,73 @@ class RegistrationRepository extends BaseRepository {
 
   /**
    * Lấy dữ liệu Dashboard cho Tình nguyện viên (Volunteer)
+   * ✅ OPTIMIZED: Dùng Aggregation để filter ngay trong DB
    */
   async getVolunteerDashboardData(volunteerId) {
+    const vId = new mongoose.Types.ObjectId(volunteerId);
     const now = new Date();
-    // Bắt buộc phải populate 'event' để thực hiện lọc theo thời gian ở Frontend
-    const registrations = await this.find(
-      { volunteer: volunteerId }, 
-      null, 
-      { sort: { createdAt: -1 } }, 
-      "event"
-    );
 
+    const results = await this.model.aggregate([
+      { $match: { volunteer: vId } },
+      {
+        $lookup: {
+          from: "events",
+          localField: "event",
+          foreignField: "_id",
+          as: "eventData"
+        }
+      },
+      {
+        $unwind: {
+          path: "$eventData",
+          preserveNullAndEmptyArrays: false
+        }
+      },
+      {
+        $facet: {
+          completedEvents: [
+            { $match: { status: "completed" } },
+            { $sort: { createdAt: -1 } }
+          ],
+          currentEvents: [
+            {
+              $match: {
+                status: "approved",
+                "eventData.date": { $lte: now }
+              }
+            },
+            { $sort: { createdAt: -1 } }
+          ],
+          upcomingEvents: [
+            {
+              $match: {
+                status: "approved",
+                "eventData.date": { $gt: now }
+              }
+            },
+            { $sort: { "eventData.date": 1 } }
+          ],
+          pendingEvents: [
+            { $match: { status: "pending" } },
+            { $sort: { createdAt: -1 } }
+          ]
+        }
+      }
+    ]);
+
+    const data = results[0] || {
+      completedEvents: [],
+      currentEvents: [],
+      upcomingEvents: [],
+      pendingEvents: []
+    };
+
+    // Transform từng mảng
     return {
-      completedEvents: registrations.filter((r) => r.status === "completed"),
-      currentEvents: registrations.filter((r) => r.status === "approved" && r.event && new Date(r.event.date) <= now),
-      upcomingEvents: registrations.filter((r) => r.status === "approved" && r.event && new Date(r.event.date) > now),
-      pendingEvents: registrations.filter((r) => r.status === "pending"),
+      completedEvents: this.transform(data.completedEvents),
+      currentEvents: this.transform(data.currentEvents),
+      upcomingEvents: this.transform(data.upcomingEvents),
+      pendingEvents: this.transform(data.pendingEvents)
     };
   }
 
@@ -143,40 +194,112 @@ class RegistrationRepository extends BaseRepository {
 
   /**
    * Trả về dữ liệu xuất báo cáo Tình nguyện viên (Loại bỏ mật khẩu và Mongo IDs)
+   * ✅ OPTIMIZED: Dùng Aggregation thay vì N queries
    */
   async getVolunteersExportData() {
     const User = mongoose.model("User");
-    const volunteers = await User.find({ role: "VOLUNTEER" }).lean();
-    return await Promise.all(volunteers.map(async (v) => {
-      const completedEventsCount = await this.countDocuments({ volunteer: v._id, status: "completed" });
-      return {
-        id: v._id.toString(), 
-        name: v.name || "", 
-        email: v.email || "",
-        phone: v.phone || "", 
-        status: v.status || "", 
-        points: v.points || 0,
-        completedEventsCount
-      };
-    }));
+
+    const results = await User.aggregate([
+      { $match: { role: "VOLUNTEER" } },
+      {
+        $lookup: {
+          from: "registrations",
+          let: { userId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$volunteer", "$$userId"] },
+                    { $eq: ["$status", "completed"] }
+                  ]
+                }
+              }
+            },
+            { $count: "total" }
+          ],
+          as: "completedStats"
+        }
+      },
+      {
+        $project: {
+          id: { $toString: "$_id" },
+          name: { $ifNull: ["$name", ""] },
+          email: { $ifNull: ["$email", ""] },
+          phone: { $ifNull: ["$phone", ""] },
+          status: { $ifNull: ["$status", ""] },
+          points: { $ifNull: ["$points", 0] },
+          completedEventsCount: {
+            $ifNull: [
+              { $arrayElemAt: ["$completedStats.total", 0] },
+              0
+            ]
+          }
+        }
+      }
+    ]);
+
+    return results;
   }
 
   /**
    * Bảng xếp hạng Tình nguyện viên kèm tỷ lệ hoàn thành
+   * ✅ OPTIMIZED: Dùng Aggregation thay vì N queries
    */
   async getVolunteerRankingWithCompletion(limit = 10) {
     const User = mongoose.model("User");
-    const volunteers = await User.find({ role: "VOLUNTEER" }).sort({ points: -1 }).limit(limit).lean();
-    
-    const results = await Promise.all(volunteers.map(async (v, i) => {
-      const completedEvents = await this.countDocuments({ volunteer: v._id, status: "completed" });
-      return { ...v, id: v._id.toString(), rank: i + 1, completedEvents };
-    }));
 
-    return results.map(r => {
-      delete r._id; delete r.__v; delete r.password;
-      return r;
-    });
+    const results = await User.aggregate([
+      { $match: { role: "VOLUNTEER" } },
+      {
+        $lookup: {
+          from: "registrations",
+          let: { userId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$volunteer", "$$userId"] },
+                    { $eq: ["$status", "completed"] }
+                  ]
+                }
+              }
+            },
+            { $count: "total" }
+          ],
+          as: "completedStats"
+        }
+      },
+      {
+        $project: {
+          password: 0,
+          __v: 0
+        }
+      },
+      {
+        $addFields: {
+          id: { $toString: "$_id" },
+          completedEvents: {
+            $ifNull: [
+              { $arrayElemAt: ["$completedStats.total", 0] },
+              0
+            ]
+          }
+        }
+      },
+      { $sort: { points: -1 } },
+      { $limit: limit },
+      {
+        $project: {
+          _id: 0,
+          completedStats: 0
+        }
+      }
+    ]);
+
+    // Add rank sau khi sort
+    return results.map((r, i) => ({ ...r, rank: i + 1 }));
   }
 }
 export default new RegistrationRepository();

@@ -297,38 +297,159 @@ class EventRepository extends BaseRepository {
     };
   }
 
+  /**
+   * ✅ OPTIMIZED: Lấy trending events dùng Aggregation thay vì N+1 queries
+   */
   async getTrendingEvents(days = 7) {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - days);
-    const events = await this.getEventsWithStats({ status: "approved" });
-    const data = await Promise.all(
-      events.map(async (e) => {
-        const eId = new mongoose.Types.ObjectId(e.id);
-        const [reg, likes, shares] = await Promise.all([
-          mongoose
-            .model("Registration")
-            .countDocuments({ event: eId, createdAt: { $gte: cutoffDate } }),
-          mongoose.model("EventAction").countDocuments({
-            event: eId,
-            type: "LIKE",
-            createdAt: { $gte: cutoffDate },
-          }),
-          mongoose.model("EventAction").countDocuments({
-            event: eId,
-            type: "SHARE",
-            createdAt: { $gte: cutoffDate },
-          }),
-        ]);
-        return {
-          ...e,
-          recentRegistrations: reg,
-          recentLikes: likes,
-          recentShares: shares,
-          trendingScore: reg * 3 + likes * 2 + shares * 5,
-        };
-      })
-    );
-    return data.sort((a, b) => b.trendingScore - a.trendingScore).slice(0, 10);
+
+    const results = await this.model.aggregate([
+      { $match: { status: "approved" } },
+
+      // Join với registrations để đếm đăng ký gần đây
+      {
+        $lookup: {
+          from: "registrations",
+          let: { eventId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$event", "$$eventId"] },
+                    { $gte: ["$createdAt", cutoffDate] }
+                  ]
+                }
+              }
+            },
+            { $count: "total" }
+          ],
+          as: "recentRegs"
+        }
+      },
+
+      // Join với eventactions để đếm likes gần đây
+      {
+        $lookup: {
+          from: "eventactions",
+          let: { eventId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$event", "$$eventId"] },
+                    { $eq: ["$type", "LIKE"] },
+                    { $gte: ["$createdAt", cutoffDate] }
+                  ]
+                }
+              }
+            },
+            { $count: "total" }
+          ],
+          as: "recentLikes"
+        }
+      },
+
+      // Join với eventactions để đếm shares gần đây
+      {
+        $lookup: {
+          from: "eventactions",
+          let: { eventId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$event", "$$eventId"] },
+                    { $eq: ["$type", "SHARE"] },
+                    { $gte: ["$createdAt", cutoffDate] }
+                  ]
+                }
+              }
+            },
+            { $count: "total" }
+          ],
+          as: "recentShares"
+        }
+      },
+
+      // Join với registrations để đếm currentParticipants
+      {
+        $lookup: {
+          from: "registrations",
+          localField: "_id",
+          foreignField: "event",
+          as: "registrations"
+        }
+      },
+
+      // Join với users để lấy thông tin creator
+      {
+        $lookup: {
+          from: "users",
+          localField: "createdBy",
+          foreignField: "_id",
+          as: "creator"
+        }
+      },
+
+      // Tính toán các metrics
+      {
+        $addFields: {
+          recentRegistrations: {
+            $ifNull: [{ $arrayElemAt: ["$recentRegs.total", 0] }, 0]
+          },
+          recentLikes: {
+            $ifNull: [{ $arrayElemAt: ["$recentLikes.total", 0] }, 0]
+          },
+          recentShares: {
+            $ifNull: [{ $arrayElemAt: ["$recentShares.total", 0] }, 0]
+          },
+          currentParticipants: {
+            $size: {
+              $filter: {
+                input: "$registrations",
+                as: "reg",
+                cond: { $eq: ["$$reg.status", "approved"] }
+              }
+            }
+          },
+          createdBy: { $arrayElemAt: ["$creator", 0] }
+        }
+      },
+
+      // Tính trending score
+      {
+        $addFields: {
+          trendingScore: {
+            $add: [
+              { $multiply: ["$recentRegistrations", 3] },
+              { $multiply: ["$recentLikes", 2] },
+              { $multiply: ["$recentShares", 5] }
+            ]
+          }
+        }
+      },
+
+      // Sắp xếp và giới hạn
+      { $sort: { trendingScore: -1 } },
+      { $limit: 10 },
+
+      // Cleanup
+      {
+        $project: {
+          recentRegs: 0,
+          recentLikes: 0,
+          recentShares: 0,
+          registrations: 0,
+          creator: 0
+        }
+      }
+    ]);
+
+    return this.transform(results);
   }
 
   async getStatsBatch(eventIds) {

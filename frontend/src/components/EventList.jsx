@@ -157,27 +157,9 @@ export default function EventList() {
                         setEvents(raw);
                     }
 
-                    // Prefetch like statuses
-                    try {
-                        const ids = raw.map((r) => r.id);
-                        const statusMap = {};
-                        await Promise.all(
-                            ids.map(async (id) => {
-                                try {
-                                    const statusRes = await CheckEventStatus(id);
-                                    statusMap[id] =
-                                        statusRes.status === 200
-                                            ? !!statusRes.data.hasLiked
-                                            : false;
-                                } catch {
-                                    statusMap[id] = false;
-                                }
-                            })
-                        );
-                        setLikedEvents(statusMap);
-                    } catch (e) {
-                        console.warn("Failed to prefetch like statuses", e);
-                    }
+                    // ✅ OPTIMIZED: Lazy load like statuses (chỉ load khi user scroll/interact)
+                    // Không cần prefetch tất cả, sẽ load on-demand khi cần
+                    setLikedEvents({}); // Reset state, sẽ load khi user interact
                 }
             } catch (err) {
                 console.error("Fetch events error", err);
@@ -186,7 +168,7 @@ export default function EventList() {
             }
         }
         init();
-    }, [checkLikeStatuses, fetchAllRealtimeStats]);
+    }, []); // ✅ Fix: Remove unnecessary dependencies
 
     useEffect(() => {
         async function fetchMy() {
@@ -255,12 +237,14 @@ export default function EventList() {
         userParticipationMap,
     ]);
 
-    useEffect(() => {
-        const interval = setInterval(() => {
-            if (filteredEvents.length > 0) fetchAllRealtimeStats(filteredEvents);
-        }, 30000);
-        return () => clearInterval(interval);
-    }, [filteredEvents, fetchAllRealtimeStats]);
+    // ✅ OPTIMIZED: Remove auto-polling, chỉ update khi user interact
+    // Stats sẽ được update khi user like/share/view
+    // useEffect(() => {
+    //     const interval = setInterval(() => {
+    //         if (filteredEvents.length > 0) fetchAllRealtimeStats(filteredEvents);
+    //     }, 30000);
+    //     return () => clearInterval(interval);
+    // }, [filteredEvents, fetchAllRealtimeStats]);
 
     const applyFilter = () => {
         setAppliedFilters({
@@ -274,7 +258,17 @@ export default function EventList() {
         e.stopPropagation();
         try {
             if (type === "LIKE") {
-                const isLiked = !!likedEvents[eventId];
+                // ✅ OPTIMIZED: Lazy load like status nếu chưa có
+                let isLiked = likedEvents[eventId];
+                if (isLiked === undefined) {
+                    try {
+                        const statusRes = await CheckEventStatus(eventId);
+                        isLiked = statusRes.status === 200 ? !!statusRes.data.hasLiked : false;
+                    } catch {
+                        isLiked = false;
+                    }
+                }
+
                 setLikedEvents((prev) => ({ ...prev, [eventId]: !isLiked }));
                 setEvents((prev) =>
                     prev.map((ev) =>

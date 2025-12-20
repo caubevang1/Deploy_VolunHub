@@ -52,73 +52,59 @@ export default function EventDetail() {
   const [isLiked, setIsLiked] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
 
+  // ✅ OPTIMIZED: Combine all API calls in single useEffect
   useEffect(() => {
-    async function fetchUser() {
-      try {
-        const res = await GetUserInfo();
-        if (res.status === 200) setCurrentUser(res.data);
-      } catch (err) {
-        console.error("Lỗi lấy thông tin user:", err);
-      }
-    }
-    fetchUser();
-  }, []);
-
-  useEffect(() => {
-    async function load() {
+    async function loadEventData() {
       setLoading(true);
       try {
-        const res = await GetEventDetail(eventId);
-        if (res.status === 200 && res.data) {
-          setEvent(res.data);
+        // Parallel fetch all data
+        const [eventRes, userRes, myEventsRes] = await Promise.allSettled([
+          GetEventDetail(eventId),
+          GetUserInfo(),
+          GetMyEvent(),
+        ]);
 
+        // Handle event detail
+        if (eventRes.status === "fulfilled" && eventRes.value?.data) {
+          setEvent(eventRes.value.data);
+
+          // Fetch stats and like status in parallel
           const [statsRes, likeRes] = await Promise.allSettled([
             GetEventActionStats(eventId),
             CheckEventStatus(eventId),
           ]);
 
-          if (
-            statsRes.status === "fulfilled" &&
-            statsRes.value.status === 200
-          ) {
+          if (statsRes.status === "fulfilled" && statsRes.value?.status === 200) {
             setStats(statsRes.value.data);
           }
-          if (likeRes.status === "fulfilled" && likeRes.value.status === 200) {
+          if (likeRes.status === "fulfilled" && likeRes.value?.status === 200) {
             setIsLiked(likeRes.value.data.hasLiked);
           }
 
-          await EventActions(eventId, { type: "VIEW" });
+          // Track view (fire and forget)
+          EventActions(eventId, { type: "VIEW" }).catch(console.error);
+        }
+
+        // Handle user info
+        if (userRes.status === "fulfilled" && userRes.value?.data) {
+          setCurrentUser(userRes.value.data);
+        }
+
+        // Handle registration status
+        if (myEventsRes.status === "fulfilled" && Array.isArray(myEventsRes.value?.data)) {
+          const eventData = myEventsRes.value.data.find(
+            (item) => String(item.event?.id || item.event) === String(eventId)
+          );
+          setRegistrationStatus(eventData?.status || "");
         }
       } catch (err) {
-        console.error("Lỗi khi tải chi tiết sự kiện:", err);
+        console.error("Lỗi khi tải dữ liệu:", err);
       } finally {
         setLoading(false);
       }
     }
-    load();
+    loadEventData();
   }, [eventId]);
-
-  useEffect(() => {
-    async function checkRegistrationStatus() {
-      if (!event || !event.id) return;
-      try {
-        const res = await GetMyEvent();
-        if (res.status === 200 && Array.isArray(res.data)) {
-          const eventData = res.data.find(
-            (item) => String(item.event?.id || item.event) === String(eventId)
-          );
-          if (eventData) {
-            setRegistrationStatus(eventData.status);
-          } else {
-            setRegistrationStatus("");
-          }
-        }
-      } catch (err) {
-        console.error("Lỗi kiểm tra trạng thái đăng ký:", err);
-      }
-    }
-    checkRegistrationStatus();
-  }, [eventId, event]);
 
   const handleRegister = async () => {
     if (registrationStatus) {

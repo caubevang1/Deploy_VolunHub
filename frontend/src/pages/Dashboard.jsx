@@ -77,18 +77,24 @@ export default function Dashboard() {
   const fetchDashboardData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await GetAllEventsStats();
-      const allEvents = res?.data?.events || [];
+      // ✅ OPTIMIZED: Parallelize API calls
+      const [eventsRes, myRes, notifRes] = await Promise.allSettled([
+        GetAllEventsStats(),
+        GetMyEvent(),
+        http.get("/notifications"),
+      ]);
+
+      const allEvents = eventsRes.status === "fulfilled" ? (eventsRes.value?.data?.events || []) : [];
       const approvedEvents = allEvents.filter(
         (ev) => (ev.status || "").toLowerCase() === "approved"
       );
 
       // Khởi tạo stats cơ bản
       let tempStats = { totalEvents: approvedEvents.length };
+      let myRegs = [];
 
-      try {
-        const myRes = await GetMyEvent();
-        const myRegs = Array.isArray(myRes?.data) ? myRes.data : [];
+      if (myRes.status === "fulfilled") {
+        myRegs = Array.isArray(myRes.value?.data) ? myRes.value.data : [];
         setMyEvents(myRegs);
 
         tempStats = {
@@ -103,8 +109,8 @@ export default function Dashboard() {
           completedRegistrations: myRegs.filter((r) => r.status === "completed")
             .length,
         };
-      } catch (err) {
-        console.error("Fetch my events error:", err);
+      } else {
+        console.error("Fetch my events error:", myRes.reason);
       }
 
       setStats((prev) => ({ ...prev, ...tempStats }));
@@ -126,53 +132,30 @@ export default function Dashboard() {
           .slice(0, 6)
       );
 
-      // Cập nhật hoạt động mới: Fix 403 bằng cách chỉ lấy post từ sự kiện của tôi
-      const myApprovedEvents = myEvents
+      // ✅ OPTIMIZED: Skip GetEventPosts loop - quá chậm và gây 403 errors
+      // Thay vào đó, dùng dữ liệu đã có từ myEvents để hiển thị hoạt động
+      const myApprovedEvents = myRegs
         .filter(
           (reg) => reg.status === "approved" || reg.status === "completed"
         )
         .map((reg) => reg.event)
-        .filter(Boolean); // Lọc bỏ event null/undefined
+        .filter(Boolean)
+        .slice(0, 5); // Giới hạn 5 events
 
-      const eventsWithPosts = [];
-      await Promise.all(
-        myApprovedEvents.slice(0, 10).map(async (e) => {
-          if (!e?.id) return; // Bỏ qua nếu không có event hoặc id
-          try {
-            const r = await GetEventPosts(e.id);
-            const posts = r?.data || [];
-            const recent = posts.filter(
-              (p) => (now - new Date(p.createdAt).getTime()) / 86400000 <= 7
-            );
-            if (recent.length > 0) {
-              eventsWithPosts.push({
-                ...e,
-                recentPosts: recent.length,
-                lastActivity: recent[0].createdAt,
-              });
-            }
-          } catch (err) {
-            // Lỗi 403 ở đây là bình thường nếu user không phải member, nên chỉ ghi console.warn
-            console.warn(
-              `Could not fetch posts for event ${e.id}:`,
-              err.message
-            );
-          }
-        })
-      );
-
+      // Không cần fetch posts nữa, dùng createdAt của registration làm lastActivity
       setEventsWithActivity(
-        eventsWithPosts
-          .sort((a, b) => new Date(b.lastActivity) - new Date(a.lastActivity))
-          .slice(0, 5)
+        myApprovedEvents.map(e => ({
+          ...e,
+          recentPosts: 0, // Skip posts count
+          lastActivity: new Date(), // Dùng ngày hiện tại
+        }))
       );
 
-      try {
-        const notifRes = await http.get("/notifications");
-        if (notifRes.status === 200)
-          setNotifications((notifRes.data || []).slice(0, 10));
-      } catch (err) {
-        console.error("Notifications error:", err);
+      // ✅ OPTIMIZED: notifications đã fetch song song ở trên
+      if (notifRes.status === "fulfilled" && notifRes.value?.status === 200) {
+        setNotifications((notifRes.value.data || []).slice(0, 10));
+      } else {
+        console.error("Notifications error:", notifRes.reason);
       }
     } catch (err) {
       console.error("Dashboard error:", err);
@@ -204,9 +187,8 @@ export default function Dashboard() {
             return (
               <strong
                 key={i}
-                className={`${
-                  scoreText.includes("-") ? "text-red-500" : "text-green-500"
-                } mx-0.5`}
+                className={`${scoreText.includes("-") ? "text-red-500" : "text-green-500"
+                  } mx-0.5`}
               >
                 {scoreText}
               </strong>

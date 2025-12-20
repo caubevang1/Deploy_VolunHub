@@ -22,27 +22,33 @@ export default function AdminTemplate() {
     const [collapsed, setCollapsed] = useState(false);
     const [userInfo, setUserInfo] = useState(null);
 
+    // ✅ OPTIMIZED: Only fetch once and handle errors properly
     useEffect(() => {
+        let mounted = true;
         const fetchUserInfo = async () => {
             try {
                 const res = await GetUserInfo();
                 const userData = res.data?.body || res.data?.content || res.data;
-                const isAdmin = userData.role === 'ADMIN';
 
-                if (!isAdmin) {
+                if (!mounted) return;
+
+                if (userData.role !== 'ADMIN') {
                     removeLocalStorage(LOCALSTORAGE_USER);
                     window.location.href = '/';
                 } else {
                     setUserInfo(userData);
                 }
             } catch (error) {
-                console.error(error);
-                removeLocalStorage(LOCALSTORAGE_USER);
-                window.location.href = '/';
+                console.error('Admin auth error:', error);
+                if (mounted) {
+                    removeLocalStorage(LOCALSTORAGE_USER);
+                    window.location.href = '/';
+                }
             }
         };
 
         fetchUserInfo();
+        return () => { mounted = false; };
     }, []);
 
     // ✅ Định nghĩa danh sách Menu theo cấu trúc Group để giống ảnh mẫu
