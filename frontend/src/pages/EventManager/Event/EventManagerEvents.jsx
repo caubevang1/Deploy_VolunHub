@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef } from "react";
-import { Table, Input, Button, message, Tag, AutoComplete } from "antd";
+import { Table, Input, Button, message, Tag, AutoComplete, Space } from "antd";
 import { debounce } from "lodash";
 import {
   GetManagerEvents,
   DeleteEvents,
   GetEventDetail,
 } from "../../../services/EventManagerService";
-import { ReloadOutlined, EditOutlined, CloseOutlined } from "@ant-design/icons";
+import { ReloadOutlined, EditOutlined, CloseOutlined, ArrowLeftOutlined } from "@ant-design/icons";
 import Swal from "sweetalert2";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTrash } from "@fortawesome/free-solid-svg-icons";
@@ -414,9 +414,14 @@ export default function EventManagerEvents() {
     <div>
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-2xl uppercase font-bold">Quản lý sự kiện</h2>
-        <Button icon={<ReloadOutlined />} onClick={fetchEvents}>
-          Tải lại
-        </Button>
+        <Space>
+          <Button icon={<ArrowLeftOutlined />} onClick={() => navigate("/quanlisukien/dashboard")}>
+            Quay lại
+          </Button>
+          <Button icon={<ReloadOutlined />} onClick={fetchEvents}>
+            Tải lại
+          </Button>
+        </Space>
       </div>
 
       <AutoComplete

@@ -571,9 +571,8 @@ export default function EventManagerDashboard() {
     },
   ];
 
-  const submittedEvents = stats.pendingEvents + stats.approvedEvents + stats.rejectedEvents;
-  const approvalRate = submittedEvents > 0 ? Math.round((stats.approvedEvents / submittedEvents) * 100) : 0;
-  const completionRate = stats.approvedEvents > 0 ? Math.round((stats.completedEvents / stats.approvedEvents) * 100) : 0;
+  const approvalRate = stats.totalEvents > 0 ? Math.round(((stats.approvedEvents + stats.completedEvents) / stats.totalEvents) * 100) : 0;
+  const completionRate = (stats.approvedEvents + stats.completedEvents) > 0 ? Math.round((stats.completedEvents / (stats.approvedEvents + stats.completedEvents)) * 100) : 0;
   const participantApprovalRate = stats.totalRegistrations > 0 ? Math.round((stats.approvedRegistrations / stats.totalRegistrations) * 100) : 0;
 
   if (loading) {
@@ -638,7 +637,6 @@ export default function EventManagerDashboard() {
                 navigate={navigate}
                 approvalRate={approvalRate}
                 completionRate={completionRate}
-                submittedEvents={submittedEvents}
                 statusMapping={statusMapping}
                 categoryMapping={categoryMapping}
                 eventColumns={eventColumns}
@@ -717,13 +715,13 @@ const EventsTab = ({
         <Col xs={24} md={12}>
           <Card title={<Space><CheckCircleOutlined style={{ color: "#52c41a" }} /><span className="font-semibold">Tỷ Lệ Sự Kiện Được Phê Duyệt</span></Space>} className="shadow-md" style={{ borderRadius: 8 }}>
             <Progress percent={approvalRate} strokeColor="#52c41a" size={{ strokeWidth: 12 }} />
-            <p className="text-center mt-3 text-gray-500"><span className="font-bold text-green-600">{stats.approvedEvents}</span> / {submittedEvents} sự kiện</p>
+            <p className="text-center mt-3 text-gray-500"><span className="font-bold text-green-600">{stats.approvedEvents + stats.completedEvents}</span> / {stats.totalEvents} sự kiện</p>
           </Card>
         </Col>
         <Col xs={24} md={12}>
           <Card title={<Space><TrophyOutlined style={{ color: "#1890ff" }} /><span className="font-semibold">Tỷ Lệ Hoàn Thành</span></Space>} className="shadow-md" style={{ borderRadius: 8 }}>
             <Progress percent={completionRate} strokeColor="#1890ff" size={{ strokeWidth: 12 }} />
-            <p className="text-center mt-3 text-gray-500"><span className="font-bold text-blue-600">{stats.completedEvents}</span> / {stats.approvedEvents} sự kiện</p>
+            <p className="text-center mt-3 text-gray-500"><span className="font-bold text-blue-600">{stats.completedEvents}</span> / {stats.approvedEvents + stats.completedEvents} sự kiện</p>
           </Card>
         </Col>
       </Row>
