@@ -96,6 +96,34 @@ class EventRepository extends BaseRepository {
             viewsCount: 1,
             rejectionReason: 1,
             createdBy: { $arrayElemAt: ["$creator", 0] },
+            totalRegistrations: { $size: "$registrations" },
+            approvedCount: {
+              $size: {
+                $filter: {
+                  input: "$registrations",
+                  as: "reg",
+                  cond: { $in: ["$$reg.status", ["approved", "completed"]] },
+                },
+              },
+            },
+            pendingCount: {
+              $size: {
+                $filter: {
+                  input: "$registrations",
+                  as: "reg",
+                  cond: { $eq: ["$$reg.status", "pending"] },
+                },
+              },
+            },
+            rejectedCount: {
+              $size: {
+                $filter: {
+                  input: "$registrations",
+                  as: "reg",
+                  cond: { $eq: ["$$reg.status", "rejected"] },
+                },
+              },
+            },
             currentParticipants: {
               $size: {
                 $filter: {

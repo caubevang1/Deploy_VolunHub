@@ -254,23 +254,26 @@ export const getMyEvents = async (req, res) => {
 export const getEventDetailsForManagement = async (req, res) => {
   try {
     const eventId = req.params.id;
-    const event = await EventRepository.findById(eventId);
+    // Use getEventWithStatsById to fetch event with pre-calculated registration stats
+    const event = await EventRepository.getEventWithStatsById(eventId);
     if (!event) return res.status(404).json({ message: "Không tìm thấy" });
 
-    const [registrations, posts, comments] = await Promise.all([
-      RegistrationRepository.getRegistrationsByEvent(eventId),
+    // Extract stats directly from the event object
+    const stats = {
+      totalRegistrations: event.totalRegistrations || 0,
+      approvedCount: event.approvedCount || 0,
+      pendingCount: event.pendingCount || 0,
+      rejectedCount: event.rejectedCount || 0,
+    };
+
+    const [posts, comments] = await Promise.all([
       PostRepository.getPostsByEvent(eventId),
       CommentRepository.getCommentsByEvent(eventId)
     ]);
 
-    const stats = {
-      totalRegistrations: registrations.length,
-      approvedCount: registrations.filter(r => ["approved", "completed"].includes(r.status)).length,
-      pendingCount: registrations.filter(r => r.status === "pending").length,
-      rejectedCount: registrations.filter(r => r.status === "rejected").length,
-    };
-
-    res.status(200).json({ event, registrations, posts, comments, stats });
+    // Note: 'registrations' array is no longer passed as a separate top-level item in the response
+    // as its stats are embedded in the event object for efficiency.
+    res.status(200).json({ event, posts, comments, stats });
   } catch (error) {
     res.status(500).json({ message: "Lỗi server", error: error.message });
   }

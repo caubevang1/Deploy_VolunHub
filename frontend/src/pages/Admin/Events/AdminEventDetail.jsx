@@ -16,6 +16,8 @@ import {
   ArrowLeft,
   AlertTriangle,
 } from "lucide-react";
+// thêm import fallback từ EventManagerService
+import { GetEventDetail as GetEventDetailForManager } from "../../../services/EventManagerService";
 
 const categoryMapping = {
   Community: "Cộng đồng",
@@ -45,15 +47,56 @@ export default function AdminEventDetail() {
   useEffect(() => {
     async function load() {
       try {
-        const res = await GetEventDetail(eventId);
-        if (res.status === 200) {
-          // Repo transform trả về object sạch, không cần [0] hay xử lý phức tạp
-          setEvent(res.data);
+        // Thử AdminService trước
+        let res = null;
+        try {
+          res = await GetEventDetail(eventId);
+        } catch (adminErr) {
+          console.warn(
+            "AdminService.GetEventDetail failed, will try EventManagerService:",
+            adminErr
+          );
+        }
+
+        // Chuẩn hoá event object từ response (có thể khác shape)
+        const normalize = (r) => {
+          if (!r) return null;
+          // Thường API trả về { status:200, data: { ...event } } hoặc { status:200, data: { event: {...} } }
+          const payload = r.data ?? r;
+          if (!payload) return null;
+          return payload.event ?? payload;
+        };
+
+        let evt = normalize(res);
+
+        // Nếu không có kết quả từ admin service, thử fallback sang manager service
+        if (!evt) {
+          try {
+            const mgrRes = await GetEventDetailForManager(eventId);
+            evt = normalize(mgrRes);
+            if (evt) {
+              console.info("Loaded event via EventManagerService fallback");
+            }
+          } catch (mgrErr) {
+            console.warn(
+              "EventManagerService.GetEventDetail also failed:",
+              mgrErr
+            );
+          }
+        }
+
+        if (evt) {
+          setEvent(evt);
+        } else {
+          console.warn("No event found for id:", eventId);
+          setEvent(null);
         }
       } catch (err) {
         console.error("Lỗi lấy chi tiết sự kiện:", err);
+        setEvent(null);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
     load();
   }, [eventId]);

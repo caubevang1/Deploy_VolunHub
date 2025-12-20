@@ -15,9 +15,9 @@ import {
   Space,
   Select,
   Tooltip,
-  Popconfirm,
   DatePicker,
   Tabs,
+  Modal,
 } from "antd";
 import {
   CalendarOutlined,
@@ -27,23 +27,54 @@ import {
   FireOutlined,
   TrophyOutlined,
   ReloadOutlined,
-  PlusOutlined,
   EyeOutlined,
-  CloseCircleOutlined,
   TeamOutlined,
   FolderOpenOutlined,
-  FileTextOutlined,
+  SmileFilled,
+  FrownFilled,
+  MehFilled,
+  UserDeleteOutlined,
 } from "@ant-design/icons";
 import {
   GetManagerEvents,
   GetEventDetail,
   GetParticipants,
   UpdateParticipantStatus,
+  MarkCompletedParticipants,
 } from "../../../services/EventManagerService";
 import { useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
+import Swal from "sweetalert2";
 
 const { RangePicker } = DatePicker;
+
+// PERFORMANCE_OPTIONS đặt ngoài component
+const PERFORMANCE_OPTIONS = [
+  {
+    key: "GOOD",
+    label: "Tốt",
+    icon: <SmileFilled className="text-lg" />,
+    color: "bg-[#189438] !text-white",
+  },
+  {
+    key: "AVERAGE",
+    label: "Trung bình",
+    icon: <MehFilled className="text-lg" />,
+    color: "bg-[#E2A800] !text-white",
+  },
+  {
+    key: "BAD",
+    label: "Kém",
+    icon: <FrownFilled className="text-lg" />,
+    color: "bg-[#E41D13] !text-white",
+  },
+  {
+    key: "NO_SHOW",
+    label: "Vắng mặt",
+    icon: <UserDeleteOutlined className="text-lg" />,
+    color: "bg-gray-500 !text-white",
+  },
+];
 
 export default function EventManagerDashboard() {
   const [activeTab, setActiveTab] = useState("events");
@@ -61,11 +92,22 @@ export default function EventManagerDashboard() {
   const [loading, setLoading] = useState(true);
   const [recentEvents, setRecentEvents] = useState([]);
   const [topEvents, setTopEvents] = useState([]);
-  const [pendingRegistrations, setPendingRegistrations] = useState([]);
   const [upcomingEvents, setUpcomingEvents] = useState([]);
-  const [timeFilter, setTimeFilter] = useState("all"); 
+  const [timeFilter, setTimeFilter] = useState("all");
   const [dateRange, setDateRange] = useState(null);
   const [actionLoading, setActionLoading] = useState({});
+  const [allRegistrations, setAllRegistrations] = useState([]);
+  const [filteredRegistrations, setFilteredRegistrations] = useState([]);
+  const [activeVolunteerCard, setActiveVolunteerCard] = useState("all");
+  const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
+  const [selectedParticipant, setSelectedParticipant] = useState(null);
+  const [submittingRating, setSubmittingRating] = useState(false);
+  
+  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+  const [selectedForRejection, setSelectedForRejection] = useState(null);
+  const [selectedRejectionReason, setSelectedRejectionReason] = useState("");
+  const [sortStatus, setSortStatus] = useState("all");
+  
   const navigate = useNavigate();
 
   // Mapping được định nghĩa lại chuẩn xác để fix lỗi ESLint
@@ -196,24 +238,22 @@ export default function EventManagerDashboard() {
           .slice(0, 5);
         setTopEvents(top);
 
-        // Collect all pending registrations
-        const allPendingRegistrations = [];
+        // Collect all registrations (not just pending)
+        const allRegs = [];
         detailedEventsData.forEach((event) => {
           if (event.participants && event.participants.length > 0) {
-            const pending = event.participants
-              .filter((p) => p.status === "pending")
-              .map((p) => ({
-                ...p,
-                eventName: event.name,
-                eventId: event.id,
-                eventDate: event.date,
-              }));
-            allPendingRegistrations.push(...pending);
+            const regs = event.participants.map((p) => ({
+              ...p,
+              eventName: event.name,
+              eventId: event.id,
+              eventDate: event.date,
+              eventSlug: event.slug,
+            }));
+            allRegs.push(...regs);
           }
         });
-
-        allPendingRegistrations.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        setPendingRegistrations(allPendingRegistrations.slice(0, 10));
+        allRegs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        setAllRegistrations(allRegs);
 
         // Upcoming events
         const upcoming = detailedEventsData
@@ -221,7 +261,7 @@ export default function EventManagerDashboard() {
             if (e.status !== "approved") return false;
             const eventDate = dayjs(e.date);
             const daysDiff = eventDate.diff(now, "day");
-            return daysDiff >= 0 && daysDiff <= 7; 
+            return daysDiff >= 0 && daysDiff <= 7;
           })
           .sort((a, b) => new Date(a.date) - new Date(b.date))
           .slice(0, 5);
@@ -239,35 +279,320 @@ export default function EventManagerDashboard() {
     fetchDashboardData();
   }, [fetchDashboardData]);
 
+  // Khi fetch xong allRegistrations, cập nhật filteredRegistrations mặc định là tất cả
+  useEffect(() => {
+    setFilteredRegistrations(allRegistrations);
+    setActiveVolunteerCard("all");
+  }, [allRegistrations]);
+
+  // Hàm lọc danh sách theo loại card
+  const handleVolunteerCardClick = (type) => {
+    setActiveVolunteerCard(type);
+    let filtered = allRegistrations;
+    
+    if (type === "approved") {
+      // Bao gồm cả approved và completed
+      filtered = allRegistrations.filter(
+        (r) =>
+          String(r.status).toLowerCase() === "approved" ||
+          String(r.status).toLowerCase() === "completed"
+      );
+    } else if (type === "pending") {
+      filtered = allRegistrations.filter((r) => String(r.status).toLowerCase() === "pending");
+    }
+    
+    // Apply sort filter
+    if (sortStatus !== "all") {
+      filtered = filtered.filter((r) => String(r.status).toLowerCase() === sortStatus);
+    }
+    
+    setFilteredRegistrations(filtered);
+  };
+
+  // Hàm sort theo trạng thái
+  const handleSortStatusChange = (value) => {
+    setSortStatus(value);
+    let filtered = allRegistrations;
+    
+    // Apply card filter first
+    if (activeVolunteerCard === "approved") {
+      filtered = allRegistrations.filter(
+        (r) =>
+          String(r.status).toLowerCase() === "approved" ||
+          String(r.status).toLowerCase() === "completed"
+      );
+    } else if (activeVolunteerCard === "pending") {
+      filtered = allRegistrations.filter((r) => String(r.status).toLowerCase() === "pending");
+    }
+    
+    // Then apply sort filter
+    if (value !== "all") {
+      filtered = filtered.filter((r) => String(r.status).toLowerCase() === value);
+    }
+    
+    setFilteredRegistrations(filtered);
+  };
+
   const handleApproveRegistration = async (registrationId) => {
+    const participant = filteredRegistrations.find(r => r.id === registrationId);
+    const result = await Swal.fire({
+      title: `Bạn có chắc muốn duyệt?`,
+      html: `Tình nguyện viên: <strong>${participant?.volunteer?.name || participant?.user?.name}</strong>`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Xác nhận",
+      cancelButtonText: "Hủy",
+      confirmButtonColor: "#22C55E",
+      cancelButtonColor: "#d33",
+    });
+
+    if (!result.isConfirmed) return;
+
     setActionLoading(prev => ({ ...prev, [registrationId]: true }));
     try {
       const res = await UpdateParticipantStatus(registrationId, "approved");
       if (res.status === 200) {
-        message.success("Đã duyệt đăng ký");
+        Swal.fire("Thành công", "Đã duyệt đăng ký", "success");
         fetchDashboardData();
       }
     } catch (err) {
       console.error(err);
-      message.error("Không thể duyệt đăng ký");
+      Swal.fire("Lỗi", "Không thể duyệt đăng ký", "error");
     }
     setActionLoading(prev => ({ ...prev, [registrationId]: false }));
   };
 
   const handleRejectRegistration = async (registrationId) => {
-    setActionLoading(prev => ({ ...prev, [registrationId]: true }));
+    const participant = filteredRegistrations.find(r => r.id === registrationId);
+    setSelectedForRejection({ 
+      id: registrationId, 
+      name: participant?.volunteer?.name || participant?.user?.name 
+    });
+    setIsRejectModalOpen(true);
+  };
+
+  const handleConfirmRejection = async () => {
+    if (!selectedRejectionReason) {
+      message.warning("Vui lòng chọn lý do từ chối");
+      return;
+    }
+
+    setIsRejectModalOpen(false);
+
     try {
-      const res = await UpdateParticipantStatus(registrationId, "rejected");
+      const res = await UpdateParticipantStatus(
+        selectedForRejection.id,
+        "rejected",
+        selectedRejectionReason
+      );
       if (res.status === 200) {
-        message.success("Đã từ chối đăng ký");
+        Swal.fire(
+          "Thành công",
+          "Đã từ chối đăng ký và gửi thông báo",
+          "success"
+        );
         fetchDashboardData();
       }
     } catch (err) {
       console.error(err);
-      message.error("Không thể từ chối đăng ký");
+      Swal.fire("Lỗi", "Không thể cập nhật trạng thái", "error");
+    } finally {
+      setSelectedRejectionReason("");
+      setSelectedForRejection(null);
     }
-    setActionLoading(prev => ({ ...prev, [registrationId]: false }));
   };
+
+  const openRatingModal = (record) => {
+    setSelectedParticipant(record);
+    setIsRatingModalOpen(true);
+  };
+
+  const handleSubmitRating = async (performance) => {
+    if (!selectedParticipant) return;
+    const selectedOption = PERFORMANCE_OPTIONS.find(
+      (o) => o.key === performance
+    );
+    const confirmResult = await Swal.fire({
+      title: "Xác nhận đánh giá",
+      html: `Bạn có chắc chắn muốn đánh giá: <br/><strong>${selectedParticipant.volunteer?.name || selectedParticipant.user?.name}</strong> <br/> <strong style="color: #DDB958; font-size: 1.2em;">${selectedOption?.label}</strong>?`,
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Đồng ý",
+    });
+    if (!confirmResult.isConfirmed) return;
+    setSubmittingRating(true);
+    try {
+      const res = await MarkCompletedParticipants(selectedParticipant.id, {
+        performance,
+      });
+      if (res.status === 200) {
+        setIsRatingModalOpen(false);
+        Swal.fire({
+          icon: "success",
+          title: "Đánh giá thành công!",
+          timer: 1500,
+          showConfirmButton: false,
+        });
+        fetchDashboardData();
+      }
+    } catch (err) {
+      console.error(err);
+      message.error("Có lỗi xảy ra khi đánh giá.");
+    } finally {
+      setSubmittingRating(false);
+    }
+  };
+
+  // volunteerColumns đặt trong component (cần navigate và openRatingModal)
+  const volunteerColumns = [
+    {
+      title: "Tình nguyện viên",
+      key: "volunteer",
+      render: (_, record) => (
+        <Space direction="vertical" size={0}>
+          <span className="font-medium">
+            {record.volunteer?.name || record.user?.name || "N/A"}
+          </span>
+          <span className="text-gray-500 text-xs">
+            {record.volunteer?.email || record.user?.email || ""}
+          </span>
+        </Space>
+      ),
+    },
+    {
+      title: "Sự kiện",
+      dataIndex: "eventName",
+      key: "eventName",
+      render: (text, record) => (
+        <a
+          onClick={() =>
+            // changed: always navigate by numeric id to match manager route param
+            navigate(`/quanlisukien/su-kien/${record.eventId}`)
+          }
+          className="text-blue-600 hover:text-blue-800 font-medium cursor-pointer"
+        >
+          {text}
+        </a>
+      ),
+    },
+    {
+      title: "Ngày đăng ký",
+      dataIndex: "createdAt",
+      key: "createdAt",
+      width: 120,
+      render: (date) => dayjs(date).format("DD/MM/YYYY"),
+    },
+    {
+      title: "Trạng thái",
+      dataIndex: "status",
+      width: 120,
+      render: (status) => {
+        const colors = {
+          pending: "#DDB958",
+          approved: "#00C950",
+          rejected: "red",
+          completed: "#2B7FFF",
+        };
+        const labels = {
+          pending: "Chờ duyệt",
+          approved: "Đã duyệt",
+          rejected: "Từ chối",
+          completed: "Hoàn thành",
+        };
+        return (
+          <Tag
+            style={{ color: colors[status] || "#999" }}
+            className="!font-semibold !bg-transparent !border-none !text-[14px] !pl-0"
+          >
+            {labels[status] || status?.toUpperCase()}
+          </Tag>
+        );
+      },
+    },
+    {
+      title: "Đánh giá",
+      dataIndex: "performance",
+      align: "center",
+      width: 160,
+      render: (perf, record) => {
+        // Nếu bị từ chối, hiển thị "Bị từ chối"
+        if (String(record.status).toLowerCase() === "rejected") {
+          return (
+            <div className="bg-red-500 !text-white px-3 py-1 rounded-md flex items-center justify-center gap-2 w-[130px] mx-auto whitespace-nowrap">
+              <span className="font-semibold">Bị từ chối</span>
+            </div>
+          );
+        }
+        
+        if (!perf) return <span className="text-gray-400">—</span>;
+        const option = PERFORMANCE_OPTIONS.find((o) => o.key === perf);
+        if (!option) return <span className="text-gray-500">{perf}</span>;
+        return (
+          <div className={`${option.color} px-3 py-1 rounded-md flex items-center justify-center gap-2 w-[130px] mx-auto whitespace-nowrap`}>
+            {option.icon}
+            <span className="font-semibold">{option.label}</span>
+          </div>
+        );
+      },
+    },
+    {
+      title: "Thao tác",
+      align: "center",
+      width: 200,
+      render: (_, record) => {
+        const recordStatus = String(record.status).toLowerCase();
+        
+        // Nếu đang chờ duyệt
+        if (recordStatus === "pending") {
+          return (
+            <div className="flex flex-col justify-center items-center gap-2">
+              <Button
+                type="primary"
+                className="!bg-green-500 w-18"
+                size="small"
+                loading={actionLoading[record.id]}
+                onClick={() => handleApproveRegistration(record.id)}
+              >
+                Duyệt
+              </Button>
+              <Button
+                size="small"
+                className="!bg-red-500 !text-white w-18"
+                loading={actionLoading[record.id]}
+                onClick={() => handleRejectRegistration(record.id)}
+              >
+                Từ chối
+              </Button>
+            </div>
+          );
+        }
+        
+        // Nếu đã duyệt, hiển thị nút đánh giá
+        if (recordStatus === "approved") {
+          return (
+            <Button
+              type="primary"
+              className="!bg-blue-500"
+              onClick={() => openRatingModal(record)}
+            >
+              Đánh giá
+            </Button>
+          );
+        }
+        
+        // Nếu hoàn thành hoặc từ chối, không hiển thị gì
+        if (recordStatus === "completed") {
+          return (
+            <span className="text-green-600 font-medium text-xs">
+              Đã kết thúc
+            </span>
+          );
+        }
+        
+        return null;
+      },
+    },
+  ];
 
   const eventColumns = [
     {
@@ -277,7 +602,8 @@ export default function EventManagerDashboard() {
       render: (text, record) => (
         <a
           onClick={() =>
-            navigate(`/quanlisukien/su-kien/${record.slug || record.id || record.id}`)
+            // changed: use record.id (guaranteed id from API)
+            navigate(`/quanlisukien/su-kien/${record.id}`)
           }
           className="text-blue-600 hover:text-blue-800 font-medium cursor-pointer"
         >
@@ -391,7 +717,8 @@ export default function EventManagerDashboard() {
       render: (text, record) => (
         <a
           onClick={() =>
-            navigate(`/quanlisukien/su-kien/${record.slug || record.id || record.id}`)
+            // changed: use id
+            navigate(`/quanlisukien/su-kien/${record.id}`)
           }
           className="text-blue-600 hover:text-blue-800 font-medium cursor-pointer"
         >
@@ -427,77 +754,6 @@ export default function EventManagerDashboard() {
     },
   ];
 
-  const pendingRegistrationColumns = [
-    {
-      title: "Tình nguyện viên",
-      key: "volunteer",
-      render: (_, record) => (
-        <Space direction="vertical" size={0}>
-          <span className="font-medium">
-            {record.volunteer?.name || record.user?.name || "N/A"}
-          </span>
-          <span className="text-gray-500 text-xs">
-            {record.volunteer?.email || record.user?.email || ""}
-          </span>
-        </Space>
-      ),
-    },
-    {
-      title: "Sự kiện",
-      dataIndex: "eventName",
-      key: "eventName",
-      render: (text, record) => (
-        <a
-          onClick={() =>
-            navigate(
-              `/quanlisukien/su-kien/${record.eventSlug || record.eventId}`
-            )
-          }
-          className="text-blue-600 hover:text-blue-800 font-medium cursor-pointer"
-        >
-          {text}
-        </a>
-      ),
-    },
-    {
-      title: "Ngày đăng ký",
-      dataIndex: "createdAt",
-      key: "createdAt",
-      width: 120,
-      render: (date) => dayjs(date).format("DD/MM/YYYY"),
-    },
-    {
-      title: "Thao tác",
-      align: "center",
-      width: 200,
-      render: (_, record) => (
-        <div className="flex flex-col justify-center items-center gap-2">
-          <Tooltip title="Duyệt tham gia">
-            <Button
-              type="primary"
-              className="!bg-green-500 !hover:bg-green-600 !border-none !font-semibold w-18"
-              size="small"
-              loading={actionLoading[record.id || record.id]}
-              onClick={() => handleApproveRegistration(record.id || record.id)}
-            >
-              Duyệt
-            </Button>
-          </Tooltip>
-          <Tooltip title="Từ chối tham gia">
-            <Button
-              size="small"
-              className="!bg-red-500 !hover:bg-red-600 !border-none !text-white !font-semibold w-18"
-              loading={actionLoading[record.id || record.id]}
-              onClick={() => handleRejectRegistration(record.id || record.id)}
-            >
-              Từ chối
-            </Button>
-          </Tooltip>
-        </div>
-      ),
-    },
-  ];
-
   const upcomingEventColumns = [
     {
       title: "Sự kiện",
@@ -506,7 +762,8 @@ export default function EventManagerDashboard() {
       render: (text, record) => (
         <a
           onClick={() =>
-            navigate(`/quanlisukien/su-kien/${record.slug || record.id || record.id}`)
+            // changed: use id
+            navigate(`/quanlisukien/su-kien/${record.id}`)
           }
           className="text-blue-600 hover:text-blue-800 cursor-pointer font-medium"
         >
@@ -524,8 +781,8 @@ export default function EventManagerDashboard() {
         const today = dayjs();
         const diff = eventDate.diff(today, "day");
         let color = "#1890ff";
-        if (diff <= 2) color = "#ff4d4f"; 
-        else if (diff <= 7) color = "#52c41a"; 
+        if (diff <= 2) color = "#ff4d4f";
+        else if (diff <= 7) color = "#52c41a";
         return (
           <Tag
             style={{
@@ -550,9 +807,8 @@ export default function EventManagerDashboard() {
             size="small"
             icon={<TeamOutlined />}
             onClick={() =>
-              navigate(
-                `/quanlisukien/su-kien/${record.slug || record.id || record.id}/participants`
-              )
+              // changed: use id for participants route
+              navigate(`/quanlisukien/su-kien/${record.id}/participants`)
             }
           >
             Danh sách
@@ -561,7 +817,8 @@ export default function EventManagerDashboard() {
             size="small"
             icon={<EyeOutlined />}
             onClick={() =>
-              navigate(`/quanlisukien/su-kien/${record.slug || record.id || record.id}`)
+              // changed: use id
+              navigate(`/quanlisukien/su-kien/${record.id}`)
             }
           >
             Chi tiết
@@ -656,16 +913,117 @@ export default function EventManagerDashboard() {
             children: (
               <VolunteersTab
                 stats={stats}
-                pendingRegistrations={pendingRegistrations}
+                filteredRegistrations={filteredRegistrations}
                 participantApprovalRate={participantApprovalRate}
-                pendingRegistrationColumns={pendingRegistrationColumns}
-                navigate={navigate}
-                setActiveTab={setActiveTab}
+                volunteerColumns={volunteerColumns}
+                handleVolunteerCardClick={handleVolunteerCardClick}
+                activeVolunteerCard={activeVolunteerCard}
+                sortStatus={sortStatus}
+                handleSortStatusChange={handleSortStatusChange}
               />
             ),
           },
         ]}
       />
+
+      {/* Modal từ chối với lý do */}
+      <Modal
+        title={
+          <div className="text-xl font-bold text-red-500">Từ chối đăng ký</div>
+        }
+        open={isRejectModalOpen}
+        onCancel={() => {
+          setIsRejectModalOpen(false);
+          setSelectedRejectionReason("");
+          setSelectedForRejection(null);
+        }}
+        onOk={handleConfirmRejection}
+        okText="Xác nhận từ chối"
+        cancelText="Hủy"
+        okButtonProps={{ danger: true }}
+        centered
+      >
+        <div className="my-4">
+          <p className="mb-4">
+            Tình nguyện viên:{" "}
+            <strong className="text-lg">{selectedForRejection?.name}</strong>
+          </p>
+          <p className="mb-2 font-semibold">Vui lòng chọn lý do từ chối:</p>
+          <div className="space-y-2">
+            {[
+              "Không đủ điều kiện tham gia",
+              "Đã đủ số lượng tình nguyện viên",
+              "Không phù hợp với yêu cầu sự kiện",
+              "Lịch trình không phù hợp",
+              "Điểm uy tín không đủ",
+              "Lý do khác",
+            ].map((reason) => (
+              <div
+                key={reason}
+                className={`p-3 border rounded cursor-pointer transition-all ${
+                  selectedRejectionReason === reason
+                    ? "border-red-500 bg-red-50"
+                    : "border-gray-300 hover:border-red-300 hover:bg-gray-50"
+                }`}
+                onClick={() => setSelectedRejectionReason(reason)}
+              >
+                <div className="flex items-center">
+                  <input
+                    type="radio"
+                    checked={selectedRejectionReason === reason}
+                    onChange={() => setSelectedRejectionReason(reason)}
+                    className="mr-2"
+                  />
+                  <span>{reason}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal đánh giá volunteer */}
+      <Modal
+        footer={null}
+        open={isRatingModalOpen}
+        onCancel={() => setIsRatingModalOpen(false)}
+        width={700}
+        centered
+      >
+        <div className="text-center mb-8 mt-4">
+          <h3 className="text-2xl font-bold text-gray-800">
+            Đánh giá Tình Nguyện Viên
+          </h3>
+          <p className="text-gray-500 mt-2">
+            Chọn mức độ hoàn thành của: <br />
+            <span className="text-[#001529] font-bold text-3xl">
+              {selectedParticipant?.volunteer?.name || selectedParticipant?.user?.name}
+            </span>
+          </p>
+        </div>
+        <div className="grid grid-cols-2 gap-4 px-4 pb-6">
+          {PERFORMANCE_OPTIONS.map((option) => (
+            <div
+              key={option.key}
+              onClick={() => !submittingRating && handleSubmitRating(option.key)}
+              className={`group relative cursor-pointer rounded-xl border-2 p-6 transition-all ${option.color} ${
+                submittingRating
+                  ? "opacity-50 pointer-events-none"
+                  : "hover:-translate-y-1 hover:shadow-lg"
+              }`}
+            >
+              <div className="text-4xl mb-2 !text-white">{option.icon}</div>
+              <div className="font-bold text-lg mb-1">{option.label}</div>
+              <div className="text-sm opacity-80">
+                {option.key === "GOOD" && "Hoàn thành tốt nhiệm vụ, thái độ tích cực."}
+                {option.key === "AVERAGE" && "Hoàn thành nhiệm vụ ở mức cơ bản."}
+                {option.key === "BAD" && "Thái độ không tốt hoặc không hoàn thành nhiệm vụ."}
+                {option.key === "NO_SHOW" && "Đăng ký nhưng không tham gia."}
+              </div>
+            </div>
+          ))}
+        </div>
+      </Modal>
     </div>
   );
 }
@@ -681,7 +1039,6 @@ const EventsTab = ({
   navigate,
   approvalRate,
   completionRate,
-  //submittedEvents,
   eventColumns,
   topEventColumns,
   upcomingEventColumns,
@@ -731,7 +1088,7 @@ const EventsTab = ({
           {upcomingEvents.length === 0 ? (
             <Empty description="Không có sự kiện sắp diễn ra" image={Empty.PRESENTED_IMAGE_SIMPLE} />
           ) : (
-            <Table dataSource={upcomingEvents} columns={upcomingEventColumns} rowKey={(r) => r.id || r.id} pagination={false} size="small" />
+            <Table dataSource={upcomingEvents} columns={upcomingEventColumns} rowKey={(r) => r.id} pagination={false} size="small" />
           )}
         </Card>
       </div>
@@ -742,7 +1099,7 @@ const EventsTab = ({
             {recentEvents.length === 0 ? (
               <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />
             ) : (
-              <Table dataSource={recentEvents} columns={eventColumns} rowKey={(r) => r.id || r.id} pagination={false} size="small" />
+              <Table dataSource={recentEvents} columns={eventColumns} rowKey={(r) => r.id} pagination={false} size="small" />
             )}
           </Card>
         </Col>
@@ -752,7 +1109,7 @@ const EventsTab = ({
             {topEvents.length === 0 ? (
               <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />
             ) : (
-              <Table dataSource={topEvents} columns={topEventColumns} rowKey={(r) => r.id || r.id} pagination={false} size="small" />
+              <Table dataSource={topEvents} columns={topEventColumns} rowKey={(r) => r.id} pagination={false} size="small" />
             )}
           </Card>
         </Col>
@@ -766,26 +1123,41 @@ const EventsTab = ({
 // ========================================
 const VolunteersTab = ({
   stats,
-  pendingRegistrations,
+  filteredRegistrations,
   participantApprovalRate,
-  pendingRegistrationColumns,
-  navigate,
+  volunteerColumns,
+  handleVolunteerCardClick,
+  activeVolunteerCard,
+  sortStatus,
+  handleSortStatusChange,
 }) => {
   return (
     <>
       <Row gutter={[16, 16]} className="mb-6">
         <Col xs={24} sm={12} lg={8}>
-          <Card className="shadow-md" style={{ borderTop: "4px solid #1890ff", borderRadius: 8 }}>
+          <Card
+            className={`shadow-md cursor-pointer ${activeVolunteerCard === "all" ? "ring-2 ring-blue-400" : ""}`}
+            style={{ borderTop: "4px solid #1890ff", borderRadius: 8 }}
+            onClick={() => handleVolunteerCardClick("all")}
+          >
             <Statistic title={<span className="text-gray-600 font-medium">Tổng Đăng Ký</span>} value={stats.totalRegistrations} prefix={<UserOutlined style={{ color: "#1890ff" }} />} valueStyle={{ color: "#1890ff", fontWeight: "bold" }} />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={8}>
-          <Card className="shadow-md" style={{ borderTop: "4px solid #52c41a", borderRadius: 8 }}>
+          <Card
+            className={`shadow-md cursor-pointer ${activeVolunteerCard === "approved" ? "ring-2 ring-green-400" : ""}`}
+            style={{ borderTop: "4px solid #52c41a", borderRadius: 8 }}
+            onClick={() => handleVolunteerCardClick("approved")}
+          >
             <Statistic title={<span className="text-gray-600 font-medium">Đã Duyệt</span>} value={stats.approvedRegistrations} prefix={<CheckCircleOutlined style={{ color: "#52c41a" }} />} valueStyle={{ color: "#52c41a", fontWeight: "bold" }} />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={8}>
-          <Card className="shadow-md" style={{ borderTop: "4px solid #faad14", borderRadius: 8 }}>
+          <Card
+            className={`shadow-md cursor-pointer ${activeVolunteerCard === "pending" ? "ring-2 ring-yellow-400" : ""}`}
+            style={{ borderTop: "4px solid #faad14", borderRadius: 8 }}
+            onClick={() => handleVolunteerCardClick("pending")}
+          >
             <Statistic title={<span className="text-gray-600 font-medium">Chờ Duyệt</span>} value={stats.pendingRegistrations} prefix={<ClockCircleOutlined style={{ color: "#faad14" }} />} valueStyle={{ color: "#faad14", fontWeight: "bold" }} />
           </Card>
         </Col>
@@ -796,11 +1168,51 @@ const VolunteersTab = ({
         <p className="text-center mt-3 text-gray-500 font-medium">{stats.approvedRegistrations} / {stats.totalRegistrations} đăng ký</p>
       </Card>
 
-      <Card title={<Space><ClockCircleOutlined style={{ color: "#faad14" }} /><span>Đăng Ký Chờ Duyệt ({pendingRegistrations.length})</span></Space>} extra={<Button type="link" onClick={() => navigate("/quanlisukien/tham-gia")}>Xem tất cả →</Button>} className="shadow-md" style={{ borderRadius: 8 }}>
-        {pendingRegistrations.length === 0 ? (
-          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />
+      <Card 
+        title={
+          <div className="flex items-center justify-between">
+            <Space>
+              <ClockCircleOutlined style={{ color: "#faad14" }} />
+              <span>Danh Sách Tình Nguyện Viên</span>
+            </Space>
+            <Select
+              value={sortStatus}
+              onChange={handleSortStatusChange}
+              style={{ width: 180 }}
+              placeholder="Lọc theo trạng thái"
+            >
+              <Select.Option value="all">
+                <span className="font-medium">Tất cả trạng thái</span>
+              </Select.Option>
+              <Select.Option value="pending">
+                <Tag color="#DDB958" className="!border-none">Chờ duyệt</Tag>
+              </Select.Option>
+              <Select.Option value="approved">
+                <Tag color="#00C950" className="!border-none">Đã duyệt</Tag>
+              </Select.Option>
+              <Select.Option value="completed">
+                <Tag color="#2B7FFF" className="!border-none">Hoàn thành</Tag>
+              </Select.Option>
+              <Select.Option value="rejected">
+                <Tag color="red" className="!border-none">Từ chối</Tag>
+              </Select.Option>
+            </Select>
+          </div>
+        } 
+        className="shadow-md" 
+        style={{ borderRadius: 8 }}
+      >
+        {filteredRegistrations.length === 0 ? (
+          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Không có dữ liệu" />
         ) : (
-          <Table dataSource={pendingRegistrations} columns={pendingRegistrationColumns} rowKey={(r) => r.id || r.id} pagination={{ pageSize: 10 }} size="small" />
+          <Table 
+            dataSource={filteredRegistrations} 
+            columns={volunteerColumns} 
+            rowKey={(r) => r.id} 
+            pagination={{ pageSize: 10 }} 
+            size="small"
+            scroll={{ x: 1200 }}
+          />
         )}
       </Card>
     </>

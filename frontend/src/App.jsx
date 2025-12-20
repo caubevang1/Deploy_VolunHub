@@ -22,6 +22,7 @@ import PendingEvents from "./pages/Admin/Events/PendingAdminEvents";
 import EventManagerEvents from "./pages/EventManager/Event/EventManagerEvents";
 import CreateEvent from "./pages/EventManager/Event/CreatEvents";
 import AdminEventDetail from "./pages/Admin/Events/AdminEventDetail";
+import EventManagerDetail from "./pages/EventManager/Event/EventManagerDetail";
 import Participants from "./pages/EventManager/Participant/Participant";
 import EditEvent from "./pages/EventManager/Event/EditEvent";
 import EventDiscussion from "./pages/EventDiscussion";
@@ -57,26 +58,26 @@ class App extends Component {
             <Route
               path="su-kien/:eventId"
               element={<AdminEventDetail />}
-            />{" "}
+            />
             <Route
               path="su-kien/:eventId/trao-doi"
               element={<EventDiscussion />}
-            />{" "}
+            />
           </Route>
           {/* Manager routes */}
           <Route path="/quanlisukien" element={<EventManagerTemplate />}>
             <Route index element={<EventManagerDashboard />} />
             <Route path="dashboard" element={<EventManagerDashboard />} />
+            <Route path="su-kien" element={<EventManagerEvents />} />
+            <Route path="su-kien/tao" element={<CreateEvent />} />
+            <Route path="su-kien/sua/:eventId" element={<EditEvent />} />
+            <Route path="su-kien/:eventId" element={<EventManagerDetail />} />
             <Route
               path="su-kien/:eventId/participants"
               element={<Participants />}
             />
-            <Route path="su-kien" element={<EventManagerEvents />} />
-            <Route path="su-kien/tao" element={<CreateEvent />} />
-            <Route path="su-kien/sua/:eventId" element={<EditEvent />} />
-            <Route path="su-kien/:eventId" element={<AdminEventDetail />} />
             <Route
-              path="/quanlisukien/su-kien/:eventId/trao-doi"
+              path="su-kien/:eventId/trao-doi"
               element={<EventDiscussion />}
             />
           </Route>
