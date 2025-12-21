@@ -44,5 +44,5 @@ export const startCronJobs = () => {
     }
   });
 
-  console.log("Cron job đã được thiết lập - chạy mỗi ngày lúc 00:00.");
+  console.log("Cron job đã được thiết lập");
 };
