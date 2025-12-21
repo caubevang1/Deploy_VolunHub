@@ -174,11 +174,11 @@ export default function EventManagerDashboard() {
                 detailRes.status === 200
                   ? detailRes.data.stats
                   : {
-                      totalRegistrations: 0,
-                      approvedCount: 0,
-                      pendingCount: 0,
-                      rejectedCount: 0,
-                    };
+                    totalRegistrations: 0,
+                    approvedCount: 0,
+                    pendingCount: 0,
+                    rejectedCount: 0,
+                  };
 
               return {
                 ...event,
@@ -371,9 +371,8 @@ export default function EventManagerDashboard() {
     );
     const result = await Swal.fire({
       title: `Bạn có chắc muốn duyệt?`,
-      html: `Tình nguyện viên: <strong>${
-        participant?.volunteer?.name || participant?.user?.name
-      }</strong>`,
+      html: `Tình nguyện viên: <strong>${participant?.volunteer?.name || participant?.user?.name
+        }</strong>`,
       icon: "warning",
       showCancelButton: true,
       confirmButtonText: "Xác nhận",
@@ -452,11 +451,9 @@ export default function EventManagerDashboard() {
     );
     const confirmResult = await Swal.fire({
       title: "Xác nhận đánh giá",
-      html: `Bạn có chắc chắn muốn đánh giá: <br/><strong>${
-        selectedParticipant.volunteer?.name || selectedParticipant.user?.name
-      }</strong> <br/> <strong style="color: #DDB958; font-size: 1.2em;">${
-        selectedOption?.label
-      }</strong>?`,
+      html: `Bạn có chắc chắn muốn đánh giá: <br/><strong>${selectedParticipant.volunteer?.name || selectedParticipant.user?.name
+        }</strong> <br/> <strong style="color: #DDB958; font-size: 1.2em;">${selectedOption?.label
+        }</strong>?`,
       icon: "question",
       showCancelButton: true,
       confirmButtonText: "Đồng ý",
@@ -874,23 +871,23 @@ export default function EventManagerDashboard() {
   const approvalRate =
     stats.totalEvents > 0
       ? Math.round(
-          ((stats.approvedEvents + stats.completedEvents) / stats.totalEvents) *
-            100
-        )
+        ((stats.approvedEvents + stats.completedEvents) / stats.totalEvents) *
+        100
+      )
       : 0;
   const completionRate =
     stats.approvedEvents + stats.completedEvents > 0
       ? Math.round(
-          (stats.completedEvents /
-            (stats.approvedEvents + stats.completedEvents)) *
-            100
-        )
+        (stats.completedEvents /
+          (stats.approvedEvents + stats.completedEvents)) *
+        100
+      )
       : 0;
   const participantApprovalRate =
     stats.totalRegistrations > 0
       ? Math.round(
-          (stats.approvedRegistrations / stats.totalRegistrations) * 100
-        )
+        (stats.approvedRegistrations / stats.totalRegistrations) * 100
+      )
       : 0;
 
   if (loading) {
@@ -904,7 +901,7 @@ export default function EventManagerDashboard() {
   }
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
+    <div>
       <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
         <h2 className="text-3xl font-bold text-gray-800">
           Dashboard Quản Lý Sự Kiện
@@ -1029,11 +1026,10 @@ export default function EventManagerDashboard() {
             ].map((reason) => (
               <div
                 key={reason}
-                className={`p-3 border rounded cursor-pointer transition-all ${
-                  selectedRejectionReason === reason
+                className={`p-3 border rounded cursor-pointer transition-all ${selectedRejectionReason === reason
                     ? "border-red-500 bg-red-50"
                     : "border-gray-300 hover:border-red-300 hover:bg-gray-50"
-                }`}
+                  }`}
                 onClick={() => setSelectedRejectionReason(reason)}
               >
                 <div className="flex items-center">
@@ -1078,13 +1074,11 @@ export default function EventManagerDashboard() {
               onClick={() =>
                 !submittingRating && handleSubmitRating(option.key)
               }
-              className={`group relative cursor-pointer rounded-xl border-2 p-6 transition-all ${
-                option.color
-              } ${
-                submittingRating
+              className={`group relative cursor-pointer rounded-xl border-2 p-6 transition-all ${option.color
+                } ${submittingRating
                   ? "opacity-50 pointer-events-none"
                   : "hover:-translate-y-1 hover:shadow-lg"
-              }`}
+                }`}
             >
               <div className="text-4xl mb-2 !text-white">{option.icon}</div>
               <div className="font-bold text-lg mb-1">{option.label}</div>
@@ -1270,66 +1264,64 @@ const EventsTab = ({
         </Card>
       </div>
 
-      <Row gutter={[16, 16]} className="mb-6">
-        <Col xs={24} lg={12}>
-          <Card
-            title={
-              <Space>
-                <FolderOpenOutlined style={{ color: "#1890ff" }} />
-                <span className="font-semibold text-lg">Sự kiện gần đây</span>
-              </Space>
-            }
-            extra={
-              <Button
-                type="link"
-                onClick={() => navigate("/quanlisukien/su-kien")}
-                className="text-blue-600 hover:text-blue-800"
-              >
-                Xem tất cả →
-              </Button>
-            }
-            className="shadow-md"
-            style={{ borderRadius: 8 }}
-          >
-            {recentEvents.length === 0 ? (
-              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />
-            ) : (
-              <Table
-                dataSource={recentEvents}
-                columns={eventColumns}
-                rowKey={(r) => r.id}
-                pagination={false}
-                size="small"
-              />
-            )}
-          </Card>
-        </Col>
+      <div className="mb-6">
+        <Card
+          title={
+            <Space>
+              <FolderOpenOutlined style={{ color: "#1890ff" }} />
+              <span className="font-semibold text-lg">Sự kiện gần đây</span>
+            </Space>
+          }
+          extra={
+            <Button
+              type="link"
+              onClick={() => navigate("/quanlisukien/su-kien")}
+              className="text-blue-600 hover:text-blue-800"
+            >
+              Xem tất cả →
+            </Button>
+          }
+          className="shadow-md"
+          style={{ borderRadius: 8 }}
+        >
+          {recentEvents.length === 0 ? (
+            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />
+          ) : (
+            <Table
+              dataSource={recentEvents}
+              columns={eventColumns}
+              rowKey={(r) => r.id}
+              pagination={false}
+              size="small"
+            />
+          )}
+        </Card>
+      </div>
 
-        <Col xs={24} lg={12}>
-          <Card
-            title={
-              <Space>
-                <FireOutlined style={{ color: "#ff4d4f" }} />
-                <span className="font-semibold text-lg">Sự Kiện Hot Nhất</span>
-              </Space>
-            }
-            className="shadow-md"
-            style={{ borderRadius: 8 }}
-          >
-            {topEvents.length === 0 ? (
-              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />
-            ) : (
-              <Table
-                dataSource={topEvents}
-                columns={topEventColumns}
-                rowKey={(r) => r.id}
-                pagination={false}
-                size="small"
-              />
-            )}
-          </Card>
-        </Col>
-      </Row>
+      <div className="mb-6">
+        <Card
+          title={
+            <Space>
+              <FireOutlined style={{ color: "#ff4d4f" }} />
+              <span className="font-semibold text-lg">Sự Kiện Hot Nhất</span>
+            </Space>
+          }
+          className="shadow-md"
+          style={{ borderRadius: 8 }}
+        >
+          {topEvents.length === 0 ? (
+            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />
+          ) : (
+            <Table
+              dataSource={topEvents}
+              columns={topEventColumns}
+              rowKey={(r) => r.id}
+              pagination={false}
+              size="small"
+            />
+          )}
+        </Card>
+      </div>
     </>
   );
 };
@@ -1352,9 +1344,8 @@ const VolunteersTab = ({
       <Row gutter={[16, 16]} className="mb-6">
         <Col xs={24} sm={12} lg={8}>
           <Card
-            className={`shadow-md cursor-pointer ${
-              activeVolunteerCard === "all" ? "ring-2 ring-blue-400" : ""
-            }`}
+            className={`shadow-md cursor-pointer ${activeVolunteerCard === "all" ? "ring-2 ring-blue-400" : ""
+              }`}
             style={{ borderTop: "4px solid #1890ff", borderRadius: 8 }}
             onClick={() => handleVolunteerCardClick("all")}
           >
@@ -1370,9 +1361,8 @@ const VolunteersTab = ({
         </Col>
         <Col xs={24} sm={12} lg={8}>
           <Card
-            className={`shadow-md cursor-pointer ${
-              activeVolunteerCard === "approved" ? "ring-2 ring-green-400" : ""
-            }`}
+            className={`shadow-md cursor-pointer ${activeVolunteerCard === "approved" ? "ring-2 ring-green-400" : ""
+              }`}
             style={{ borderTop: "4px solid #52c41a", borderRadius: 8 }}
             onClick={() => handleVolunteerCardClick("approved")}
           >
@@ -1388,9 +1378,8 @@ const VolunteersTab = ({
         </Col>
         <Col xs={24} sm={12} lg={8}>
           <Card
-            className={`shadow-md cursor-pointer ${
-              activeVolunteerCard === "pending" ? "ring-2 ring-yellow-400" : ""
-            }`}
+            className={`shadow-md cursor-pointer ${activeVolunteerCard === "pending" ? "ring-2 ring-yellow-400" : ""
+              }`}
             style={{ borderTop: "4px solid #faad14", borderRadius: 8 }}
             onClick={() => handleVolunteerCardClick("pending")}
           >

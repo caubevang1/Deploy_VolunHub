@@ -385,11 +385,11 @@ export default function EventList() {
     if (loading) return <p className="text-center py-10">Đang tải...</p>;
 
     return (
-        <div className="px-2 md:px-0">
-            <div className="flex flex-col md:flex-row gap-3 mb-6">
+        <div>
+            <div className="px-2 md:px-0 flex flex-col md:flex-row gap-3 mb-6">
                 <select
                     name="category"
-                    className="border p-2 rounded"
+                    className="border border-gray-300 p-2 rounded"
                     value={filters.category}
                     onChange={(e) =>
                         setFilters((p) => ({ ...p, category: e.target.value }))
@@ -405,7 +405,7 @@ export default function EventList() {
 
                 <select
                     name="status"
-                    className="border p-2 rounded"
+                    className="border border-gray-300 p-2 rounded"
                     value={filters.status}
                     onChange={(e) =>
                         setFilters((p) => ({ ...p, status: e.target.value }))
@@ -423,7 +423,7 @@ export default function EventList() {
                     Lọc
                 </button>
 
-                <div className="flex-1 flex items-center border rounded-full px-4 ml-0 md:ml-10 shadow-sm">
+                <div className="flex-1 flex items-center border border-gray-300 rounded-full px-4 ml-0 md:ml-10 shadow-sm">
                     <input
                         type="text"
                         placeholder="Tìm kiếm..."
@@ -437,176 +437,180 @@ export default function EventList() {
                 </div>
             </div>
 
-            <div className="flex gap-6 border-b mb-6 overflow-x-auto">
-                {[
-                    { key: "all", label: "Tất Cả" },
-                    { key: "joined", label: "Đã Đăng Ký" },
-                    { key: "notJoined", label: "Chưa Đăng Ký" },
-                    { key: "liked", label: "Yêu Thích" },
-                ].map((t) => (
-                    <button
-                        key={t.key}
-                        onClick={() => setTab(t.key)}
-                        className={`pb-2 whitespace-nowrap ${tab === t.key ? "border-b-2 border-[#DDB958] text-[#DDB958]" : ""
-                            }`}
-                    >
-                        {t.label} ({tabCounts[t.key]})
-                    </button>
-                ))}
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredEvents.map((event) => {
-                    const eventId = event.id;
-                    return (
-                        <div
-                            key={eventId}
-                            className="flex flex-col relative cursor-pointer w-full md:w-auto h-auto md:h-[700px] bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border border-gray-100"
-                            onClick={() => handleViewDetail(eventId)}
+            <div className="px-2 md:px-0">
+                <div className="flex gap-6 md:gap-12 border-b-2 border-gray-700 mb-6 overflow-x-auto">
+                    {[
+                        { key: "all", label: "Tất Cả" },
+                        { key: "joined", label: "Đã Đăng Ký" },
+                        { key: "notJoined", label: "Chưa Đăng Ký" },
+                        { key: "liked", label: "Yêu Thích" },
+                    ].map((t) => (
+                        <button
+                            key={t.key}
+                            onClick={() => setTab(t.key)}
+                            className={`pb-2 whitespace-nowrap text-base md:text-xl font-medium ${tab === t.key ? "border-b-[3px] border-[#DDB958] text-[#DDB958]" : "text-gray-700"
+                                }`}
                         >
-                            {/* Badge trạng thái */}
-                            {userParticipationMap[eventId] && (
-                                <span
-                                    className={`absolute top-2 md:top-4 right-2 md:right-4 px-2 md:px-3 py-1 rounded-full text-white text-[10px] md:text-xs font-bold shadow-md z-10 ${userParticipationMap[eventId].status === "approved"
-                                        ? "bg-green-500"
-                                        : userParticipationMap[eventId].status === "rejected"
-                                            ? "bg-red-500"
-                                            : userParticipationMap[eventId].status === "pending"
-                                                ? "bg-yellow-500"
-                                                : "bg-gray-500"
-                                        }`}
-                                >
-                                    {userParticipationMap[eventId].status === "approved"
-                                        ? "Đã tham gia"
-                                        : userParticipationMap[eventId].status === "rejected"
-                                            ? "Bị từ chối"
-                                            : "Đang chờ"}
-                                </span>
-                            )}
+                            {t.label} ({tabCounts[t.key]})
+                        </button>
+                    ))}
+                </div>
 
-                            {/* Badge điểm hoàn thành (top-left) */}
-                            {event.points > 0 && (
-                                <span className="absolute top-2 left-2 md:top-4 md:left-4 px-2 md:px-3 py-1 rounded-full text-white text-[11px] md:text-sm font-bold shadow-md z-10 bg-gradient-to-r from-yellow-400 to-yellow-500">
-                                    +{event.points} điểm
-                                </span>
-                            )}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filteredEvents.map((event) => {
+                        const eventId = event.id;
+                        return (
+                            <div
+                                key={eventId}
+                                className="flex flex-col relative cursor-pointer w-full md:w-auto h-auto md:h-[700px] bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden border-2 border-gray-300"
+                                onClick={() => handleViewDetail(eventId)}
+                            >
+                                {/* Badge trạng thái */}
+                                {userParticipationMap[eventId] && (
+                                    <span
+                                        className={`absolute top-2 md:top-4 right-2 md:right-4 px-2 md:px-3 py-1 rounded-full text-white text-[10px] md:text-xs font-bold shadow-md z-10 ${userParticipationMap[eventId].status === "approved"
+                                            ? "bg-green-500"
+                                            : userParticipationMap[eventId].status === "rejected"
+                                                ? "bg-red-500"
+                                                : userParticipationMap[eventId].status === "pending"
+                                                    ? "bg-yellow-500"
+                                                    : "bg-gray-500"
+                                            }`}
+                                    >
+                                        {userParticipationMap[eventId].status === "approved"
+                                            ? "Đã tham gia"
+                                            : userParticipationMap[eventId].status === "rejected"
+                                                ? "Bị từ chối"
+                                                : "Đang chờ"}
+                                    </span>
+                                )}
 
-                            {/* Ảnh cover */}
-                            <img
-                                src={
-                                    event.coverImage?.startsWith("http")
-                                        ? event.coverImage
-                                        : `http://localhost:5000${event.coverImage}`
-                                }
-                                alt={event.name}
-                                className="h-[250px] md:h-[400px] w-full object-cover"
-                            />
+                                {/* Badge điểm hoàn thành (top-left) */}
+                                {event.points > 0 && (
+                                    <span className="absolute top-2 left-2 md:top-4 md:left-4 px-2 md:px-3 py-1 rounded-full text-white text-[11px] md:text-sm font-bold shadow-md z-10 bg-gradient-to-r from-yellow-400 to-yellow-500">
+                                        +{event.points} điểm
+                                    </span>
+                                )}
 
-                            {/* Thân card */}
-                            <div className="px-4 md:px-6 py-3 md:py-5 flex flex-col gap-2.5">
-                                {/* Tiêu đề */}
-                                <h2 className="font-semibold text-lg md:text-xl leading-5 md:leading-6 line-clamp-2 min-h-[2.5rem] md:h-[3rem]">
-                                    {event.name}
-                                </h2>
+                                {/* Ảnh cover */}
+                                <img
+                                    src={
+                                        event.coverImage?.startsWith("http")
+                                            ? event.coverImage
+                                            : `http://localhost:5000${event.coverImage}`
+                                    }
+                                    alt={event.name}
+                                    className="h-[250px] md:h-[400px] w-full object-cover"
+                                />
 
-                                {/* Khối thông tin + mô tả */}
-                                <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-start">
-                                    {/* Cột trái: thông tin nhanh */}
-                                    <div className="flex flex-col text-gray-700 text-sm md:text-[15px] gap-3 md:gap-3 w-full md:w-[140px]">
-                                        <div className="flex gap-2 items-center pb-2">
-                                            <Calendar
-                                                size={16}
-                                                className="md:w-[18px] md:h-[18px] text-[#DDB958]"
-                                            />
-                                            <span className="text-xs md:text-sm">
-                                                {new Date(event.date).toLocaleDateString("vi-VN")}
-                                            </span>
+                                {/* Thân card */}
+                                <div className="px-4 md:px-6 py-3 md:py-4 flex flex-col gap-3">
+                                    {/* Tiêu đề */}
+                                    <h2 className="font-bold text-base md:text-xl leading-snug line-clamp-2 min-h-[2.5rem] text-gray-800">
+                                        {event.name}
+                                    </h2>
+
+                                    {/* Khối thông tin + mô tả */}
+                                    <div className="flex flex-col md:flex-row gap-3 md:gap-4 items-start">
+                                        {/* Cột trái: thông tin nhanh */}
+                                        <div className="flex flex-col text-gray-600 text-sm gap-0 w-full md:w-[40%]">
+                                            <div className="flex gap-2 items-center py-2.5 border-b border-gray-200">
+                                                <Calendar
+                                                    size={18}
+                                                    className="text-gray-500 flex-shrink-0"
+                                                />
+                                                <span className="text-sm">
+                                                    {new Date(event.date).toLocaleDateString("vi-VN")}
+                                                </span>
+                                            </div>
+                                            <div className="flex gap-2 items-center py-2.5 border-b border-gray-200">
+                                                <Users
+                                                    size={18}
+                                                    className="text-gray-500 flex-shrink-0"
+                                                />
+                                                <span className="text-sm font-medium">
+                                                    {event.currentParticipants || 0}/{event.maxParticipants || 0}
+                                                </span>
+                                            </div>
+                                            <div className="flex gap-2 items-start py-2.5">
+                                                <MapPin
+                                                    size={18}
+                                                    className="text-gray-500 flex-shrink-0 mt-0.5"
+                                                />
+                                                <span className="line-clamp-2 text-sm">
+                                                    {event.location}
+                                                </span>
+                                            </div>
                                         </div>
-                                        <div className="flex gap-2 items-center pb-2">
-                                            <MapPin
-                                                size={16}
-                                                className="md:w-[18px] md:h-[18px] text-[#DDB958]"
+
+                                        {/* Đường kẻ dọc */}
+                                        <div className="hidden md:block w-0.5 bg-[#DCBA58] self-stretch"></div>
+
+                                        {/* Cột phải: mô tả */}
+                                        <div className="flex-1 md:w-[60%] text-gray-600 leading-relaxed border-t md:border-t-0 pt-3 md:pt-0">
+                                            <div
+                                                className="text-sm line-clamp-5 md:line-clamp-6"
+                                                dangerouslySetInnerHTML={{
+                                                    __html: event.description || "Không có mô tả",
+                                                }}
                                             />
-                                            <span className="line-clamp-2 text-xs md:text-sm">
-                                                {event.location}
-                                            </span>
-                                        </div>
-                                        <div className="flex gap-2 items-center pb-2">
-                                            <Users
-                                                size={16}
-                                                className="md:w-[18px] md:h-[18px] text-[#DDB958]"
-                                            />
-                                            <span className="text-xs md:text-sm font-medium">
-                                                {event.currentParticipants || 0}/
-                                                {event.maxParticipants || 0}
-                                            </span>
                                         </div>
                                     </div>
 
-                                    {/* Cột phải: mô tả */}
-                                    <div className="text-gray-700 leading-5 md:leading-6 border-t md:border-t-0 md:border-l border-gray-200 pt-3 md:pt-0 md:pl-4 w-full md:w-[190px]">
-                                        <div
-                                            className="prose prose-sm md:prose-lg max-w-none text-xs md:text-sm line-clamp-4 md:line-clamp-6 text-gray-600"
-                                            dangerouslySetInnerHTML={{
-                                                __html: event.description || "Không có mô tả",
-                                            }}
-                                        />
-                                    </div>
-                                </div>
+                                    {/* Lý do từ chối (nếu có) */}
+                                    {userParticipationMap[eventId]?.status === "rejected" &&
+                                        userParticipationMap[eventId]?.rejectionReason && (
+                                            <div className="text-xs text-red-600 bg-red-50 p-2 rounded border border-red-200">
+                                                <strong>Lý do từ chối:</strong>{" "}
+                                                {userParticipationMap[eventId].rejectionReason}
+                                            </div>
+                                        )}
 
-                                {/* Lý do từ chối (nếu có) */}
-                                {userParticipationMap[eventId]?.status === "rejected" &&
-                                    userParticipationMap[eventId]?.rejectionReason && (
-                                        <div className="text-xs text-red-600 bg-red-50 p-2 rounded border border-red-200">
-                                            <strong>Lý do từ chối:</strong>{" "}
-                                            {userParticipationMap[eventId].rejectionReason}
+                                    {/* Hàng thao tác */}
+                                    <div className="flex items-center justify-between pt-6 md:pt-7">
+                                        {/* Cụm trái: Like/Share */}
+                                        <div className="flex items-center gap-4 md:gap-6 text-sm md:text-[15px]">
+                                            <button
+                                                onClick={(e) => handleInteraction(e, eventId, "LIKE")}
+                                                className="flex items-center gap-1.5 md:gap-2 hover:scale-110 transition-transform"
+                                            >
+                                                <Heart
+                                                    size={20}
+                                                    strokeWidth={1.5}
+                                                    className={`md:w-6 md:h-6 ${likedEvents[eventId]
+                                                        ? "text-red-600 fill-red-600"
+                                                        : "text-gray-600"
+                                                        }`}
+                                                />
+                                                <span className="font-medium text-gray-700">
+                                                    {event.likesCount ?? 0}
+                                                </span>
+                                            </button>
+                                            <button
+                                                onClick={(e) => handleInteraction(e, eventId, "SHARE")}
+                                                className="flex items-center gap-1.5 md:gap-2 hover:scale-110 transition-transform text-gray-600"
+                                            >
+                                                <Share2
+                                                    size={20}
+                                                    strokeWidth={1.5}
+                                                    className="md:w-6 md:h-6"
+                                                />
+                                                <span className="font-medium text-gray-700">
+                                                    {event.sharesCount ?? 0}
+                                                </span>
+                                            </button>
                                         </div>
-                                    )}
 
-                                {/* Hàng thao tác */}
-                                <div className="flex items-center justify-between pt-6 md:pt-7">
-                                    {/* Cụm trái: Like/Share */}
-                                    <div className="flex items-center gap-4 md:gap-6 text-sm md:text-[15px]">
-                                        <button
-                                            onClick={(e) => handleInteraction(e, eventId, "LIKE")}
-                                            className="flex items-center gap-1.5 md:gap-2 hover:scale-110 transition-transform"
-                                        >
-                                            <Heart
-                                                size={20}
-                                                strokeWidth={1.5}
-                                                className={`md:w-6 md:h-6 ${likedEvents[eventId]
-                                                    ? "text-red-600 fill-red-600"
-                                                    : "text-gray-600"
-                                                    }`}
-                                            />
-                                            <span className="font-medium text-gray-700">
-                                                {event.likesCount ?? 0}
-                                            </span>
+                                        {/* Nút Chi Tiết */}
+                                        <button className="bg-[#DCBA58] text-white px-4 md:px-6 py-2 md:py-2.5 rounded-lg font-semibold text-sm md:text-[15px] hover:bg-[#CDA550] hover:shadow-lg transition-all duration-200">
+                                            Chi tiết
                                         </button>
-                                        <button
-                                            onClick={(e) => handleInteraction(e, eventId, "SHARE")}
-                                            className="flex items-center gap-1.5 md:gap-2 hover:scale-110 transition-transform text-gray-600"
-                                        >
-                                            <Share2
-                                                size={20}
-                                                strokeWidth={1.5}
-                                                className="md:w-6 md:h-6"
-                                            />
-                                            <span className="font-medium text-gray-700">
-                                                {event.sharesCount ?? 0}
-                                            </span>
-                                        </button>
                                     </div>
-
-                                    {/* Nút Chi Tiết */}
-                                    <button className="bg-[#DCBA58] text-white px-4 md:px-6 py-2 md:py-2.5 rounded-lg font-semibold text-sm md:text-[15px] hover:bg-[#CDA550] hover:shadow-lg transition-all duration-200">
-                                        Chi tiết
-                                    </button>
                                 </div>
                             </div>
-                        </div>
-                    );
-                })}
+                        );
+                    })}
+                </div>
             </div>
         </div>
     );

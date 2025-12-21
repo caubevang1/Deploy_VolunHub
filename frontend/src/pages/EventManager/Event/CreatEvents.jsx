@@ -84,7 +84,7 @@ export default function CreateEvent() {
     try {
       const descriptionWithPlaceholder = buildDescriptionWithPlaceholder();
       const formData = new FormData();
-      
+
       // Gán các trường cơ bản
       formData.append("name", values.name);
       formData.append("location", values.location);
@@ -137,7 +137,7 @@ export default function CreateEvent() {
   ];
 
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-white shadow-sm rounded-xl">
+    <>
       <h2 className="text-2xl font-bold mb-6 text-gray-800 border-b pb-4">TẠO SỰ KIỆN TÌNH NGUYỆN</h2>
 
       <Form
@@ -146,21 +146,21 @@ export default function CreateEvent() {
         onFinish={handleCreateEvent}
         initialValues={{ category: "Community", maxParticipants: 50 }}
       >
-        <Form.Item 
-          label={<span className="font-semibold">Tên sự kiện</span>} 
-          name="name" 
+        <Form.Item
+          label={<span className="font-semibold">Tên sự kiện</span>}
+          name="name"
           rules={[{ required: true, message: 'Vui lòng nhập tên sự kiện!' }]}
         >
           <Input size="large" placeholder="Ví dụ: Chiến dịch mùa hè xanh 2024" />
         </Form.Item>
 
         <Form.Item label={<span className="font-semibold">Mô tả chi tiết</span>} required>
-          <div className="border rounded-lg overflow-hidden">
+          <div className=" rounded-md overflow-hidden hover:border-blue-400 transition-colors">
             <CKEditor
               editor={ClassicEditor}
               onReady={onEditorReady}
               // SỬA: Loại bỏ biến unused 'e' và 'editor' để fix lỗi ESLint
-              onChange={() => {}}
+              onChange={() => { }}
               config={{
                 toolbar: ["heading", "|", "bold", "italic", "link", "bulletedList", "numberedList", "undo", "redo", "imageUpload"],
                 placeholder: "Nhập mô tả hoặc dán hình ảnh trực tiếp vào đây..."
@@ -170,26 +170,26 @@ export default function CreateEvent() {
         </Form.Item>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Form.Item 
-            label={<span className="font-semibold">Ngày bắt đầu</span>} 
-            name="date" 
+          <Form.Item
+            label={<span className="font-semibold">Ngày bắt đầu</span>}
+            name="date"
             rules={[{ required: true, message: 'Chọn ngày bắt đầu!' }]}
           >
             <DatePicker size="large" className="w-full" format="DD/MM/YYYY" />
           </Form.Item>
 
-          <Form.Item 
-            label={<span className="font-semibold">Ngày kết thúc</span>} 
-            name="endDate" 
+          <Form.Item
+            label={<span className="font-semibold">Ngày kết thúc</span>}
+            name="endDate"
             rules={[{ required: true, message: 'Chọn ngày kết thúc!' }]}
           >
             <DatePicker size="large" className="w-full" format="DD/MM/YYYY" />
           </Form.Item>
         </div>
 
-        <Form.Item 
-          label={<span className="font-semibold">Địa điểm</span>} 
-          name="location" 
+        <Form.Item
+          label={<span className="font-semibold">Địa điểm</span>}
+          name="location"
           rules={[{ required: true, message: 'Vui lòng nhập địa chỉ!' }]}
         >
           <Input size="large" placeholder="Địa chỉ chi tiết nơi diễn ra sự kiện" />
@@ -233,6 +233,6 @@ export default function CreateEvent() {
           </Button>
         </div>
       </Form>
-    </div>
+    </>
   );
 }

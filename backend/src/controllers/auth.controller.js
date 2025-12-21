@@ -112,7 +112,7 @@ export const verifyAndRegister = async (req, res) => {
     if (validation.error)
       return res.status(400).json({ message: validation.error });
 
-    const isValid = await OtpRepository.verifyOtp(email, otp, "REGISTER");
+    const isValid = await OtpRepository.verifyAndExpire(email, otp, "REGISTER");
     if (!isValid) {
       return res
         .status(400)
@@ -228,7 +228,7 @@ export const sendResetOtp = async (req, res) => {
 export const resetPassword = async (req, res) => {
   try {
     const { email, otp, newPassword } = req.body;
-    const isValid = await OtpRepository.verifyOtp(email, otp, "RESET");
+    const isValid = await OtpRepository.verifyAndExpire(email, otp, "RESET");
     if (!isValid)
       return res.status(400).json({ message: "OTP sai hoặc hết hạn." });
 

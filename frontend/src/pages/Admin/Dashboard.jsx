@@ -171,33 +171,33 @@ export default function Dashboard() {
   const approvalRate =
     stats.totalEvents > 0
       ? Math.round(
-          ((stats.approvedEventsCount + stats.completedEventsCount) /
-            stats.totalEvents) *
-            100
-        )
+        ((stats.approvedEventsCount + stats.completedEventsCount) /
+          stats.totalEvents) *
+        100
+      )
       : 0;
 
   const completionRate =
     stats.approvedEventsCount + stats.completedEventsCount > 0
       ? Math.round(
-          (stats.completedEventsCount /
-            (stats.approvedEventsCount + stats.completedEventsCount)) *
-            100
-        )
+        (stats.completedEventsCount /
+          (stats.approvedEventsCount + stats.completedEventsCount)) *
+        100
+      )
       : 0;
 
   const rejectionRate =
     stats.rejectedEventsCount +
       stats.approvedEventsCount +
       stats.completedEventsCount >
-    0
+      0
       ? Math.round(
-          (stats.rejectedEventsCount /
-            (stats.rejectedEventsCount +
-              stats.approvedEventsCount +
-              stats.completedEventsCount)) *
-            100
-        )
+        (stats.rejectedEventsCount /
+          (stats.rejectedEventsCount +
+            stats.approvedEventsCount +
+            stats.completedEventsCount)) *
+        100
+      )
       : 0;
 
   if (loading) {
@@ -299,7 +299,7 @@ export default function Dashboard() {
             <Statistic
               title={
                 <span className="text-gray-600 font-medium">
-                  Sự Kiện Bị Từ Chối
+                  Sự Kiện Đã Từ Chối
                 </span>
               }
               value={stats.rejectedEventsCount}
