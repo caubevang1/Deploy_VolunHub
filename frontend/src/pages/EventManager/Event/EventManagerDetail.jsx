@@ -122,9 +122,9 @@ export default function EventManagerDetail() {
     );
 
   return (
-    <div className="w-full bg-gray-50 min-h-screen pb-10">
+    <>
       {/* Top Navigation */}
-      <div className="bg-white px-6 py-4 shadow-sm flex items-center gap-4">
+      <div className="bg-white px-6 py-4 shadow-sm flex items-center gap-4 mb-6">
         <button
           onClick={() => navigate(-1)}
           className="p-2 hover:bg-gray-100 rounded-full"
@@ -134,7 +134,7 @@ export default function EventManagerDetail() {
         <h2 className="text-xl font-bold text-gray-800">Chi tiết sự kiện</h2>
       </div>
 
-      <div className="max-w-6xl mx-auto mt-6 bg-white rounded-2xl overflow-hidden shadow-lg">
+      <div className="bg-white rounded-2xl overflow-hidden shadow-lg">
         <div className="relative h-96 w-full">
           <img
             src={getFullUrl(event.coverImage)}
@@ -150,11 +150,10 @@ export default function EventManagerDetail() {
 
         <div className="px-8 py-6 flex flex-wrap gap-4 items-center bg-white border-b">
           <span
-            className={`px-4 py-1.5 rounded-full text-sm font-bold uppercase ${
-              event.status === "approved"
-                ? "bg-green-100 text-green-700"
-                : "bg-yellow-100 text-yellow-700"
-            }`}
+            className={`px-4 py-1.5 rounded-full text-sm font-bold uppercase ${event.status === "approved"
+              ? "bg-green-100 text-green-700"
+              : "bg-yellow-100 text-yellow-700"
+              }`}
           >
             Trạng thái: {statusLabels[event.status] || event.status}
           </span>
@@ -181,7 +180,7 @@ export default function EventManagerDetail() {
           )}
         </div>
 
-        <div className="p-10 grid grid-cols-1 md:grid-cols-2 gap-12 border-b">
+        <div className="p-10 pl-16 grid grid-cols-1 md:grid-cols-2 gap-12">
           <div className="space-y-6">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-blue-50 text-blue-600 rounded-lg">
@@ -256,16 +255,18 @@ export default function EventManagerDetail() {
               </div>
             </div>
 
-            <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-xl">
-              <Phone className="text-gray-400 mt-1" size={20} />
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-indigo-50 text-indigo-600 rounded-lg">
+                <Phone size={24} />
+              </div>
               <div>
                 <p className="text-sm text-gray-500 font-medium">
                   Liên hệ tổ chức
                 </p>
-                <p className="font-bold text-gray-800">
+                <p className="text-lg font-bold text-gray-800">
                   {event.createdBy?.name || "N/A"}
                 </p>
-                <p className="text-blue-600 font-mono">
+                <p className="text-sm text-blue-600 font-medium">
                   {event.createdBy?.phone || "Chưa cập nhật"}
                 </p>
               </div>
@@ -287,11 +288,10 @@ export default function EventManagerDetail() {
 
         {(event.status === "rejected" || event.status === "pending") && (
           <div
-            className={`m-10 p-6 ${
-              event.status === "rejected"
-                ? "bg-red-50 border-l-8 border-red-500"
-                : "bg-yellow-50 border-l-8 border-yellow-300"
-            } rounded-lg`}
+            className={`m-10 p-6 ${event.status === "rejected"
+              ? "bg-red-50 border-l-8 border-red-500"
+              : "bg-yellow-50 border-l-8 border-yellow-300"
+              } rounded-lg`}
           >
             {event.status === "rejected" ? (
               <>
@@ -332,6 +332,6 @@ export default function EventManagerDetail() {
           </div>
         )}
       </div>
-    </div>
+    </>
   );
 }

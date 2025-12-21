@@ -51,11 +51,10 @@ export default function EventDetail() {
   });
   const [isLiked, setIsLiked] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
-  const [isProcessingLike, setIsProcessingLike] = useState(false);
+  // const [isProcessingLike, setIsProcessingLike] = useState(false);
   const [isProcessingShare, setIsProcessingShare] = useState(false);
   const likeTimeout = useRef(null);
 
-  // ✅ OPTIMIZED: Combine all API calls in single useEffect
   useEffect(() => {
     async function loadEventData() {
       setLoading(true);
@@ -424,21 +423,21 @@ export default function EventDetail() {
             {(registrationStatus === "approved" ||
               currentUser?.role === "ADMIN" ||
               String(currentUser?.id) === String(event.createdBy?.id)) && (
-              <button
-                onClick={() =>
-                  navigate(
-                    // If current user is the event creator, send them to the EventManager channel path
-                    String(currentUser?.id) === String(event.createdBy?.id)
-                      ? `/quanlisukien/su-kien/${eventId}/trao-doi`
-                      : `/su-kien/${eventId}/trao-doi`
-                  )
-                }
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-purple-500 text-purple-600 rounded-lg hover:bg-purple-50 transition font-medium"
-              >
-                <MessageSquare size={20} />
-                <span>Kênh Trao Đổi</span>
-              </button>
-            )}
+                <button
+                  onClick={() =>
+                    navigate(
+                      // If current user is the event creator, send them to the EventManager channel path
+                      String(currentUser?.id) === String(event.createdBy?.id)
+                        ? `/quanlisukien/su-kien/${eventId}/trao-doi`
+                        : `/su-kien/${eventId}/trao-doi`
+                    )
+                  }
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-purple-500 text-purple-600 rounded-lg hover:bg-purple-50 transition font-medium"
+                >
+                  <MessageSquare size={20} />
+                  <span>Kênh Trao Đổi</span>
+                </button>
+              )}
 
             {/* Nút Đăng ký tham gia */}
             {registrationStatus === "" && (
@@ -454,14 +453,14 @@ export default function EventDetail() {
             {/* Nút Hủy đăng ký */}
             {(registrationStatus === "pending" ||
               registrationStatus === "approved") && (
-              <button
-                onClick={handleCancelRegistration}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-gray-500 text-gray-600 rounded-lg hover:bg-gray-50 transition font-medium"
-              >
-                <X size={20} />
-                <span>Hủy đăng ký</span>
-              </button>
-            )}
+                <button
+                  onClick={handleCancelRegistration}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-gray-500 text-gray-600 rounded-lg hover:bg-gray-50 transition font-medium"
+                >
+                  <X size={20} />
+                  <span>Hủy đăng ký</span>
+                </button>
+              )}
           </div>
         </div>
 
