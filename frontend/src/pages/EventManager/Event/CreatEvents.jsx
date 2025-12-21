@@ -159,7 +159,6 @@ export default function CreateEvent() {
             <CKEditor
               editor={ClassicEditor}
               onReady={onEditorReady}
-              // SỬA: Loại bỏ biến unused 'e' và 'editor' để fix lỗi ESLint
               onChange={() => { }}
               config={{
                 toolbar: ["heading", "|", "bold", "italic", "link", "bulletedList", "numberedList", "undo", "redo", "imageUpload"],

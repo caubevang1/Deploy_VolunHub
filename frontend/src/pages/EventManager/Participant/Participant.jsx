@@ -87,7 +87,6 @@ export default function Participants() {
   const [selectedForRejection, setSelectedForRejection] = useState(null);
   const [selectedRejectionReason, setSelectedRejectionReason] = useState("");
 
-  // ✅ Sửa lỗi fetchParticipants missing dependency
   const fetchParticipants = useCallback(async () => {
     setLoading(true);
     try {
@@ -107,7 +106,6 @@ export default function Participants() {
     fetchParticipants();
   }, [fetchParticipants]);
 
-  // ✅ Sửa lỗi debounce logic để clear dependency unknown
   const debouncedSearch = useMemo(
     () =>
       debounce((value, list) => {
@@ -151,8 +149,8 @@ export default function Participants() {
                 item.status === "approved"
                   ? "green"
                   : item.status === "pending"
-                  ? "orange"
-                  : "default"
+                    ? "orange"
+                    : "default"
               }
             >
               {item.status === "approved" ? "Đã duyệt" : "Chờ duyệt"}
@@ -471,11 +469,10 @@ export default function Participants() {
             ].map((reason) => (
               <div
                 key={reason}
-                className={`p-3 border rounded cursor-pointer transition-all ${
-                  selectedRejectionReason === reason
+                className={`p-3 border rounded cursor-pointer transition-all ${selectedRejectionReason === reason
                     ? "border-red-500 bg-red-50"
                     : "border-gray-300 hover:border-red-300 hover:bg-gray-50"
-                }`}
+                  }`}
                 onClick={() => setSelectedRejectionReason(reason)}
               >
                 <div className="flex items-center">
@@ -518,13 +515,11 @@ export default function Participants() {
               onClick={() =>
                 !submittingRating && handleSubmitRating(option.key)
               }
-              className={`group relative cursor-pointer rounded-xl border-2 p-6 transition-all ${
-                option.color
-              } ${
-                submittingRating
+              className={`group relative cursor-pointer rounded-xl border-2 p-6 transition-all ${option.color
+                } ${submittingRating
                   ? "opacity-50 pointer-events-none"
                   : "hover:-translate-y-1 hover:shadow-lg"
-              }`}
+                }`}
             >
               {option.icon}
               <div className="font-bold text-lg mb-1">{option.label}</div>

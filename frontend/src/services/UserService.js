@@ -15,7 +15,7 @@ export const ResetPassword = (data) => http.post(`/auth/otp/reset-password`, dat
 //UserInfo
 export const GetUserInfo = () => http.get(`/auth/me`);
 export const UpdateUser = (formData) => {
-  return http.put("/auth/me", formData); // hoặc http.put('/users/me', formData)
+  return http.put("/auth/me", formData);
 };
 
 export const ChangePassword = (data) => http.put(`/auth/change-password`, data);

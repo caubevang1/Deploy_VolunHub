@@ -123,19 +123,16 @@ export const subscribeUserToPush = async () => {
     }
 
     if (lastErr) {
-      // In chi tiết để nhà phát triển dễ debug
       console.error('❌ [WebPush] Không thể lưu subscription sau nhiều lần thử:', lastErr?.response?.data || lastErr?.message || lastErr);
-      // Thêm hướng dẫn nhanh cho dev
       if (lastErr?.response?.status === 401) {
-        console.error('👉 [Gợi ý] Token có thể chưa được lưu vào localStorage trước khi gọi subscribe. Hãy đảm bảo đăng ký push được gọi sau khi login hoàn tất.');
+        console.error('Token có thể chưa được lưu vào localStorage trước khi gọi subscribe. Hãy đảm bảo đăng ký push được gọi sau khi login hoàn tất.');
       }
     }
 
   } catch (error) {
     console.error('❌ [WebPush] Lỗi khi đăng ký:', error);
-    // Gợi ý debug nếu gặp lỗi 401
     if (error.response?.status === 401) {
-        console.error("👉 Gợi ý: Token chưa được lưu vào localStorage kịp thời, hoặc BaseUrl.js chưa đọc đúng key token.");
+      console.error("Token chưa được lưu vào localStorage kịp thời, hoặc BaseUrl.js chưa đọc đúng key token.");
     }
   }
 };

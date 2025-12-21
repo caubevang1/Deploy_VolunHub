@@ -163,17 +163,11 @@ export default function EventList() {
                         setEvents(raw);
                     }
 
-                    // ✅ OPTIMIZED: Lazy load like statuses (chỉ load khi user scroll/interact)
-                    // Không cần prefetch tất cả, sẽ load on-demand khi cần
-                    // setLikedEvents({}); // Reset state, sẽ load khi user interact
 
                     // Restore checking like statuses for visible events
                     if (merged.length > 0) {
                         // Check status for the first batch of events
                         const initialIds = merged.slice(0, 10).map((e) => e.id);
-                        // We can't call checkLikeStatuses directly here easily because it depends on state
-                        // But we can trigger it via a side effect or just let the user interact
-                        // For now, let's just let it be lazy, but ensure the interaction logic is robust.
                     }
                 }
             } catch (err) {
@@ -204,7 +198,7 @@ export default function EventList() {
                         : res.data?.items || [];
                     list.forEach((item) => {
                         const eventId = item.event?.id;
-                        if (eventId) statusMap[eventId] = item; // Lưu toàn bộ registration info
+                        if (eventId) statusMap[eventId] = item;
                     });
                     setUserParticipationMap(statusMap);
                 }
@@ -328,28 +322,17 @@ export default function EventList() {
             console.error(err);
             // Rollback optimistic update if failed
             if (type === "LIKE") {
-                const currentLikedState = !!likedEvents[eventId]; // This is the state BEFORE the optimistic update? No, this is from closure.
-                // Actually, we need to revert to the opposite of what we just set.
-                // But wait, likedEvents is state.
-                // We can't easily revert state inside catch without knowing the previous state.
-                // However, we can just re-fetch the status or toggle back.
-
-                // Simple revert:
+                const currentLikedState = !!likedEvents[eventId];
                 setLikedEvents((prev) => ({
                     ...prev,
                     [eventId]: !likedEvents[eventId],
                 })); // This might be wrong if state updated.
 
-                // Better: Re-fetch status
                 try {
                     const statusRes = await CheckEventStatus(eventId);
                     const serverLiked =
                         statusRes.status === 200 ? !!statusRes.data.hasLiked : false;
                     setLikedEvents((prev) => ({ ...prev, [eventId]: serverLiked }));
-
-                    // Also revert count
-                    // This is hard because we don't know the exact count.
-                    // Let's just re-fetch stats
                     const statsRes = await GetEventsActionStatsBatch([eventId]);
                     if (statsRes.data?.stats?.[eventId]) {
                         const realStats = statsRes.data.stats[eventId];

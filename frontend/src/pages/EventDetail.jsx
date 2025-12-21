@@ -51,7 +51,6 @@ export default function EventDetail() {
   });
   const [isLiked, setIsLiked] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
-  // const [isProcessingLike, setIsProcessingLike] = useState(false);
   const [isProcessingShare, setIsProcessingShare] = useState(false);
   const likeTimeout = useRef(null);
 
@@ -419,14 +418,14 @@ export default function EventDetail() {
               <span>Chia sẻ</span>
             </button>
 
-            {/* Nút Kênh Trao Đổi - Admin thấy, approved volunteers thấy, và creator (Event Manager) cũng thấy */}
+            {/* Nút Kênh Trao Đổi - Admin thấy, approved volunteers thấy, và EventManager cũng thấy */}
             {(registrationStatus === "approved" ||
               currentUser?.role === "ADMIN" ||
               String(currentUser?.id) === String(event.createdBy?.id)) && (
                 <button
                   onClick={() =>
                     navigate(
-                      // If current user is the event creator, send them to the EventManager channel path
+                      // Nếu là eventmanager thì vào đường dẫn quản lý, không thì vào đường dẫn user thường
                       String(currentUser?.id) === String(event.createdBy?.id)
                         ? `/quanlisukien/su-kien/${eventId}/trao-doi`
                         : `/su-kien/${eventId}/trao-doi`

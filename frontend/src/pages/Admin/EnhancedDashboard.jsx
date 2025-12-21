@@ -69,7 +69,7 @@ export default function EnhancedDashboard() {
   const [loading, setLoading] = useState(true);
   const [errorState, setErrorState] = useState(null);
   const [recentUsers, setRecentUsers] = useState([]);
-  const [pendingEvents, setPendingEvents] = useState([]); // Sẽ chứa TOÀN BỘ danh sách
+  const [pendingEvents, setPendingEvents] = useState([]);
   const [trendingEvents, setTrendingEvents] = useState([]);
   const [recentActivity, setRecentActivity] = useState(null);
 
@@ -153,7 +153,6 @@ export default function EnhancedDashboard() {
     try {
       const res = await GetPendingEvents();
       if (res.status === 200) {
-        // FIX: Lưu toàn bộ danh sách để có tổng số lượng chính xác
         setPendingEvents(res.data);
       }
     } catch (err) {
@@ -340,33 +339,33 @@ export default function EnhancedDashboard() {
   const approvalRate =
     stats.totalEvents > 0
       ? Math.round(
-          ((stats.approvedEventsCount + stats.completedEventsCount) /
-            stats.totalEvents) *
-            100
-        )
+        ((stats.approvedEventsCount + stats.completedEventsCount) /
+          stats.totalEvents) *
+        100
+      )
       : 0;
 
   const completionRate =
     stats.approvedEventsCount + stats.completedEventsCount > 0
       ? Math.round(
-          (stats.completedEventsCount /
-            (stats.approvedEventsCount + stats.completedEventsCount)) *
-            100
-        )
+        (stats.completedEventsCount /
+          (stats.approvedEventsCount + stats.completedEventsCount)) *
+        100
+      )
       : 0;
 
   const rejectionRate =
     stats.rejectedEventsCount +
       stats.approvedEventsCount +
       stats.completedEventsCount >
-    0
+      0
       ? Math.round(
-          (stats.rejectedEventsCount /
-            (stats.rejectedEventsCount +
-              stats.approvedEventsCount +
-              stats.completedEventsCount)) *
-            100
-        )
+        (stats.rejectedEventsCount /
+          (stats.rejectedEventsCount +
+            stats.approvedEventsCount +
+            stats.completedEventsCount)) *
+        100
+      )
       : 0;
 
   const pendingColumns = [
@@ -491,8 +490,8 @@ export default function EnhancedDashboard() {
             role === "ADMIN"
               ? "red"
               : role === "EVENTMANAGER"
-              ? "blue"
-              : "default"
+                ? "blue"
+                : "default"
           }
         >
           {roleMapping[role] || role}
@@ -789,7 +788,6 @@ export default function EnhancedDashboard() {
             <Space>
               <ClockCircleOutlined style={{ color: "#faad14" }} />
               <span className="font-semibold text-lg">Sự Kiện Chờ Duyệt</span>
-              {/* FIX: Sử dụng pendingEvents.length để hiển thị con số chính xác */}
               <Badge
                 count={pendingEvents.length}
                 showZero

@@ -131,7 +131,6 @@ export default function EditEvent() {
       try {
         const res = await GetEventDetail(eventId);
         if (res.status === 200) {
-          // API may return { event, posts, comments, stats } or return event object directly
           const payload = res.data || {};
           const eventData = payload.event ? payload.event : payload;
           setEvent(eventData);
@@ -152,9 +151,8 @@ export default function EditEvent() {
             uid: `${i}`,
             name: `gallery_${i}.jpg`,
             status: "done",
-            url: `http://localhost:5000${
-              img && img.startsWith("/") ? "" : "/"
-            }${img}`,
+            url: `http://localhost:5000${img && img.startsWith("/") ? "" : "/"
+              }${img}`,
           }));
           setGalleryImages(galleryFiles);
 
@@ -173,9 +171,8 @@ export default function EditEvent() {
                 uid: "-1",
                 name: "cover.jpg",
                 status: "done",
-                url: `http://localhost:5000${
-                  coverPath && coverPath.startsWith("/") ? "" : "/"
-                }${coverPath}`,
+                url: `http://localhost:5000${coverPath && coverPath.startsWith("/") ? "" : "/"
+                  }${coverPath}`,
               },
             ]);
           }

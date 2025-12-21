@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { GetEventDetail } from "../services/EventService";
 import {
@@ -50,7 +50,7 @@ function CommentSection({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const commentInputRef = useRef(null);
 
-  const postId = post.id; // SỬA: Luôn dùng .id sạch từ Backend
+  const postId = post.id;
   const comments = commentsMap[postId] || [];
 
   // Xử lý chọn emoji cho comment
@@ -118,7 +118,7 @@ function CommentSection({
         // Cập nhật state comments (xóa khỏi danh sách)
         setCommentsMap((prev) => ({
           ...prev,
-          [postId]: comments.filter((c) => c.id !== commentId), // SỬA: So sánh qua id
+          [postId]: comments.filter((c) => c.id !== commentId),
         }));
 
         // Cập nhật lại post list để hiển thị commentCount mới (giảm 1)
@@ -142,13 +142,11 @@ function CommentSection({
   };
 
   const handleToggleLike = async (commentId) => {
-    // Optimistic Update
     setCommentsMap((prev) => ({
       ...prev,
       [postId]: comments.map((c) => {
         if (c.id === commentId) {
-          // SỬA: id sạch
-          const currentlyLiked = c.likes?.includes(currentUser.id); // SỬA: dùng .id
+          const currentlyLiked = c.likes?.includes(currentUser.id);
           return {
             ...c,
             likes: currentlyLiked
@@ -227,10 +225,10 @@ function CommentSection({
       {commentsMap[postId] !== undefined && comments.length > 0 && (
         <div className="comment-list">
           {comments.map((comment) => {
-            const isLiked = comment.likes?.includes(currentUser?.id); // SỬA: id sạch
+            const isLiked = comment.likes?.includes(currentUser?.id);
             const canDelete =
               currentUser?.role === "ADMIN" ||
-              comment.author?.id === currentUser?.id; // SỬA: author.id sạch
+              comment.author?.id === currentUser?.id;
 
             return (
               <div key={comment.id} className="text-sm">
@@ -306,7 +304,7 @@ export default function EventDiscussion() {
   const [commentsMap, setCommentsMap] = useState({});
   const postInputRef = useRef(null);
 
-  // ✅ OPTIMIZED: Fetch all data in parallel
+  // Song song fetch user và event
   useEffect(() => {
     let mounted = true;
 
@@ -526,8 +524,7 @@ export default function EventDiscussion() {
     setPosts((prevPosts) =>
       prevPosts.map((post) => {
         if (post.id === postId) {
-          // SỬA: id sạch
-          const currentlyLiked = post.likes?.includes(currentUser.id); // SỬA: dùng .id
+          const currentlyLiked = post.likes?.includes(currentUser.id);
           return {
             ...post,
             likes: currentlyLiked
@@ -562,7 +559,7 @@ export default function EventDiscussion() {
     if (result.isConfirmed) {
       try {
         await DeletePost(postId);
-        setPosts(posts.filter((post) => post.id !== postId)); // SỬA: id sạch
+        setPosts(posts.filter((post) => post.id !== postId));
         // Xóa luôn comments của post này khỏi state
         setCommentsMap((prev) => {
           const newMap = { ...prev };
@@ -684,9 +681,8 @@ export default function EventDiscussion() {
             ref={postInputRef}
             value={newPost}
             onChange={(e) => setNewPost(e.target.value)}
-            placeholder={`${
-              currentUser?.name || "Bạn"
-            } ơi, viết cập nhật cho sự kiện này...`}
+            placeholder={`${currentUser?.name || "Bạn"
+              } ơi, viết cập nhật cho sự kiện này...`}
             className="composer-textarea w-full p-4 bg-gray-50 rounded-xl border-none focus:ring-2 focus:ring-blue-100 transition-all text-gray-700 placeholder-gray-400"
             rows="3"
             disabled={isPosting}
@@ -754,14 +750,14 @@ export default function EventDiscussion() {
           </div>
         ) : (
           posts.map((post) => {
-            const isLiked = post.likes?.includes(currentUser?.id); // SỬA: id sạch
+            const isLiked = post.likes?.includes(currentUser?.id);
             const isEventCreator =
               event?.createdBy?.id === currentUser?.id ||
               event?.createdBy === currentUser?.id;
             const canDelete =
               currentUser?.role === "ADMIN" ||
               isEventCreator ||
-              post.author?.id === currentUser?.id; // SỬA: author.id sạch
+              post.author?.id === currentUser?.id;
 
             return (
               <div
@@ -864,11 +860,10 @@ export default function EventDiscussion() {
                 <div className="post-actions flex items-center gap-1">
                   <button
                     onClick={() => handleToggleLike(post.id)}
-                    className={`action-btn flex-1 flex items-center justify-center gap-2 py-2 rounded-xl transition-all font-semibold text-sm ${
-                      isLiked
-                        ? "bg-red-50 text-red-600"
-                        : "text-gray-500 hover:bg-red-50 hover:text-red-600"
-                    }`}
+                    className={`action-btn flex-1 flex items-center justify-center gap-2 py-2 rounded-xl transition-all font-semibold text-sm ${isLiked
+                      ? "bg-red-50 text-red-600"
+                      : "text-gray-500 hover:bg-red-50 hover:text-red-600"
+                      }`}
                   >
                     <Heart
                       size={18}
@@ -879,9 +874,8 @@ export default function EventDiscussion() {
 
                   <button
                     onClick={() => toggleCommentSection(post.id)}
-                    className={`action-btn flex-1 flex items-center justify-center gap-2 py-2 rounded-xl transition-all font-semibold text-sm text-gray-500 hover:bg-blue-50 hover:text-blue-600 ${
-                      visibleComments[post.id] ? "bg-blue-50 text-blue-600" : ""
-                    }`}
+                    className={`action-btn flex-1 flex items-center justify-center gap-2 py-2 rounded-xl transition-all font-semibold text-sm text-gray-500 hover:bg-blue-50 hover:text-blue-600 ${visibleComments[post.id] ? "bg-blue-50 text-blue-600" : ""
+                      }`}
                   >
                     <MessageSquare size={18} />
                     <span>Bình luận</span>

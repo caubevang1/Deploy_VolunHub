@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-// ✅ Thêm AppstoreOutlined cho icon Dashboard
 import {
     MenuFoldOutlined,
     MenuUnfoldOutlined,
@@ -22,7 +21,6 @@ export default function AdminTemplate() {
     const [collapsed, setCollapsed] = useState(false);
     const [userInfo, setUserInfo] = useState(null);
 
-    // ✅ OPTIMIZED: Only fetch once and handle errors properly
     useEffect(() => {
         let mounted = true;
         const fetchUserInfo = async () => {
@@ -51,7 +49,6 @@ export default function AdminTemplate() {
         return () => { mounted = false; };
     }, []);
 
-    // ✅ Định nghĩa danh sách Menu theo cấu trúc Group để giống ảnh mẫu
     const menuItems = [
         {
             type: 'group',
@@ -60,13 +57,13 @@ export default function AdminTemplate() {
                 {
                     key: 'dashboard',
                     icon: <AppstoreOutlined />,
-                    label: <NavLink to='dashboard'>Dashboard</NavLink>, // Link mẫu, chưa cần xử lý logic
+                    label: <NavLink to='dashboard'>Dashboard</NavLink>,
                 },
             ],
         },
         {
             type: 'group',
-            label: <span className="text-white font-semibold ">HOẠT ĐỘNG</span>, // Tương ứng với APPS
+            label: <span className="text-white font-semibold ">HOẠT ĐỘNG</span>,
             children: [
                 {
                     key: 'user-manager',
@@ -129,7 +126,6 @@ export default function AdminTemplate() {
                             />
                         </NavLink>
 
-                        {/* ✅ Sử dụng menuItems đã định nghĩa ở trên */}
                         <Menu
                             key={selectedKey} // Force re-mount with new defaults when selection changes
                             theme="dark"

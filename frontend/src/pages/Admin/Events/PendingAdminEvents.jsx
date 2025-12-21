@@ -134,7 +134,7 @@ export default function PendingAdminEvents() {
     }
   };
 
-  // use ref-based debounce to avoid eslint warning about unknown deps
+  // Dùng ref để lưu hàm debounce tránh tạo lại nhiều lần
   const searchKeywordRef = useRef(null);
   useEffect(() => {
     const fn = debounce((value) => {

@@ -212,26 +212,25 @@ const ThongTinNguoiDung = ({ user, onUserUpdated }) => {
           </div>
 
           <div className="flex items-center gap-3 mt-4">
-            {/* ✅ [HIỂN THỊ] Điểm người dùng (Badge) */}
+            {/* Điểm người dùng (Badge) */}
             <div className="bg-orange-500 text-white px-4 py-2 mr-2 rounded-full shadow font-bold text-[14px]">
               🌟 {user?.points || 0} ĐIỂM
             </div>
 
             {/* Trạng thái người dùng */}
             <div
-              className={`px-4 py-2 mr-2 rounded-full shadow font-bold text-[14px] text-white ${
-                user?.status === "ACTIVE"
+              className={`px-4 py-2 mr-2 rounded-full shadow font-bold text-[14px] text-white ${user?.status === "ACTIVE"
                   ? "bg-green-500"
                   : user?.status === "LOCKED"
-                  ? "bg-red-500"
-                  : "bg-gray-400"
-              }`}
+                    ? "bg-red-500"
+                    : "bg-gray-400"
+                }`}
             >
               {user?.status === "ACTIVE"
                 ? "ĐANG HOẠT ĐỘNG"
                 : user?.status === "LOCKED"
-                ? "BỊ KHÓA"
-                : "Không rõ"}
+                  ? "BỊ KHÓA"
+                  : "Không rõ"}
             </div>
           </div>
         </div>
@@ -241,14 +240,13 @@ const ThongTinNguoiDung = ({ user, onUserUpdated }) => {
           <div
             className="content__avatar w-[200px] h-[200px] rounded-full bg-cover bg-center relative cursor-pointer -mt-[130px] shadow-lg"
             style={{
-              backgroundImage: `url(${
-                avatarPreview ||
+              backgroundImage: `url(${avatarPreview ||
                 (user?.avatar
                   ? user.avatar.startsWith("http")
                     ? user.avatar
                     : `http://localhost:5000${user.avatar}`
                   : "http://localhost:5000/uploads/avatars/avatar-1764958251284-210153801.png")
-              })`,
+                })`,
             }}
           >
             {editMode && (
@@ -300,19 +298,18 @@ const ThongTinNguoiDung = ({ user, onUserUpdated }) => {
 
                 return (
                   <span
-                    className={`px-3 py-1 rounded-sm text-sm font-semibold text-white relative overflow-hidden ${
-                      color === "purple"
+                    className={`px-3 py-1 rounded-sm text-sm font-semibold text-white relative overflow-hidden ${color === "purple"
                         ? "bg-purple-500"
                         : color === "red"
-                        ? "bg-red-500"
-                        : color === "orange"
-                        ? "bg-orange-500"
-                        : color === "blue"
-                        ? "bg-blue-500"
-                        : color === "cyan"
-                        ? "bg-cyan-500"
-                        : "bg-gray-500"
-                    }`}
+                          ? "bg-red-500"
+                          : color === "orange"
+                            ? "bg-orange-500"
+                            : color === "blue"
+                              ? "bg-blue-500"
+                              : color === "cyan"
+                                ? "bg-cyan-500"
+                                : "bg-gray-500"
+                      }`}
                     style={{
                       boxShadow: "0 4px 15px rgba(0,0,0,0.2)",
                     }}
@@ -411,11 +408,10 @@ const InfoRow = ({
             onClick={() =>
               handleInputChange({ target: { name, value: "Male" } })
             }
-            className={`p-2 rounded ${
-              editData[name] === "Male"
+            className={`p-2 rounded ${editData[name] === "Male"
                 ? "bg-blue-500 text-white"
                 : "bg-gray-200"
-            }`}
+              }`}
           >
             <FontAwesomeIcon icon={faMars} />
           </button>
@@ -424,11 +420,10 @@ const InfoRow = ({
             onClick={() =>
               handleInputChange({ target: { name, value: "Female" } })
             }
-            className={`p-2 rounded ${
-              editData[name] === "Female"
+            className={`p-2 rounded ${editData[name] === "Female"
                 ? "bg-pink-500 text-white"
                 : "bg-gray-200"
-            }`}
+              }`}
           >
             <FontAwesomeIcon icon={faVenus} />
           </button>
@@ -490,9 +485,8 @@ const InfoRow = ({
 
   return (
     <li
-      className={`flex items-center gap-3 pb-6 ${
-        type !== "gender" ? "border-b border-gray-200" : ""
-      }`}
+      className={`flex items-center gap-3 pb-6 ${type !== "gender" ? "border-b border-gray-200" : ""
+        }`}
     >
       <strong className="w-40">{label}:</strong>
       <div className="flex-1">{renderField()}</div>
@@ -809,7 +803,7 @@ const InforUser = () => {
         </span>
       ),
       key: 2,
-      children: <PasswordForm onSuccess={() => {}} />,
+      children: <PasswordForm onSuccess={() => { }} />,
     },
     {
       label: (

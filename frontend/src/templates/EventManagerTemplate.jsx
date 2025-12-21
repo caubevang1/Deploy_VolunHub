@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
-// ✅ Thêm AppstoreOutlined
 import {
     MenuFoldOutlined,
     MenuUnfoldOutlined,
@@ -21,7 +20,6 @@ export default function EventManagerTemplate() {
     const [collapsed, setCollapsed] = useState(false);
     const [userInfo, setUserInfo] = useState(null);
 
-    // ✅ OPTIMIZED: Only fetch once and handle errors properly
     useEffect(() => {
         let mounted = true;
         const fetchUserInfo = async () => {
@@ -50,7 +48,6 @@ export default function EventManagerTemplate() {
         return () => { mounted = false; };
     }, []);
 
-    // ✅ Định nghĩa cấu trúc Menu Group giống Admin
     const menuItems = [
         {
             type: 'group',
@@ -68,7 +65,7 @@ export default function EventManagerTemplate() {
             label: <span className="text-white font-semibold">HOẠT ĐỘNG</span>,
             children: [
                 {
-                    key: 'event-manager', // Đổi key cho thống nhất
+                    key: 'event-manager',
                     icon: <SnippetsOutlined />,
                     label: 'Quản lý sự kiện',
                     children: [
@@ -91,7 +88,6 @@ export default function EventManagerTemplate() {
     return (
         <Layout className="!min-h-screen">
             <Sider trigger={null} collapsible collapsed={collapsed} width={250}>
-                {/* ✅ Dùng flex flex-col h-full justify-between để đẩy ảnh xuống đáy tự động */}
                 <div className="flex flex-col h-full justify-between pb-4">
 
                     {/* --- PHẦN TRÊN: LOGO + MENU --- */}
@@ -104,7 +100,7 @@ export default function EventManagerTemplate() {
                             />
                         </NavLink>
 
-                        {/* ✅ Menu Items */}
+                        {/* Menu Items */}
                         <Menu
                             theme="dark"
                             mode="inline"
@@ -119,7 +115,6 @@ export default function EventManagerTemplate() {
                         <img
                             src={eventmanager}
                             alt="Event Manager"
-                            // ✅ Xóa mt-[400px] cứng, thay bằng logic flexbox
                             className={`transition-all duration-300 ${collapsed ? 'w-10 h-auto' : 'w-full h-auto'}`}
                         />
                     </div>

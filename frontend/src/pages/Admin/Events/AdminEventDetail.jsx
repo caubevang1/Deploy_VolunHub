@@ -16,7 +16,6 @@ import {
   ArrowLeft,
   AlertTriangle,
 } from "lucide-react";
-// thêm import fallback từ EventManagerService
 import { GetEventDetail as GetEventDetailForManager } from "../../../services/EventManagerService";
 
 const categoryMapping = {
@@ -47,7 +46,6 @@ export default function AdminEventDetail() {
   useEffect(() => {
     async function load() {
       try {
-        // Thử AdminService trước
         let res = null;
         try {
           res = await GetEventDetail(eventId);
@@ -61,7 +59,6 @@ export default function AdminEventDetail() {
         // Chuẩn hoá event object từ response (có thể khác shape)
         const normalize = (r) => {
           if (!r) return null;
-          // Thường API trả về { status:200, data: { ...event } } hoặc { status:200, data: { event: {...} } }
           const payload = r.data ?? r;
           if (!payload) return null;
           return payload.event ?? payload;

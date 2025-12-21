@@ -25,7 +25,7 @@ import Swal from "sweetalert2";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTrash } from "@fortawesome/free-solid-svg-icons";
 import { useNavigate, useLocation } from "react-router-dom";
-import { MessageSquare } from "lucide-react"; // ✅ Import icon
+import { MessageSquare } from "lucide-react";
 
 const { Search } = Input;
 
@@ -199,8 +199,8 @@ export default function EventManagerEvents() {
                 event.status === "approved"
                   ? "green"
                   : event.status === "pending"
-                  ? "orange"
-                  : "red"
+                    ? "orange"
+                    : "red"
               }
             >
               {statusMapping[event.status]}
@@ -396,14 +396,14 @@ export default function EventManagerEvents() {
       title: "Thao tác",
       key: "action",
       align: "center",
-      width: 150, // ✅ Tăng width
+      width: 150,
       render: (_, event) => {
         const isDisabled =
           event.status === "completed" || event.status === "approved";
 
         return (
           <div className="flex justify-center gap-2">
-            {/* ✅ Thêm nút vào kênh trao đổi */}
+            {/* Nút vào kênh trao đổi */}
             {event.status === "approved" && (
               <Button
                 type="text"

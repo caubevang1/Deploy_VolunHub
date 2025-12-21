@@ -77,7 +77,7 @@ export default function Dashboard() {
   const fetchDashboardData = useCallback(async () => {
     setLoading(true);
     try {
-      // ✅ OPTIMIZED: Parallelize API calls
+      // Sông song fetch nhiều API để tối ưu thời gian chờ
       const [eventsRes, myRes, notifRes] = await Promise.allSettled([
         GetAllEventsStats(),
         GetMyEvent(),
@@ -135,8 +135,7 @@ export default function Dashboard() {
           .slice(0, 6)
       );
 
-      // ✅ OPTIMIZED: Skip GetEventPosts loop - quá chậm và gây 403 errors
-      // Thay vào đó, dùng dữ liệu đã có từ myEvents để hiển thị hoạt động
+      // Sông song fetch nhiều API để tối ưu thời gian chờ
       const myApprovedEvents = myRegs
         .filter(
           (reg) => reg.status === "approved" || reg.status === "completed"
@@ -154,7 +153,6 @@ export default function Dashboard() {
         }))
       );
 
-      // ✅ OPTIMIZED: notifications đã fetch song song ở trên
       if (notifRes.status === "fulfilled" && notifRes.value?.status === 200) {
         setNotifications((notifRes.value.data || []).slice(0, 10));
       } else {
@@ -190,9 +188,8 @@ export default function Dashboard() {
             return (
               <strong
                 key={i}
-                className={`${
-                  scoreText.includes("-") ? "text-red-500" : "text-green-500"
-                } mx-0.5`}
+                className={`${scoreText.includes("-") ? "text-red-500" : "text-green-500"
+                  } mx-0.5`}
               >
                 {scoreText}
               </strong>

@@ -58,13 +58,11 @@ export default function VolunteerRanking() {
     return <span className="text-gray-600 font-bold">{rank}</span>;
   };
 
-  // SỬA: Thay _id bằng id
   const getCurrentRank = (recordId) => {
     const index = sortedData.findIndex((v) => (v.id || vid) === recordId);
     return index >= 0 ? index + 1 : 999;
   };
 
-  // SỬA: Thay _id bằng id
   const getRankClass = (record) => {
     const currentRank = getCurrentRank(record.id || recordid);
     if (currentRank === 1) return "rank-1";
@@ -174,7 +172,6 @@ export default function VolunteerRanking() {
     },
   ];
 
-  // SỬA: Thay _id bằng id
   const getCurrentManagerRank = (recordId) => {
     const index = sortedManagerData.findIndex(
       (m) => (m.id || mid) === recordId
@@ -182,7 +179,6 @@ export default function VolunteerRanking() {
     return index >= 0 ? index + 1 : 999;
   };
 
-  // SỬA: Thay _id bằng id
   const getManagerRankClass = (record) => {
     const currentRank = getCurrentManagerRank(record.id || recordid);
     if (currentRank === 1) return "rank-1";
@@ -255,7 +251,6 @@ export default function VolunteerRanking() {
         <span className="font-semibold text-gray-700">{count || 0}</span>
       ),
     },
-    /* 'Hoàn thành' column removed for managers */
   ];
 
   if (loading) {
@@ -383,7 +378,7 @@ export default function VolunteerRanking() {
                   <Table
                     columns={volunteerColumns}
                     dataSource={volunteers}
-                    rowKey={(record) => record.id || recordid} // SỬA: Linh hoạt key
+                    rowKey={(record) => record.id || recordid}
                     pagination={{
                       pageSize: 20,
                       showSizeChanger: false,
@@ -412,7 +407,7 @@ export default function VolunteerRanking() {
                   <Table
                     columns={managerColumns}
                     dataSource={managers}
-                    rowKey={(record) => record.id || recordid} // SỬA: Linh hoạt key
+                    rowKey={(record) => record.id || recordid}
                     pagination={{
                       pageSize: 20,
                       showSizeChanger: false,

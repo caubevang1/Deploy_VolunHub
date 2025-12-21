@@ -24,7 +24,7 @@ import {
 } from "../../services/AdminService";
 import { useNavigate } from "react-router-dom";
 
-// Main Dashboard Component
+// Volunteer Dashboard Component
 
 export default function Dashboard() {
   const [stats, setStats] = useState({

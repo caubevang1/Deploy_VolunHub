@@ -161,7 +161,6 @@ export default function EventManagerDashboard() {
         const detailedEventsData = await Promise.all(
           events.map(async (event) => {
             try {
-              // FIX: Sử dụng event.id thay vì eventid để đồng bộ với transform của Backend
               const eventId = event.id;
               const [detailRes, participantsRes] = await Promise.all([
                 GetEventDetail(eventId),
@@ -482,7 +481,7 @@ export default function EventManagerDashboard() {
     }
   };
 
-  // volunteerColumns đặt trong component (cần navigate và openRatingModal)
+  // volunteerColumns đặt trong component 
   const volunteerColumns = [
     {
       title: "Tình nguyện viên",
@@ -505,7 +504,6 @@ export default function EventManagerDashboard() {
       render: (text, record) => (
         <a
           onClick={() =>
-            // changed: always navigate by numeric id to match manager route param
             navigate(`/quanlisukien/su-kien/${record.eventId}`)
           }
           className="text-blue-600 hover:text-blue-800 font-medium cursor-pointer"
@@ -643,7 +641,6 @@ export default function EventManagerDashboard() {
       render: (text, record) => (
         <a
           onClick={() =>
-            // changed: use record.id (guaranteed id from API)
             navigate(`/quanlisukien/su-kien/${record.id}`)
           }
           className="text-blue-600 hover:text-blue-800 font-medium cursor-pointer"
@@ -757,7 +754,6 @@ export default function EventManagerDashboard() {
       render: (text, record) => (
         <a
           onClick={() =>
-            // changed: use id
             navigate(`/quanlisukien/su-kien/${record.id}`)
           }
           className="text-blue-600 hover:text-blue-800 font-medium cursor-pointer"
@@ -847,7 +843,6 @@ export default function EventManagerDashboard() {
             size="small"
             icon={<TeamOutlined />}
             onClick={() =>
-              // changed: use id for participants route
               navigate(`/quanlisukien/su-kien/${record.id}/participants`)
             }
           >
@@ -857,7 +852,6 @@ export default function EventManagerDashboard() {
             size="small"
             icon={<EyeOutlined />}
             onClick={() =>
-              // changed: use id
               navigate(`/quanlisukien/su-kien/${record.id}`)
             }
           >
@@ -1027,8 +1021,8 @@ export default function EventManagerDashboard() {
               <div
                 key={reason}
                 className={`p-3 border rounded cursor-pointer transition-all ${selectedRejectionReason === reason
-                    ? "border-red-500 bg-red-50"
-                    : "border-gray-300 hover:border-red-300 hover:bg-gray-50"
+                  ? "border-red-500 bg-red-50"
+                  : "border-gray-300 hover:border-red-300 hover:bg-gray-50"
                   }`}
                 onClick={() => setSelectedRejectionReason(reason)}
               >
