@@ -1,10 +1,15 @@
 # VolunteerHub
 
-Fueling volunteer passion.
+A Single Page Application (SPA) for organizing and managing volunteer activities (tree planting, clean-ups, charity drives, community tutoring, etc.). Tech stack: React (frontend) and Node.js + Express (backend, MVC). Roles: Volunteer, Event Manager, Admin.
 
-VolunteerHub is a Single Page Application (SPA) for organizing and managing volunteer activities (tree planting, clean-ups, charity drives, community tutoring, etc.). The project contains a React frontend and a Node.js + Express backend (MVC style). The system supports three roles: Volunteer, Event Manager, and Admin.
+Repo layout
+- frontend/ — React app (pages, components, services, assets)
+- backend/ — Express API (controllers, models, routes, middlewares)
+- frontend/public & backend/public — static/public assets (service worker, manifest, uploads)
+- README.md — this file
 
 Key features (by role)
+
 - Common / Platform
   - Email/password authentication and role-based access control (JWT).
   - Event discovery (search, filtering by date/category).
@@ -36,76 +41,81 @@ Key features (by role)
   - Export events / users / volunteers (CSV or JSON) via blob responses.
   - Admin dashboard with system statistics and recent activity.
 
-Project structure (top-level)
-- frontend/ — React SPA (pages, templates, services, assets)
-- backend/ — Express API (controllers, models, routes, middlewares)
-- README.md — this file
+Configuration (do this first)
+- Backend: create `backend/.env` (do not commit) with:
+  - MONGO_URI=your_mongo_connection_string
+  - JWT_SECRET=your_jwt_secret
+  - PORT=5000
+  - SMTP_EMAIL=your_smtp_email
+  - SMTP_PASS=your_smtp_password
+  - VAPID_PUBLIC_KEY=your_vapid_public_key
+  - VAPID_PRIVATE_KEY=your_vapid_private_key
 
-Important backend routes (examples)
+- Frontend (optional): create `frontend/.env.local` with:
+  - VITE_API_BASE_URL=http://localhost:5000
+  - or REACT_APP_API_BASE_URL=http://localhost:5000
+
+- Web Push: generate VAPID keys locally (e.g., using `web-push`) and set them in backend `.env`. Service worker is at `frontend/public/service-worker.js`.
+
+Quick start — development (after configuration)
+Backend
+1. cd backend
+2. npm install
+3. npm run dev    # recommended for development (nodemon)
+4. npm start      # production
+Default: http://localhost:5000
+
+Frontend
+1. cd frontend
+2. npm install
+3. npm run dev    # Vite or configured dev server
+4. npm run build  # production build
+Default dev: http://localhost:3000
+
+Run both
+- Open two terminals:
+  - cd backend && npm run dev
+  - cd frontend && npm run dev
+
+Important backend endpoints (examples)
+- Public events
+  - GET /api/events/public
+  - GET /api/events/public/:eventId
+- Registrations (Volunteer / Manager)
+  - POST /api/registrations/:eventId
+  - DELETE /api/registrations/:eventId
+  - GET /api/registrations/history/my
+  - GET /api/registrations/:eventId/participants
+  - PUT /api/registrations/:registrationId/status
+  - PUT /api/registrations/:registrationId/complete
+- Events (Manager/Admin)
+  - POST /api/events          (multipart/form-data when uploading files)
+  - PUT /api/events/:id
+  - DELETE /api/events/:id
+  - PUT /api/events/:id/complete
 - Admin
   - GET /api/admin/dashboard
   - GET /api/admin/events/all
   - GET /api/admin/events/pending
   - PUT /api/admin/events/:id/approve
   - PUT /api/admin/events/:id/reject
-  - DELETE /api/admin/events/:id
-  - GET /api/admin/users
-  - PUT /api/admin/users/:id/status
   - GET /api/admin/export/users?format=csv
-- Event Manager / Dashboard
-  - GET /api/dashboard/manager/events
-  - GET /api/dashboard/manager/events/:eventId/registrations
-  - PUT /api/dashboard/manager/registrations/:id/approve-cancel
-- Public / Events
-  - GET /api/events/public
-  - GET /api/events/public/:eventId
-- Note: Authentication and role middleware are applied to protected routes.
 
-Development setup (local)
-1. Backend
-   - cd backend
-   - npm install
-   - Create a `.env` in backend (see required variables below).
-   - npm start
-   - Default server URL: http://localhost:5000
+Notes & tips
+- File uploads: use multipart/form-data (cover image, gallery).
+- Export endpoints return binary blobs; frontend should use `responseType: 'blob'`.
+- If CORS issues occur, enable CORS on backend or configure frontend dev proxy (`frontend/vite.config.js` proxies `/api` and `/uploads` to backend).
+- Keep `.env` files out of version control.
+- Ensure backend API payloads remain consistent with frontend expectations (e.g., event.stats, registrations arrays).
 
-2. Frontend
-   - cd frontend
-   - npm install
-   - npm start
-   - Default app URL: http://localhost:3000
-   - If needed, set API base URL via environment variables (e.g., VITE_API_BASE_URL).
+Where to look in the code
+- Frontend services: `frontend/src/services/*`
+- Frontend pages/components: `frontend/src/pages/*`, `frontend/src/components/*`
+- Backend routes/controllers: `backend/src/routes/*`, `backend/src/controllers/*`
+- Push utilities: `backend/src/utils/sendPush.js`
+- Event & registration logic: `backend/src/controllers/event.controller.js`, `backend/src/controllers/registration.controller.js`
 
-Required environment variables (backend) — use placeholders, do not commit real secrets
-- MONGO_URI=your_mongo_connection_string
-- JWT_SECRET=your_jwt_secret
-- PORT=5000
-- SMTP_EMAIL=your_smtp_email
-- SMTP_PASS=your_smtp_password
-- VAPID_PUBLIC_KEY=your_vapid_public_key
-- VAPID_PRIVATE_KEY=your_vapid_private_key
-
-VAPID keys (Web Push)
-- VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY are required for Web Push notifications. If your .env is missing valid VAPID keys, generate them (e.g., using web-push library) and add them to your local `.env`. Example generator (node):
-  - npm i -g web-push
-  - node -e "const webpush=require('web-push'); console.log(webpush.generateVAPIDKeys())"
-
-Notes & caveats
-- Do not commit real secrets. Keep .env values local and private.
-- API responses for file export use `responseType: blob` on the frontend.
-- Many frontend components expect backend fields like `event.id`, `createdBy`, `stats` — keep consistent payloads.
-- If you hit CORS issues, enable CORS on the backend or configure a dev proxy in the frontend.
-- For large uploads, ensure backend file size limits and multipart handling are configured.
-
-Testing & seeding
-- The repository does not include a production seed by default. Create seed scripts or use Postman to create sample users (Volunteer / EventManager / Admin) and sample events for testing.
-
-Contributing / Notes for the team
-- Keep frontend UI logic separate from service/API calls (see services/* files).
-- Follow role-based access checks in backend middlewares (verifyToken, admin, eventManager).
-- When altering APIs, update frontend services accordingly (services/*).
-
-Contacts / Team
+Team
 - Nguyễn Trường Nam — 23021644  
 - Nguyễn Đăng Đạo — 23021516  
 - Nguyễn Lê Anh Tuấn — 23021708
