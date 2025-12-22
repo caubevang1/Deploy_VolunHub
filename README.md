@@ -1,91 +1,111 @@
-# VolunteerHub - INT3306 Course Project
-## Web Application Development - Fall 2025
+# VolunteerHub
 
-**"Fueling the passion of volunteers."**
+Fueling volunteer passion.
 
-**VolunteerHub** is a Single Page Application (SPA) built to connect, organize, and manage volunteering activities. The system is designed to serve three primary user roles: Volunteers, Event Managers, and Administrators, with clearly defined business logic and permissions.
+VolunteerHub is a Single Page Application (SPA) for organizing and managing volunteer activities (tree planting, clean-ups, charity drives, community tutoring, etc.). The project contains a React frontend and a Node.js + Express backend (MVC style). The system supports three roles: Volunteer, Event Manager, and Admin.
 
-## 🚀 Key Features
+Key features (by role)
+- Common / Platform
+  - Email/password authentication and role-based access control (JWT).
+  - Event discovery (search, filtering by date/category).
+  - Per-event discussion channel (post/comment/like) created automatically when an event is approved.
+  - Role-specific dashboards (Volunteer, Event Manager, Admin).
+  - Export data (CSV/JSON) endpoints for Admin.
 
-The system is divided into three distinct workflows based on user roles:
+- Volunteer
+  - Register / login.
+  - Browse events with details (name, date, location, description, gallery).
+  - Register & cancel registration before the event starts.
+  - View participation history and completion status.
+  - Receive notifications (push/email hooks supported).
+  - Access and interact with event discussion channel after event approval.
 
-### 1. Volunteer
-* **Event Discovery:** View, search, and filter the list of available events (by time, category).
-* **Event Interaction:** Register for an event and cancel a registration (before the event starts).
-* **Personal Tracking:** View a personal history of participated events and their completion status.
-* **Community Channel:** Post, comment, and like on a dedicated "wall" for each event (after registration is approved).
-* **Notifications:** Receive real-time notifications about registration status (using Web Push API).
-* **Dashboard:** Get a quick overview of new events, events with new interactions, and "hot" or trending events.
+- Event Manager
+  - Register / login.
+  - Create / edit / delete events (file upload support for cover images; use multipart/form-data).
+  - Approve / reject volunteer registrations.
+  - Mark volunteer participation as completed and rate performance.
+  - View participants and event-specific reports.
+  - Access event discussion channel for approved events.
+  - Manager dashboard: overview of managed events, registrations, and basic stats.
 
-### 2. Event Manager
-* **Event Management (CRUD):** Create, read, update, and delete events managed by them (with input validation using Joi/Yup).
-* **Volunteer Management:** Approve or reject volunteer registration requests.
-* **Completion Tracking:** Mark a volunteer's participation as "completed" after the event.
-* **Reporting:** View a list and details of all participants for a specific event.
-* **Community Interaction:** Same permissions as a volunteer on the event's "wall".
-* **Dashboard:** See a summary of all events under their management.
+- Admin
+  - Login and system-level management.
+  - Approve / reject / delete events created by managers.
+  - Manage users (list, lock/unlock accounts, change roles).
+  - Export events / users / volunteers (CSV or JSON) via blob responses.
+  - Admin dashboard with system statistics and recent activity.
 
-### 3. Admin
-* **Content Moderation:** Approve or delete events created by Event Managers.
-* **User Management:** View all users and lock or unlock their accounts (for both Volunteers and Managers).
-* **Data Export:** Export event or volunteer lists to CSV/JSON files.
-* **System Dashboard:** View high-level statistics and activity across the entire platform.
+Project structure (top-level)
+- frontend/ — React SPA (pages, templates, services, assets)
+- backend/ — Express API (controllers, models, routes, middlewares)
+- README.md — this file
 
-## 🛠️ Technology Stack
+Important backend routes (examples)
+- Admin
+  - GET /api/admin/dashboard
+  - GET /api/admin/events/all
+  - GET /api/admin/events/pending
+  - PUT /api/admin/events/:id/approve
+  - PUT /api/admin/events/:id/reject
+  - DELETE /api/admin/events/:id
+  - GET /api/admin/users
+  - PUT /api/admin/users/:id/status
+  - GET /api/admin/export/users?format=csv
+- Event Manager / Dashboard
+  - GET /api/dashboard/manager/events
+  - GET /api/dashboard/manager/events/:eventId/registrations
+  - PUT /api/dashboard/manager/registrations/:id/approve-cancel
+- Public / Events
+  - GET /api/events/public
+  - GET /api/events/public/:eventId
+- Note: Authentication and role middleware are applied to protected routes.
 
-This project is built as an SPA with a clear separation between the frontend and backend.
+Development setup (local)
+1. Backend
+   - cd backend
+   - npm install
+   - Create a `.env` in backend (see required variables below).
+   - npm start
+   - Default server URL: http://localhost:5000
 
-* **Frontend:** **React.js**
-    * *State Management:* Provider Pattern (Context API)
-* **Backend:** **Node.js** & **Express.js**
-    * *Design Pattern:* MVC (Model-View-Controller)
-* **Database:** **MongoDB**
-* **Architecture:** **Single Page Application (SPA)**
+2. Frontend
+   - cd frontend
+   - npm install
+   - npm start
+   - Default app URL: http://localhost:3000
+   - If needed, set API base URL via environment variables (e.g., VITE_API_BASE_URL).
 
-## 📦 Getting Started & Setup
+Required environment variables (backend) — use placeholders, do not commit real secrets
+- MONGO_URI=your_mongo_connection_string
+- JWT_SECRET=your_jwt_secret
+- PORT=5000
+- SMTP_EMAIL=your_smtp_email
+- SMTP_PASS=your_smtp_password
+- VAPID_PUBLIC_KEY=your_vapid_public_key
+- VAPID_PRIVATE_KEY=your_vapid_private_key
 
-The project is split into two main directories: `frontend` and `backend`.
+VAPID keys (Web Push)
+- VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY are required for Web Push notifications. If your .env is missing valid VAPID keys, generate them (e.g., using web-push library) and add them to your local `.env`. Example generator (node):
+  - npm i -g web-push
+  - node -e "const webpush=require('web-push'); console.log(webpush.generateVAPIDKeys())"
 
-### Backend Setup
-1.  Navigate to the backend directory:
-    ```bash
-    cd backend
-    ```
-2.  Install the required dependencies:
-    ```bash
-    npm install
-    ```
-3.  Create a `.env` file in the `backend` root directory and add the necessary environment variables:
-    ```env
-    MONGO_URI=your_mongodb_connection_string
-    JWT_SECRET=your_strong_jwt_secret
-    PORT=5000
-    
-    ## Required for email OTP functionality
-    # SMTP_EMAIL=...
-    # SMTP_PASS=...
-    ```
-4.  Start the backend server:
-    ```bash
-    npm start
-    ```
+Notes & caveats
+- Do not commit real secrets. Keep .env values local and private.
+- API responses for file export use `responseType: blob` on the frontend.
+- Many frontend components expect backend fields like `event.id`, `createdBy`, `stats` — keep consistent payloads.
+- If you hit CORS issues, enable CORS on the backend or configure a dev proxy in the frontend.
+- For large uploads, ensure backend file size limits and multipart handling are configured.
 
-### Frontend Setup
-1.  Open a separate terminal and navigate to the frontend directory:
-    ```bash
-    cd frontend
-    ```
-2.  Install the required dependencies:
-    ```bash
-    npm install
-    ```
-3.  Start the React application:
-    ```bash
-    npm start
-    ```
-The application will be available at `http://localhost:3000`, which will connect to the backend server at `http://localhost:5000`.
+Testing & seeding
+- The repository does not include a production seed by default. Create seed scripts or use Postman to create sample users (Volunteer / EventManager / Admin) and sample events for testing.
 
-## 👥 Team Members
-* [Nguyễn Trường Nam] - [23021644]
-* [Nguyễn Đăng Đạo] - [23021516]
-* [Nguyễn Lê Anh Tuấn] - [23021708]
+Contributing / Notes for the team
+- Keep frontend UI logic separate from service/API calls (see services/* files).
+- Follow role-based access checks in backend middlewares (verifyToken, admin, eventManager).
+- When altering APIs, update frontend services accordingly (services/*).
+
+Contacts / Team
+- Nguyễn Trường Nam — 23021644  
+- Nguyễn Đăng Đạo — 23021516  
+- Nguyễn Lê Anh Tuấn — 23021708
