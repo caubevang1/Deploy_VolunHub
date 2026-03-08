@@ -20,6 +20,7 @@ import { Dropdown, Menu } from "antd";
 import { removeLocalStorage, SwalConfig } from "../utils/Configs";
 import { LOCALSTORAGE_USER } from "../utils/Constants";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { getAvatarUrl } from "../utils/imageHelper";
 import {
   faArrowRightFromBracket,
   faUser,
@@ -201,9 +202,7 @@ export default function Header() {
                     <img
                       src={
                         user?.avatar
-                          ? user.avatar.startsWith("http")
-                            ? user.avatar
-                            : `http://localhost:5000${user.avatar}`
+                          ? getAvatarUrl(user.avatar)
                           : "https://ui-avatars.com/api/?name=" +
                           encodeURIComponent(user?.username || user?.name || "User") +
                           "&background=DCBA58&color=fff&size=128"

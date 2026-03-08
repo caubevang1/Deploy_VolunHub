@@ -76,7 +76,11 @@ export const handleEventAction = async (req, res) => {
     }
 
     if (type === "SHARE") {
-      const clientUrl = process.env.CLIENT_URL || "http://localhost:3000";
+      const clientUrl =
+        process.env.CLIENT_URL ||
+        process.env.FRONTEND_URL ||
+        process.env.PUBLIC_CLIENT_URL ||
+        "http://localhost:3000";
       const shareLink = `${clientUrl}/su-kien/${eventId}`;
 
       // Kiểm tra xem user đã share chưa

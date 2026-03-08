@@ -19,6 +19,8 @@ import {
   UpdateEvents,
 } from "../../../services/EventManagerService";
 import dayjs from "dayjs";
+import { BACKEND_ORIGIN } from "../../../utils/Constants";
+import { getImageUrl } from "../../../utils/imageHelper";
 
 const { Option } = Select;
 
@@ -51,9 +53,8 @@ export default function EditEvent() {
       // Normalize URL: if it's already absolute, use as-is; otherwise prepend backend host
       let norm = url;
       if (!/^https?:\/\//i.test(url)) {
-        const host = "http://localhost:5000";
-        if (url.startsWith("/")) norm = `${host}${url}`;
-        else norm = `${host}/${url}`;
+        if (url.startsWith("/")) norm = `${BACKEND_ORIGIN}${url}`;
+        else norm = `${BACKEND_ORIGIN}/${url}`;
       }
       const res = await fetch(norm);
       const blob = await res.blob();
@@ -100,7 +101,7 @@ export default function EditEvent() {
     let html = description;
 
     galleryImages.forEach((img, index) => {
-      const realUrl = img.url ? img.url : `http://localhost:5000${img}`;
+      const realUrl = img.url ? img.url : getImageUrl(img);
       const placeholder = `[IMAGE_PLACEHOLDER_${index}]`;
       const imgTag = `<img src="${realUrl}" style="max-width:100%; border-radius:6px;" />`;
       html = html.replaceAll(placeholder, imgTag);
@@ -151,8 +152,7 @@ export default function EditEvent() {
             uid: `${i}`,
             name: `gallery_${i}.jpg`,
             status: "done",
-            url: `http://localhost:5000${img && img.startsWith("/") ? "" : "/"
-              }${img}`,
+            url: getImageUrl(img),
           }));
           setGalleryImages(galleryFiles);
 
@@ -171,8 +171,7 @@ export default function EditEvent() {
                 uid: "-1",
                 name: "cover.jpg",
                 status: "done",
-                url: `http://localhost:5000${coverPath && coverPath.startsWith("/") ? "" : "/"
-                  }${coverPath}`,
+                url: getImageUrl(coverPath),
               },
             ]);
           }

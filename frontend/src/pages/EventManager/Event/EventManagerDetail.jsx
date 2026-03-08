@@ -13,6 +13,7 @@ import {
   AlertTriangle,
   Eye,
 } from "lucide-react";
+import { getImageUrl } from "../../../utils/imageHelper";
 
 const categoryMapping = {
   Community: "Cộng đồng",
@@ -39,7 +40,6 @@ export default function EventManagerDetail() {
 
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
-  const BASE_URL = "http://localhost:5000";
 
   useEffect(() => {
     async function load() {
@@ -75,8 +75,7 @@ export default function EventManagerDetail() {
   const getFullUrl = (path) => {
     if (!path || path === "default-event-image.jpg")
       return "/default-event.png";
-    if (path.startsWith("http")) return path;
-    return `${BASE_URL}${path.startsWith("/") ? "" : "/"}${path}`;
+    return getImageUrl(path);
   };
 
   const renderDescription = (description, galleryImages) => {

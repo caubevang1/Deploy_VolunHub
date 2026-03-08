@@ -1,6 +1,7 @@
 // utils/imageHelper.js
+import { BACKEND_ORIGIN } from "./Constants";
 
-const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const BASE_URL = BACKEND_ORIGIN;
 const DEFAULT_AVATAR = `${BASE_URL}/uploads/avatars/avatar-1764958251284-210153801.png`;
 const DEFAULT_EVENT_IMAGE = "/default-event.png";
 
@@ -79,9 +80,8 @@ export const renderDescriptionWithImages = (description, galleryImages) => {
     galleryImages.forEach((img, index) => {
       const realUrl = getImageUrl(img);
       const placeholder = `[IMAGE_PLACEHOLDER_${index}]`;
-      const imgTag = `<div style="text-align: center; margin: 20px 0;"><img src="${realUrl}" style="max-width:100%; height:auto; border-radius:8px;" alt="Gallery image ${
-        index + 1
-      }" /></div>`;
+      const imgTag = `<div style="text-align: center; margin: 20px 0;"><img src="${realUrl}" style="max-width:100%; height:auto; border-radius:8px;" alt="Gallery image ${index + 1
+        }" /></div>`;
       html = html.replaceAll(placeholder, imgTag);
     });
   }

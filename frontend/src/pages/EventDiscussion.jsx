@@ -34,6 +34,7 @@ import {
 import Swal from "sweetalert2";
 import EmojiPicker from "emoji-picker-react";
 import "../styles/EventDiscussion.css";
+import { getImageUrl } from "../utils/imageHelper";
 
 // =========================================================================
 // COMMENT SECTION COMPONENT
@@ -612,7 +613,7 @@ export default function EventDiscussion() {
             <img
               src={
                 event.coverImage
-                  ? `http://localhost:5000${event.coverImage}`
+                  ? getImageUrl(event.coverImage)
                   : "/default-event.png"
               }
               alt={event.name}

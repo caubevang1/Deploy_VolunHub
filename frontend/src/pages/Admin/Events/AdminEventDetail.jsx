@@ -5,6 +5,7 @@ import {
   ApproveEvent,
   RejectEvent,
 } from "../../../services/AdminService";
+import { getImageUrl } from "../../../utils/imageHelper";
 import { message, Modal, Radio, Space, Input } from "antd";
 import {
   Calendar,
@@ -40,8 +41,6 @@ export default function AdminEventDetail() {
   const [rejectModalVisible, setRejectModalVisible] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [customReason, setCustomReason] = useState("");
-
-  const BASE_URL = "http://localhost:5000";
 
   useEffect(() => {
     async function load() {
@@ -134,8 +133,7 @@ export default function AdminEventDetail() {
   const getFullUrl = (path) => {
     if (!path || path === "default-event-image.jpg")
       return "/default-event.png";
-    if (path.startsWith("http")) return path;
-    return `${BASE_URL}${path.startsWith("/") ? "" : "/"}${path}`;
+    return getImageUrl(path);
   };
 
   const renderDescription = (description, galleryImages) => {

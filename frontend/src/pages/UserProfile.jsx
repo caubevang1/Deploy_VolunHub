@@ -15,6 +15,7 @@ import lizard from "../assets/img/lizard-removebg-preview.png";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMars, faVenus } from "@fortawesome/free-solid-svg-icons";
 import Swal from "sweetalert2";
+import { getAvatarUrl } from "../utils/imageHelper";
 
 const ThongTinNguoiDung = ({ user, onUserUpdated }) => {
   const [editData, setEditData] = useState({});
@@ -47,11 +48,7 @@ const ThongTinNguoiDung = ({ user, onUserUpdated }) => {
       points: user.points || 0,
     });
     setAvatarPreview(
-      user.avatar
-        ? user.avatar.startsWith("http")
-          ? user.avatar
-          : `http://localhost:5000${user.avatar}`
-        : "http://localhost:5000/uploads/avatars/avatar-1764958251284-210153801.png"
+      getAvatarUrl(user.avatar)
     );
     setEditMode(true);
   };
@@ -220,10 +217,10 @@ const ThongTinNguoiDung = ({ user, onUserUpdated }) => {
             {/* Trạng thái người dùng */}
             <div
               className={`px-4 py-2 mr-2 rounded-full shadow font-bold text-[14px] text-white ${user?.status === "ACTIVE"
-                  ? "bg-green-500"
-                  : user?.status === "LOCKED"
-                    ? "bg-red-500"
-                    : "bg-gray-400"
+                ? "bg-green-500"
+                : user?.status === "LOCKED"
+                  ? "bg-red-500"
+                  : "bg-gray-400"
                 }`}
             >
               {user?.status === "ACTIVE"
@@ -241,11 +238,7 @@ const ThongTinNguoiDung = ({ user, onUserUpdated }) => {
             className="content__avatar w-[200px] h-[200px] rounded-full bg-cover bg-center relative cursor-pointer -mt-[130px] shadow-lg"
             style={{
               backgroundImage: `url(${avatarPreview ||
-                (user?.avatar
-                  ? user.avatar.startsWith("http")
-                    ? user.avatar
-                    : `http://localhost:5000${user.avatar}`
-                  : "http://localhost:5000/uploads/avatars/avatar-1764958251284-210153801.png")
+                getAvatarUrl(user?.avatar)
                 })`,
             }}
           >
@@ -299,16 +292,16 @@ const ThongTinNguoiDung = ({ user, onUserUpdated }) => {
                 return (
                   <span
                     className={`px-3 py-1 rounded-sm text-sm font-semibold text-white relative overflow-hidden ${color === "purple"
-                        ? "bg-purple-500"
-                        : color === "red"
-                          ? "bg-red-500"
-                          : color === "orange"
-                            ? "bg-orange-500"
-                            : color === "blue"
-                              ? "bg-blue-500"
-                              : color === "cyan"
-                                ? "bg-cyan-500"
-                                : "bg-gray-500"
+                      ? "bg-purple-500"
+                      : color === "red"
+                        ? "bg-red-500"
+                        : color === "orange"
+                          ? "bg-orange-500"
+                          : color === "blue"
+                            ? "bg-blue-500"
+                            : color === "cyan"
+                              ? "bg-cyan-500"
+                              : "bg-gray-500"
                       }`}
                     style={{
                       boxShadow: "0 4px 15px rgba(0,0,0,0.2)",
@@ -409,8 +402,8 @@ const InfoRow = ({
               handleInputChange({ target: { name, value: "Male" } })
             }
             className={`p-2 rounded ${editData[name] === "Male"
-                ? "bg-blue-500 text-white"
-                : "bg-gray-200"
+              ? "bg-blue-500 text-white"
+              : "bg-gray-200"
               }`}
           >
             <FontAwesomeIcon icon={faMars} />
@@ -421,8 +414,8 @@ const InfoRow = ({
               handleInputChange({ target: { name, value: "Female" } })
             }
             className={`p-2 rounded ${editData[name] === "Female"
-                ? "bg-pink-500 text-white"
-                : "bg-gray-200"
+              ? "bg-pink-500 text-white"
+              : "bg-gray-200"
               }`}
           >
             <FontAwesomeIcon icon={faVenus} />

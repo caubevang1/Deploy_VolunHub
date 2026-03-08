@@ -14,6 +14,7 @@ import {
     EventActions,
 } from "../services/UserService";
 import Swal from "sweetalert2";
+import { getImageUrl } from "../utils/imageHelper";
 
 // --- UTILS ---
 const removeVietnameseTones = (str) =>
@@ -480,7 +481,7 @@ export default function EventList() {
                                     src={
                                         event.coverImage?.startsWith("http")
                                             ? event.coverImage
-                                            : `http://localhost:5000${event.coverImage}`
+                                            : getImageUrl(event.coverImage)
                                     }
                                     alt={event.name}
                                     className="h-[250px] md:h-[400px] w-full object-cover"

@@ -170,9 +170,12 @@ export const updateRegistrationStatus = async (req, res) => {
     });
 
     if (updatedReg && populatedEvent) {
-      const url = `${
-        process.env.CLIENT_URL || "http://localhost:3000"
-      }/my-registrations`;
+      const clientUrl =
+        process.env.CLIENT_URL ||
+        process.env.FRONTEND_URL ||
+        process.env.PUBLIC_CLIENT_URL ||
+        "http://localhost:3000";
+      const url = `${clientUrl}/my-registrations`;
       const title =
         status === "approved"
           ? "Đăng ký thành công! ✅"
@@ -192,7 +195,7 @@ export const updateRegistrationStatus = async (req, res) => {
         title,
         message,
         url
-      ).catch(() => {});
+      ).catch(() => { });
     }
   } catch (error) {
     res.status(500).json({ message: "Lỗi server", error: error.message });
@@ -253,9 +256,12 @@ export const markAsCompleted = async (req, res) => {
         registration: updated,
       });
 
-    const url = `${
-      process.env.CLIENT_URL || "http://localhost:3000"
-    }/my-registrations`;
+    const clientUrl =
+      process.env.CLIENT_URL ||
+      process.env.FRONTEND_URL ||
+      process.env.PUBLIC_CLIENT_URL ||
+      "http://localhost:3000";
+    const url = `${clientUrl}/my-registrations`;
 
     // Đã sửa: Không khai báo lại pushBody mà chỉ gán giá trị
     pushBody =
@@ -268,7 +274,7 @@ export const markAsCompleted = async (req, res) => {
       pushTitle,
       pushBody,
       url
-    ).catch(() => {});
+    ).catch(() => { });
   } catch (error) {
     res.status(500).json({ message: "Lỗi server", error: error.message });
   }

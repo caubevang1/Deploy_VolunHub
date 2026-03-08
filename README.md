@@ -119,3 +119,6 @@ Team
 - Nguyễn Trường Nam — 23021644  
 - Nguyễn Đăng Đạo — 23021516  
 - Nguyễn Lê Anh Tuấn — 23021708
+
+Deployment
+- See [DEPLOYMENT.md](DEPLOYMENT.md) for free-tier deployment setup (Render + Vercel).
