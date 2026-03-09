@@ -77,6 +77,8 @@ const rollbackUpload = (req) => {
 export const sendRegisterOtp = async (req, res) => {
   try {
     const email = (req.body?.email || "").trim().toLowerCase();
+    console.log(`[OTP][REGISTER] Incoming request for: ${email || "<empty>"}`);
+
     if (!email) {
       return res.status(400).json({ message: "Vui lòng nhập email." });
     }
@@ -91,8 +93,10 @@ export const sendRegisterOtp = async (req, res) => {
 
     const otp = generateOtp();
     await OtpRepository.createOtp(email, otp, "REGISTER");
+    console.log(`[OTP][REGISTER] OTP generated and saved for: ${email}`);
 
     await sendOtpEmail(email, otp, "Đăng ký tài khoản VolunteerHub");
+    console.log(`[OTP][REGISTER] Email sent successfully to: ${email}`);
     res.status(200).json({ message: "OTP đã được gửi." });
   } catch (err) {
     console.error("[sendRegisterOtp] Error:", {
@@ -241,6 +245,8 @@ export const updateProfile = async (req, res) => {
 export const sendResetOtp = async (req, res) => {
   try {
     const email = (req.body?.email || "").trim().toLowerCase();
+    console.log(`[OTP][RESET] Incoming request for: ${email || "<empty>"}`);
+
     if (!email) {
       return res.status(400).json({ message: "Vui lòng nhập email." });
     }
@@ -250,8 +256,10 @@ export const sendResetOtp = async (req, res) => {
 
     const otp = generateOtp();
     await OtpRepository.createOtp(email, otp, "RESET");
+    console.log(`[OTP][RESET] OTP generated and saved for: ${email}`);
 
     await sendOtpEmail(email, otp, "Khôi phục mật khẩu");
+    console.log(`[OTP][RESET] Email sent successfully to: ${email}`);
     res.json({ message: "OTP đã gửi." });
   } catch (err) {
     console.error("[sendResetOtp] Error:", {

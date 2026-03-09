@@ -71,8 +71,16 @@ export async function sendOtpEmail(
 
   const errors = [];
 
+  console.log(
+    `[OTP][MAIL] Start send to=${to}, host=${smtpHost}, port=${smtpPort}, secure=${smtpSecure}, attempts=${uniqueAttempts.length}`
+  );
+
   for (const cfg of uniqueAttempts) {
     try {
+      console.log(
+        `[OTP][MAIL] Trying ${cfg.label} -> ${cfg.host}:${cfg.port} secure=${cfg.secure} requireTLS=${cfg.requireTLS}`
+      );
+
       const transporter = nodemailer.createTransport({
         host: cfg.host,
         port: cfg.port,
@@ -97,8 +105,15 @@ export async function sendOtpEmail(
         `,
       });
 
+      console.log(`[OTP][MAIL] Sent successfully via ${cfg.label} to ${to}`);
+
       return;
     } catch (err) {
+      console.error(
+        `[OTP][MAIL] Failed via ${cfg.label}:`,
+        err?.code,
+        err?.message
+      );
       errors.push(`${cfg.label}: ${err?.code || "NO_CODE"} - ${err?.message || "Unknown error"}`);
     }
   }
