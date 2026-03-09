@@ -28,6 +28,48 @@ export async function sendOtpEmail(
   const greetingTimeout = toSafeNumber(process.env.SMTP_GREETING_TIMEOUT, 30000);
   const socketTimeout = toSafeNumber(process.env.SMTP_SOCKET_TIMEOUT, 45000);
 
+  const html = `
+          <h2>📌 Mã OTP của bạn là: <b>${otp}</b></h2>
+          <p>OTP có hiệu lực trong 5 phút. Không chia sẻ mã này cho bất kỳ ai.</p>
+        `;
+
+  // Ưu tiên gửi qua API (HTTPS:443) để tránh timeout cổng SMTP trên các nền tảng free-tier
+  if (process.env.BREVO_API_KEY) {
+    try {
+      console.log(`[OTP][MAIL][BREVO_API] Trying HTTPS API for ${to}`);
+      const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "api-key": process.env.BREVO_API_KEY,
+        },
+        body: JSON.stringify({
+          sender: {
+            email: process.env.SMTP_EMAIL,
+            name: "VolunteerHub",
+          },
+          to: [{ email: to }],
+          subject,
+          htmlContent: html,
+        }),
+      });
+
+      if (!response.ok) {
+        const details = await response.text();
+        throw new Error(`Brevo API failed ${response.status}: ${details}`);
+      }
+
+      console.log(`[OTP][MAIL][BREVO_API] Sent successfully to ${to}`);
+      return;
+    } catch (apiErr) {
+      console.error(
+        `[OTP][MAIL][BREVO_API] Failed:`,
+        apiErr?.message || apiErr
+      );
+      // fallback xuống SMTP nếu API lỗi
+    }
+  }
+
   const attempts = [];
 
   // Ưu tiên cấu hình từ env
@@ -99,10 +141,7 @@ export async function sendOtpEmail(
         from: `"VolunteerHub" <${process.env.SMTP_EMAIL}>`,
         to,
         subject,
-        html: `
-          <h2>📌 Mã OTP của bạn là: <b>${otp}</b></h2>
-          <p>OTP có hiệu lực trong 5 phút. Không chia sẻ mã này cho bất kỳ ai.</p>
-        `,
+        html,
       });
 
       console.log(`[OTP][MAIL] Sent successfully via ${cfg.label} to ${to}`);
